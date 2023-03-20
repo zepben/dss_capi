@@ -55,10 +55,13 @@ uses
     Generator,
     XYCurve,
     Command,
+    ZepbenHC,
     Classes;
 
 const
-    NumEMVbase = 7;
+
+
+    NumEMVbase = 4;
     NumEMRegisters = 32 + 5 * NumEMVbase;   // Total Number of energy meter registers
     
     // Fixed Registers
@@ -95,6 +98,12 @@ const
     Reg_GenMaxkW = 31;
     Reg_GenMaxkVA = 32;
     Reg_VBaseStart = 32;  // anchor for the voltage base loss registers
+
+    // ZepbenHC RMQ Message Types
+    DI = 0;
+    PHV_DI = 1;
+    DI_OVERLOAD = 2;
+    DI_VOLT_EXCEPTIONS = 3;
 
 type
 {$SCOPEDENUMS ON}
@@ -235,6 +244,11 @@ type
         EMT_Append: Boolean;
         FM_Append: Boolean;
 
+        // ZepbenHC
+        OV_Names: TStringList;
+        OV_Values: TStringList;
+        VR_Names: TStringList;
+        VR_Values: TStringList;
         
     PROTECTED
         SDI_MHandle: TBytesStream;
@@ -364,6 +378,7 @@ type
         PHV_MHandle: TBytesStream;
 
         RegisterNames: array[1..NumEMregisters] of String;
+        PHV_Names: TStringList;
 
         BranchList: TCktTree;      // Pointers to all circuit elements in meter's zone
         SequenceList: TDSSPointerList;  // Pointers to branches in sequence from meter to ends
@@ -372,6 +387,7 @@ type
         Registers: TRegisterArray;
         Derivatives: TRegisterArray;
         TotalsMask: TRegisterArray;
+        PHV_Values: TRegisterArray;
 
         // Reliability data for Head of Zone
         SAIFI: Double;     // For this Zone - based on number of customers
@@ -464,6 +480,7 @@ const
 var
     PropInfo: Pointer = NIL;    
     ActionEnum: TDSSEnum;
+    CreateDI_Files: Boolean;
 
 function jiIndex(i, j: Integer): Integer; inline;
 begin
@@ -472,6 +489,7 @@ end;
 
 constructor TEnergyMeter.Create(dssContext: TDSSContext);
 begin
+    CreateDI_Files := getBooleanEnv('CREATE_FILES', FALSE);
     if PropInfo = NIL then
     begin
         PropInfo := TypeInfo(TProp);
@@ -502,6 +520,11 @@ begin
     SM_MHandle := NIL;
     EMT_MHandle := NIL;
     FM_MHandle := NIL;
+
+    OV_Names := TStringList.Create;
+    OV_Values := TStringList.Create;
+    VR_Names := TStringList.Create;
+    VR_Values := TStringList.Create;
 end;
 
 destructor TEnergyMeter.Destroy;
@@ -827,6 +850,7 @@ var
     mtr: TEnergyMeterObj;
     CasePath: String;
 begin
+    
     if DSS.DIFilesAreOpen then
         CloseAllDIFiles;
 
@@ -900,15 +924,18 @@ begin
     if FSaveDemandInterval then
     begin  
         // Write Totals Demand interval file
+        // TODO: comment out this 
         with DSS.ActiveCircuit.Solution do
             WriteintoMem(TDI_MHandle, DynaVars.dblHour);
         for i := 1 to NumEMRegisters do
             WriteintoMem(TDI_MHandle, DI_RegisterTotals[i]);
         WriteintoMemStr(TDI_MHandle, Char(10));
         ClearDI_Totals;
-        if OverLoadFileIsOpen then
+        // if OverLoadFileIsOpen then
+        if Do_OverloadReport then
             WriteOverloadReport;
-        if VoltageFileIsOpen then
+        // if VoltageFileIsOpen then
+        if Do_VoltageExceptionReport then
             WriteVoltageReport;
     end;
 
@@ -1011,6 +1038,10 @@ begin
     ReallocMem(VPhaseMin, MaxVBaseCount * 3 * SizeOf(Double));
     ReallocMem(VPhaseAccum, MaxVBaseCount * 3 * SizeOf(Double));
     ReallocMem(VPhaseAccumCount, MaxVBaseCount * 3 * SizeOf(Integer));
+
+    PHV_Names := TStringList.Create;
+    for i := 1 to NumEMRegisters do
+        PHV_Values[i] := 0.0;
 
     LocalOnly := FALSE;
     VoltageUEOnly := FALSE;
@@ -1517,8 +1548,8 @@ begin
             S_NoLoadLosses *= 0.001;
             // Update accumulators
             TotalLosses += S_TotalLosses; // Accumulate total losses in meter zone
-            TotalLoadLosses += S_LoadLosses;  // Accumulate total load losses in meter zone
-            TotalNoLoadLosses += S_NoLoadLosses; // Accumulate total no load losses in meter zone
+            // TotalLoadLosses += S_LoadLosses;  // Accumulate total load losses in meter zone
+            // TotalNoLoadLosses += S_NoLoadLosses; // Accumulate total no load losses in meter zone
 
             // Line and Transformer Elements
             if IsLineElement(Cktelem) and FLineLosses then
@@ -1608,15 +1639,15 @@ begin
     // Accumulate losses in appropriate registers
     Integrate(Reg_ZoneLosseskWh, TotalLosses.re, Delta_hrs_local);
     Integrate(Reg_ZoneLosseskvarh, TotalLosses.im, Delta_hrs_local);
-    Integrate(Reg_LoadLosseskWh, TotalLoadLosses.re, Delta_hrs_local);
-    Integrate(Reg_LoadLosseskvarh, TotalLoadLosses.im, Delta_hrs_local);
-    Integrate(Reg_NoLoadLosseskWh, TotalNoLoadLosses.re, Delta_hrs_local);
-    Integrate(Reg_NoLoadLosseskvarh, TotalNoLoadLosses.im, Delta_hrs_local);
+    // Integrate(Reg_LoadLosseskWh, TotalLoadLosses.re, Delta_hrs_local);
+    // Integrate(Reg_LoadLosseskvarh, TotalLoadLosses.im, Delta_hrs_local);
+    // Integrate(Reg_NoLoadLosseskWh, TotalNoLoadLosses.re, Delta_hrs_local);
+    // Integrate(Reg_NoLoadLosseskvarh, TotalNoLoadLosses.im, Delta_hrs_local);
     Integrate(Reg_LineLosseskWh, TotalLineLosses.re, Delta_hrs_local);
-    Integrate(Reg_LineModeLineLoss, TotalLineModeLosses.re, Delta_hrs_local);
-    Integrate(Reg_ZeroModeLineLoss, TotalZeroModeLosses.re, Delta_hrs_local);
-    Integrate(Reg_3_phaseLineLoss, Total3phaseLosses.re, Delta_hrs_local);
-    Integrate(Reg_1_phaseLineLoss, Total1phaseLosses.re, Delta_hrs_local);
+    // Integrate(Reg_LineModeLineLoss, TotalLineModeLosses.re, Delta_hrs_local);
+    // Integrate(Reg_ZeroModeLineLoss, TotalZeroModeLosses.re, Delta_hrs_local);
+    // Integrate(Reg_3_phaseLineLoss, Total3phaseLosses.re, Delta_hrs_local);
+    // Integrate(Reg_1_phaseLineLoss, Total1phaseLosses.re, Delta_hrs_local);
     Integrate(Reg_TransformerLosseskWh, TotalTransformerLosses.re, Delta_hrs_local);
     for i := 1 to MaxVBaseCount do
     begin
@@ -1636,8 +1667,8 @@ begin
     Integrate(Reg_Zonekvarh, TotalZonekvar, Delta_hrs_local);
     Integrate(Reg_GenkWh, TotalGenkW, Delta_hrs_local);
     Integrate(Reg_Genkvarh, TotalGenkvar, Delta_hrs_local);
-    GenkVA := Sqrt(Sqr(TotalGenkvar) + Sqr(TotalGenkW));
-    LoadkVA := Sqrt(Sqr(TotalZonekvar) + Sqr(TotalZonekW));
+    // GenkVA := Sqrt(Sqr(TotalGenkvar) + Sqr(TotalGenkW));
+    // LoadkVA := Sqrt(Sqr(TotalZonekvar) + Sqr(TotalZonekW));
 
     //--------------------------------------------------------------------------
     //---------------   Set Drag Hand Registers  -------------------------------
@@ -1645,13 +1676,13 @@ begin
 
     SetDragHandRegister(Reg_LossesMaxkW, Abs(TotalLosses.Re));
     SetDragHandRegister(Reg_LossesMaxkvar, Abs(TotalLosses.im));
-    SetDragHandRegister(Reg_MaxLoadLosses, Abs(TotalLoadLosses.Re));
-    SetDragHandRegister(Reg_MaxNoLoadLosses, Abs(TotalNoLoadLosses.Re));
+    // SetDragHandRegister(Reg_MaxLoadLosses, Abs(TotalLoadLosses.Re));
+    // SetDragHandRegister(Reg_MaxNoLoadLosses, Abs(TotalNoLoadLosses.Re));
     SetDragHandRegister(Reg_ZoneMaxkW, TotalZonekW); // Removed abs()  3-10-04
-    SetDragHandRegister(Reg_ZoneMaxkVA, LoadkVA);
+    // SetDragHandRegister(Reg_ZoneMaxkVA, LoadkVA);
     // Max total generator registers
     SetDragHandRegister(Reg_GenMaxkW, TotalGenkW); // Removed abs()  3-10-04
-    SetDragHandRegister(Reg_GenMaxkVA, GenkVA);
+    // SetDragHandRegister(Reg_GenMaxkVA, GenkVA);
 
     //--------------------------------------------------------------------------
     //---------------------   Overload Energy  ---------------------------------
@@ -2918,6 +2949,17 @@ procedure TEnergyMeterObj.CloseDemandIntervalFile;
 var
     i: Integer;
 begin
+
+    if not CreateDI_Files then
+    begin
+        if DI_MHandle <> NIL then
+        begin
+            DI_MHandle.Free;
+            debug('DI_MHandle is not free. Weird');
+        end;
+        Exit;
+    end;
+
     try
         if This_Meter_DIFileIsOpen then
         begin
@@ -2958,17 +3000,21 @@ begin
             This_Meter_DIFileIsOpen := TRUE;
             if DI_MHandle <> NIL then
                 DI_MHandle.free;
-            DI_MHandle := Create_Meter_Space('"Hour"');
-            for i := 1 to NumEMRegisters do
-                WriteintoMemStr(DI_MHandle, ', "' + RegisterNames[i] + '"');
-            WriteintoMemStr(DI_MHandle, Char(10));
+            if CreateDI_Files then
+            begin
+                DI_MHandle := Create_Meter_Space('"Hour"');
+                for i := 1 to NumEMRegisters do
+                    WriteintoMemStr(DI_MHandle, ', "' + RegisterNames[i] + '"');
+                WriteintoMemStr(DI_MHandle, Char(10));
+            end;
 
             // Phase Voltage Report, if requested
             if FPhaseVoltageReport then
             begin
                 if PHV_MHandle <> NIL then
                     PHV_MHandle.Free;
-                PHV_MHandle := Create_Meter_Space('"Hour"');
+                if CreateDI_Files then
+                    PHV_MHandle := Create_Meter_Space('"Hour"');
                 VPhaseReportFileIsOpen := TRUE;
                 for i := 1 to MaxVBaseCount do
                 begin
@@ -2976,16 +3022,23 @@ begin
                     if Vbase > 0.0 then
                     begin
                         for j := 1 to 3 do
-                            WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Max', [vbase, j]));
-                        for j := 1 to 3 do
-                            WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Min', [vbase, j]));
-                        for j := 1 to 3 do
-                            WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Avg', [vbase, j]));
+                        begin
+                            if CreateDI_Files then
+                            begin
+                                WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Max', [vbase, j]));
+                                WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Min', [vbase, j]));
+                                WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Avg', [vbase, j]));
+                            end;
+                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Max', [vbase, j]));
+                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Min', [vbase, j]));
+                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Avg', [vbase, j]));
+                        end;
                     end;
                 end;
-                WriteintoMemStr(PHV_MHandle, ', Min Bus, MaxBus' + Char(10));
-            end;
 
+                if CreateDI_Files then
+                    WriteintoMemStr(PHV_MHandle, ', MinBus, MaxBus' + Char(10));
+            end;
         end;
     except
         On E: Exception do
@@ -2996,6 +3049,8 @@ end;
 procedure TEnergyMeterObj.WriteDemandIntervalData;
 var
     i, j: Integer;
+    index, k: Integer;
+    hour: Double;
 
     function MyCount_Avg(const Value: Double; const count: Integer): Double;
     begin
@@ -3006,7 +3061,7 @@ var
     end;
 
 begin
-    if DSS.EnergyMeterClass.DI_Verbose and This_Meter_DIFileIsOpen then
+    if CreateDI_Files and DSS.EnergyMeterClass.DI_Verbose and This_Meter_DIFileIsOpen then
     begin
         with DSS.ActiveCircuit.Solution do
             WriteintoMem(DI_MHandle, DynaVars.dblHour);
@@ -3015,6 +3070,8 @@ begin
         WriteIntoMemStr(DI_MHandle, Char(10));
     end;
 
+    send_di_as_double(DI, Name, DSS.ActiveCircuit.Solution.DynaVars.dblHour, Derivatives, RegisterNames, NumEMRegisters);
+
     // Add to Class demand interval registers
     with DSS.EnergyMeterClass do
         for i := 1 to NumEMRegisters do
@@ -3022,21 +3079,31 @@ begin
 
 
     // Phase Voltage Report, if requested
-    if VPhaseReportFileIsOpen then
+    if FPhaseVoltageReport then
     begin
-        with DSS.ActiveCircuit.Solution do
-            WriteintoMem(PHV_MHandle, DynaVars.dblHour);
+        k := 0;
         for i := 1 to MaxVBaseCount do
             if VBaseList^[i] > 0.0 then
             begin
                 for j := 1 to 3 do
-                    WriteintoMem(PHV_MHandle, 0.001 * VPhaseMax^[jiIndex(j, i)]);
-                for j := 1 to 3 do
-                    WriteintoMem(PHV_MHandle, 0.001 * VPhaseMin^[jiIndex(j, i)]);
-                for j := 1 to 3 do
-                    WriteintoMem(PHV_MHandle, 0.001 * MyCount_Avg(VPhaseAccum^[jiIndex(j, i)], VPhaseAccumCount^[jiIndex(j, i)]));
+                begin
+                    index := jiIndex(j, i);
+                    
+                    PHV_Values[k + 1] := 0.001 * VPhaseMax^[index];
+                    PHV_Values[k + 2] := 0.001 * VPhaseMin^[index];
+                    PHV_Values[k + 3] := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
+                    inc(k, 3);
+                    if CreateDI_Files then
+                    begin
+                        WriteintoMem(PHV_MHandle, 0.001 * VPhaseMax^[jiIndex(j, i)]);
+                        WriteintoMem(PHV_MHandle, 0.001 * VPhaseMin^[jiIndex(j, i)]);
+                        WriteintoMem(PHV_MHandle, 0.001 * MyCount_Avg(VPhaseAccum^[jiIndex(j, i)], VPhaseAccumCount^[jiIndex(j, i)]));
+                    end;
+                end;
             end;
-        WriteintoMemStr(PHV_MHandle, Char(10));
+        if CreateDI_Files then
+            WriteintoMemStr(PHV_MHandle, Char(10));
+        send_di_as_double(PHV_DI, Name, DSS.ActiveCircuit.Solution.DynaVars.dblHour, PHV_Values, PHV_Names.ToStringArray, PHV_Names.Count);
     end;
 end;
 
@@ -3044,6 +3111,7 @@ procedure TEnergyMeter.CloseAllDIFiles;
 var
     mtr: TEnergyMeterObj;
 begin
+    close_queue();
     if FSaveDemandInterval then
     begin
         // While closing DI files, write all meter registers to one file
@@ -3184,7 +3252,8 @@ begin
                 DoSimpleMsg('Error opening demand interval file "%s.csv" for appending.', [Name + DSS._Name, CRLF + E.Message], 538);
         end;
 
-        DSS.DIFilesAreOpen := TRUE;
+        if CreateDI_Files then
+            DSS.DIFilesAreOpen := TRUE;
 
     end;
 end;
@@ -3309,27 +3378,71 @@ begin
                             dVector^[i] := dBuffer^[i];
                     end;
 
-                    with DSS.ActiveCircuit.Solution do
-                        WriteintoMem(OV_MHandle, DynaVars.dblHour);
-                    WriteintoMemStr(OV_MHandle, ', ' + EncloseQuotes(PDelem.FullName));
-                    WriteintoMem(OV_MHandle, PDElem.NormAmps);
-                    WriteintoMem(OV_MHandle, pdelem.EmergAmps);
+                    if CreateDI_Files then
+                    begin
+                        with DSS.ActiveCircuit.Solution do
+                            WriteintoMem(OV_MHandle, DynaVars.dblHour);
+                        WriteintoMemStr(OV_MHandle, ', ' + EncloseQuotes(PDelem.FullName));
+                        WriteintoMem(OV_MHandle, PDElem.NormAmps);
+                        WriteintoMem(OV_MHandle, pdelem.EmergAmps);
+                    end;
+                    OV_Values.Add(PDelem.FullName);
+                    OV_Values.Add(Format('%-g', [PDElem.NormAmps]));
+                    OV_Values.Add(Format('%-g', [PDElem.EmergAmps]));
                     if PDElem.Normamps > 0.0 then
-                        WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0)
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
+                    begin
+                        WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0);
+                        OV_Values.Add(Format('%-g',[Cmax / PDElem.Normamps * 100.0]));
+                    end
                     else
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
+                    begin
                         WriteintoMem(OV_MHandle, 0.0);
+                        OV_Values.Add(Format('%-g',[0.0]));
+                    end;
                     if PDElem.Emergamps > 0.0 then
-                        WriteintoMem(OV_MHandle, Cmax / PDElem.Emergamps * 100.0)
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
+                    begin
+                        WriteintoMem(OV_MHandle, Cmax / PDElem.Emergamps * 100.0);
+                        OV_Values.Add(Format('%-g',[Cmax / PDElem.Emergamps * 100.0]));
+                    end
                     else
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
+                    begin
                         WriteintoMem(OV_MHandle, 0.0);
+                        OV_Values.Add(Format('%-g',[0.0]));
+                    end;
                     with ActiveCircuit do // Find bus of first terminal
+                    begin
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
                         WriteintoMem(OV_MHandle, Buses^[MapNodeToBus^[PDElem.NodeRef^[1]].BusRef].kVBase);
+                        OV_Values.Add(Format('%-g', [Buses^[MapNodeToBus^[PDElem.NodeRef^[1]].BusRef].kVBase]));
+                    end;
                     // Adds the currents in Amps per phase at the end of the report
                     for i := 1 to 3 do
+                    begin
+                        // Writing into memory will do nothing, so 
+                        // not terrible for one off call
+                        // but easier to manage if need to write out files
                         WriteintoMem(OV_MHandle, dVector^[i]);
-
-                    WriteintoMemStr(OV_MHandle, ' ' + Char(10));
-
+                        OV_Values.Add(Format('%-g',[dVector^[i]]));
+                    end;
+                    
+                    // Send the data and clear OV_Values for the next PDElem
+                    WriteintoMemStr(OV_MHandle, Char(10));
+                    send_di_data(DI_OVERLOAD, '', DSS.ActiveCircuit.Solution.DynaVars.dblHour, OV_Values.ToStringArray, OV_Names.ToStringArray, OV_Names.Count);
+                    OV_Values.Clear;
                 end;
             end;
         end;
@@ -3351,6 +3464,9 @@ var
     mtr: TEnergyMeterObj;
 
 begin
+    if not CreateDI_Files then
+        Exit;
+
     try
         if TDI_MHandle <> NIL then
             TDI_MHandle.Free;
@@ -3375,6 +3491,9 @@ var
     FileNm: String;
 begin
     // Only called if "SaveDemandInterval"
+
+    if not CreateDI_Files then
+        Exit;
 
     if This_Meter_DIFileIsOpen then
         Exit;
@@ -3428,6 +3547,7 @@ end;
 
 constructor TSystemMeter.Create(EnergyMeterClass: TEnergyMeter);
 begin
+    CreateDI_Files := getBooleanEnv('CREATE_FILES', FALSE);
     DSS := EnergyMeterClass.DSS;
     Clear;
     This_Meter_DIFileIsOpen := FALSE;
@@ -3473,6 +3593,9 @@ end;
 
 procedure TSystemMeter.OpenDemandIntervalFile;
 begin
+    if not CreateDI_Files then
+        Exit;
+
     try
         with DSS.EnergyMeterClass do
         begin
@@ -3500,6 +3623,9 @@ procedure TSystemMeter.Save;
 var
     CSVName, Folder: String;
 begin
+    if not CreateDI_Files then
+        Exit;
+
     try
         CSVName := 'SystemMeter' + DSS._Name + '.csv';
         // If we are doing a simulation and saving interval data, create this in the
@@ -3565,6 +3691,9 @@ var
     i: Integer;
     mtr: TEnergyMeterObj;
 begin
+    if not CreateDI_Files then
+      Exit;
+
     if EMT_MHandle <> NIL then
         EMT_MHandle.Free;
     EMT_MHandle := Create_Meter_Space('Name');
@@ -3623,6 +3752,10 @@ var
     Regsum: TRegisterArray;
     i: Integer;
 begin
+
+    if not CreateDI_Files then
+        Exit;
+
     // Sum up all registers of all meters and write to Totals.csv
     for i := 1 to NumEMRegisters do
         RegSum[i] := 0.0;
@@ -3727,14 +3860,25 @@ begin
                 end;
             end; // For i
 
-        with Solution do
-            WriteintoMem(VR_MHandle, DynaVars.dblHour);
-        WriteintoMemStr(VR_MHandle, ', ' + inttostr(UnderCount));
-        WriteintoMem(VR_MHandle, UnderVmin);
-        WriteintoMemStr(VR_MHandle, ', ' + inttostr(OverCount));
-        WriteintoMem(VR_MHandle, OverVmax);
-        WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(minbus));
-        WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(maxbus));
+        if CreateDI_Files then
+        begin
+            with Solution do
+                WriteintoMem(VR_MHandle, DynaVars.dblHour);
+            WriteintoMemStr(VR_MHandle, ', ' + inttostr(UnderCount));
+            WriteintoMem(VR_MHandle, UnderVmin);
+            WriteintoMemStr(VR_MHandle, ', ' + inttostr(OverCount));
+            WriteintoMem(VR_MHandle, OverVmax);
+            WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(minbus));
+            WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(maxbus));
+            WriteintoMemStr(VR_MHandle, Char(10));
+        end;
+
+        VR_Values.Add(inttostr(UnderCount));
+        VR_Values.Add(Format('%-g', [UnderVmin]));
+        VR_Values.Add(inttostr(OverCount));
+        VR_Values.Add(Format('%-g', [OverVmax]));
+        VR_Values.Add(BusList.NameOfIndex(minbus));
+        VR_Values.Add(BusList.NameOfIndex(maxbus));
 
         // Klugy but it works
         // now repeat for buses under 1 kV
@@ -3790,14 +3934,24 @@ begin
                 end;
             end; // For i
 
-        WriteintoMemStr(VR_MHandle, ', ' + inttostr(UnderCount));
-        WriteintoMem(VR_MHandle, UnderVmin);
-        WriteintoMemStr(VR_MHandle, ', ' + inttostr(OverCount));
-        WriteintoMem(VR_MHandle, OverVmax);
-        WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(minbus));
-        WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(maxbus));
-        WriteintoMemStr(VR_MHandle, Char(10));
+        if CreateDI_Files then
+        begin
+            WriteintoMemStr(VR_MHandle, ', ' + inttostr(UnderCount));
+            WriteintoMem(VR_MHandle, UnderVmin);
+            WriteintoMemStr(VR_MHandle, ', ' + inttostr(OverCount));
+            WriteintoMem(VR_MHandle, OverVmax);
+            WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(minbus));
+            WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(maxbus));
+            WriteintoMemStr(VR_MHandle, Char(10));
+        end;
+        VR_Values.Add(inttostr(UnderCount));
+        VR_Values.Add(Format('%-g', [UnderVmin]));
+        VR_Values.Add(inttostr(OverCount));
+        VR_Values.Add(Format('%-g', [OverVmax]));
+        VR_Values.Add(BusList.NameOfIndex(minbus));
+        VR_Values.Add(BusList.NameOfIndex(maxbus));
     end;
+    send_di_data(DI_VOLT_EXCEPTIONS, '', DSS.ActiveCircuit.Solution.DynaVars.dblHour, VR_Values.ToStringArray, VR_Names.ToStringArray, VR_Names.Count);
 end;
 
 procedure TEnergyMeter.OpenAllDIFiles;
@@ -3841,7 +3995,16 @@ begin
 end;
 
 procedure TEnergyMeter.OpenOverloadReportFile;
+var
+    i: integer;
 begin
+
+    OV_Names.CommaText := 
+        ('"Element", "Normal Amps", "Emerg Amps", "% Normal", "% Emerg", "kVBase", "I1(A)", "I2(A)", "I3(A)"');
+
+    if not CreateDI_Files then
+        Exit;
+
     try
         if OverloadFileIsOpen then
             OV_MHandle.Free;
@@ -3856,7 +4019,15 @@ begin
 end;
 
 procedure TEnergyMeter.OpenVoltageReportFile;
+var
+    i: integer;
 begin
+
+    VR_Names.CommaText := ('"Undervoltages", "Min Voltage", "Overvoltage", "Max Voltage", "Min Bus", "Max Bus", "LV Undervoltages", "Min LV Voltage", "LV Overvoltage", "Max LV Voltage", "Min LV Bus", "Max LV Bus"');
+
+    if not CreateDI_Files then
+        Exit;
+
     try
         if VoltageFileIsOpen then
             VR_MHandle.Free;

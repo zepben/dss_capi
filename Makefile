@@ -1,0 +1,47 @@
+current_dir:=${CURDIR}
+
+targets = alpine debian
+libs = libklusolvex.so libdss_capi.so librmqpush.so
+
+klu:
+	make -C ../klusolve 
+	cp ../klusolve/lib/linux_x64/libklusolvex.so ${current_dir}/lib/linux_x64/
+
+rust:
+	cd ../learnRust/fun1 && cargo build --release
+	cp ../learnRust/fun1/target/release/libdss_queue.so ${current_dir}/lib/linux_x64/
+
+rmqpush:
+	if [ ! -d zepben-extensions/lib ];  then mkdir zepben-extensions/lib; fi
+	make -C ./zepben-extensions/ $@
+	cp ./zepben-extensions/lib/librmqpush.so lib/linux_x64/
+
+debian: debian-builder rmqpush
+alpine: alpine-builder
+
+ debian-builder:
+	podman build -f=Dockerfile.$@ -t ghcr.io/zepben/dss-capi-builder:latest
+
+$(targets): 
+	podman run -v ${current_dir}:/build/dss_capi $@-builder build/build_linux_x64.sh
+
+ci: rmqpush 
+	build/build_linux_x64.sh
+
+package: lib/linux_x64/libdss_capi.so 
+	if [ -d package ];  then rm -rf package; fi
+	mkdir package
+	cd lib/linux_x64/ && cp ${libs} ${current_dir}/package
+	cd ${current_dir}/package && tar cjvf dss-libs.bz2 *
+
+runner: main.c
+	gcc -Llib/linux_x64 -ldss_capi -lrabbitmq -o dss-runner dss-runner.c
+
+clean:
+	rm -rf lib/linux_x64/libdss*.so
+
+cleanall:
+	rm -rf lib/linux_x64/lib*.so
+	rm -rf ${current_dir}/package
+	cp ../rabbitmq-c/librabbitmq/librabbitmq.so.0.14.0 lib/linux_x64/librabbitmq.so
+	cp ../klusolve/lib/linux_x64/libklusolvex.so ${current_dir}/lib/linux_x64/
