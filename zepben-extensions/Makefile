@@ -4,27 +4,31 @@ NAME = rmqpush
 # DEFINITIONS
 CC = gcc
 CFLAGS = -std=c99 -W -g -fpic -shared
-INCLUDE = -Isrc/include
+INCLUDE = -Isrc/include -Isrc/proto
 LDLIBS = -lrabbitmq -lprotobuf-c
 LDFLAGS = -Llib
-OBJS = rmqpush.o utils.o EnergyMeter.pb-c.o
+PROTODIR = src/proto/hc/opendss
+SRCDIR = src
+OBJDIR = obj
+LIBDIR = lib
+OBJS = $(addprefix $(OBJDIR)/, rmqpush.o utils.o EnergyMeter.pb-c.o)
 
 default: $(NAME) 
 
 # TARGETS
 
-%.o: src/%.c
-	$(CC) $(INCLUDE) $(CFLAGS) $< -c
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p obj
+	$(CC) $(INCLUDE) $(CFLAGS) $< -c -o $@
+
+$(OBJDIR)/%.o: $(PROTODIR)/%.c
+	@mkdir -p obj
+	$(CC) $(INCLUDE) $(CFLAGS) $< -c -o $@
 
 $(NAME): $(OBJS)  
-	$(CC) $(INCLUDE) $(CFLAGS) $(LDFLAGS) $(LDLIBS) -o lib/lib$(NAME).so $? 
-
-main: src/main.c $(NAME)
-	$(CC) -g $(INCLUDE) $(LDFLAGS) $(LDLIBS) -l$(NAME) -o test $<
-
-listen: src/rmqlisten.c 
-	$(CC) -g $(INCLUDE) $(LDFLAGS) $(LDLIBS) -l$(NAME) -o listen $<
+	@mkdir -p lib
+	$(CC) $(INCLUDE) $(CFLAGS) $(LDFLAGS) $(LDLIBS) -o $(LIBDIR)/lib$(NAME).so $? 
 
 clean:
-	rm -rf $(OBJS) 
-	rm -rf lib/lib$(NAME).so
+	rm -rf $(OBJDIR) 
+	rm -rf $(LIBDIR)

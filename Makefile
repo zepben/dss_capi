@@ -12,7 +12,6 @@ rust:
 	cp ../learnRust/fun1/target/release/libdss_queue.so ${current_dir}/lib/linux_x64/
 
 rmqpush:
-	if [ ! -d zepben-extensions/lib ];  then mkdir zepben-extensions/lib; fi
 	make -C ./zepben-extensions/ $@
 	cp ./zepben-extensions/lib/librmqpush.so lib/linux_x64/
 
@@ -38,9 +37,11 @@ runner: main.c
 	gcc -Llib/linux_x64 -ldss_capi -lrabbitmq -o dss-runner dss-runner.c
 
 clean:
+	make -C ./zepben-extensions/ clean
 	rm -rf lib/linux_x64/libdss*.so
 
 cleanall:
+	make -C ./zepben-extensions/ clean
 	rm -rf lib/linux_x64/lib*.so
 	rm -rf ${current_dir}/package
 	cp ../rabbitmq-c/librabbitmq/librabbitmq.so.0.14.0 lib/linux_x64/librabbitmq.so

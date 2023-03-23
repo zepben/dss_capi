@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <rabbitmq-c/amqp.h>
 #include <rabbitmq-c/framing.h>
@@ -33,17 +34,19 @@ void die(const char *fmt, ...) {
   exit(1);
 }
 
-void die_on_error(int x, char const *context) {
+bool has_error(int x, char const *context) {
   if (x < 0) {
     fprintf(stderr, "%s: %s\n", context, amqp_error_string2(x));
-    exit(1);
+    return true;
   }
+  
+  return false;
 }
 
-void die_on_amqp_error(amqp_rpc_reply_t x, char const *context) {
+bool has_amqp_error(amqp_rpc_reply_t x, char const *context) {
   switch (x.reply_type) {
   case AMQP_RESPONSE_NORMAL:
-    return;
+    return false;
 
   case AMQP_RESPONSE_NONE:
     fprintf(stderr, "%s: missing RPC reply type!\n", context);
@@ -77,7 +80,7 @@ void die_on_amqp_error(amqp_rpc_reply_t x, char const *context) {
     break;
   }
 
-  exit(1);
+  return true;
 }
 
 static void dump_row(long count, int numinrow, int *chs) {

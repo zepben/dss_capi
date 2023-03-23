@@ -60,7 +60,6 @@ uses
 
 const
 
-
     NumEMVbase = 4;
     NumEMRegisters = 32 + 5 * NumEMVbase;   // Total Number of energy meter registers
     
@@ -98,12 +97,6 @@ const
     Reg_GenMaxkW = 31;
     Reg_GenMaxkVA = 32;
     Reg_VBaseStart = 32;  // anchor for the voltage base loss registers
-
-    // ZepbenHC RMQ Message Types
-    DI = 0;
-    PHV_DI = 1;
-    DI_OVERLOAD = 2;
-    DI_VOLT_EXCEPTIONS = 3;
 
 type
 {$SCOPEDENUMS ON}
@@ -243,12 +236,6 @@ type
         SM_Append: Boolean;
         EMT_Append: Boolean;
         FM_Append: Boolean;
-
-        // ZepbenHC
-        OV_Names: TStringList;
-        OV_Values: TStringList;
-        VR_Names: TStringList;
-        VR_Values: TStringList;
         
     PROTECTED
         SDI_MHandle: TBytesStream;
@@ -378,7 +365,6 @@ type
         PHV_MHandle: TBytesStream;
 
         RegisterNames: array[1..NumEMregisters] of String;
-        PHV_Names: TStringList;
 
         BranchList: TCktTree;      // Pointers to all circuit elements in meter's zone
         SequenceList: TDSSPointerList;  // Pointers to branches in sequence from meter to ends
@@ -387,7 +373,6 @@ type
         Registers: TRegisterArray;
         Derivatives: TRegisterArray;
         TotalsMask: TRegisterArray;
-        PHV_Values: TRegisterArray;
 
         // Reliability data for Head of Zone
         SAIFI: Double;     // For this Zone - based on number of customers
@@ -520,11 +505,6 @@ begin
     SM_MHandle := NIL;
     EMT_MHandle := NIL;
     FM_MHandle := NIL;
-
-    OV_Names := TStringList.Create;
-    OV_Values := TStringList.Create;
-    VR_Names := TStringList.Create;
-    VR_Values := TStringList.Create;
 end;
 
 destructor TEnergyMeter.Destroy;
@@ -1038,10 +1018,6 @@ begin
     ReallocMem(VPhaseMin, MaxVBaseCount * 3 * SizeOf(Double));
     ReallocMem(VPhaseAccum, MaxVBaseCount * 3 * SizeOf(Double));
     ReallocMem(VPhaseAccumCount, MaxVBaseCount * 3 * SizeOf(Integer));
-
-    PHV_Names := TStringList.Create;
-    for i := 1 to NumEMRegisters do
-        PHV_Values[i] := 0.0;
 
     LocalOnly := FALSE;
     VoltageUEOnly := FALSE;
@@ -3029,9 +3005,6 @@ begin
                                 WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Min', [vbase, j]));
                                 WriteintoMemStr(PHV_MHandle, Format(', %.3gkV_Phs_%d_Avg', [vbase, j]));
                             end;
-                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Max', [vbase, j]));
-                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Min', [vbase, j]));
-                            PHV_Names.Add(Format('%.3gkV_Phs_%d_Avg', [vbase, j]));
                         end;
                     end;
                 end;
@@ -3049,8 +3022,11 @@ end;
 procedure TEnergyMeterObj.WriteDemandIntervalData;
 var
     i, j: Integer;
-    index, k: Integer;
-    hour: Double;
+    index: Integer;
+    DemandIntervalReport: TDemandIntervalReport;
+    DiVoltBases: TVoltBaseRegistersArray;
+    PhaseVoltageReport: TPhaseVoltageReport;
+    PhvValues: TPhaseVoltageReportValuesArray;
 
     function MyCount_Avg(const Value: Double; const count: Integer): Double;
     begin
@@ -3070,7 +3046,68 @@ begin
         WriteIntoMemStr(DI_MHandle, Char(10));
     end;
 
-    send_di_as_double(DI, Name, DSS.ActiveCircuit.Solution.DynaVars.dblHour, Derivatives, RegisterNames, NumEMRegisters);
+    with DemandIntervalReport do
+    begin
+        element := Name;
+        hour := DSS.ActiveCircuit.Solution.DynaVars.dblHour;
+        
+        kwh := Derivatives[1];
+        kvarh := Derivatives[2];
+        maxKw := Derivatives[3];
+        maxKva := Derivatives[4];
+        zoneKwh := Derivatives[5];
+        zoneKvarh := Derivatives[6];
+        zoneMaxKw := Derivatives[7];
+        zoneMaxKva := Derivatives[8];
+        overloadKwhNormal := Derivatives[9];
+        overloadKwhEmerg := Derivatives[10];
+        loadEEN := Derivatives[11];
+        loadUE := Derivatives[12];
+        zoneLossesKwh := Derivatives[13];
+        zoneLossesKvarh := Derivatives[14];
+        zoneMaxKwLosses := Derivatives[15];
+        zoneMaxKvarLosses := Derivatives[16];
+        loadLossesKwh := Derivatives[17];
+        loadLossesKvarh := Derivatives[18];
+        noLoadLossesKwh := Derivatives[19];
+        noLoadLossesKvarh := Derivatives[20];
+        maxKwLoadLosses := Derivatives[21];
+        maxKwNoLoadLosses := Derivatives[22];
+        lineLosses := Derivatives[23];
+        transformerLosses := Derivatives[24];
+
+        lineModeLineLosses := Derivatives[25];
+        zeroModeLineLosses := Derivatives[26];
+
+        phaseLineLosses3 := Derivatives[27];
+        phaseLineLosses12 := Derivatives[28];
+
+        genKwh := Derivatives[29];
+        genKvarh := Derivatives[30];
+        genMaxKw := Derivatives[31];
+        genMaxKva := Derivatives[32];
+
+        numVoltBases := 0;
+        for i := 1 to MaxVBaseCount do
+        begin
+            if VBaseList^[i] > 0.0 then
+            begin
+                with DiVoltBases[numVoltBases] do
+                begin
+                    vbase := VBaseList^[i] * SQRT3;
+                    kvLosses := Derivatives[Reg_VbaseStart + i];
+                    kvLineLoss := Derivatives[Reg_VbaseStart + 1 * MaxVBaseCount + i];
+                    kvLoadLoss := Derivatives[Reg_VbaseStart + 2 * MaxVBaseCount + i];
+                    kvNoLoadLoss := Derivatives[Reg_VbaseStart + 3 * MaxVBaseCount + i];
+                    kvLoadEnergy := Derivatives[Reg_VbaseStart + 4 * MaxVBaseCount + i];
+                end;
+
+                inc(numVoltBases, 1);
+            end;
+        end;
+    end;
+
+    send_demand_interval_report(DemandIntervalReport, DiVoltBases);
 
     // Add to Class demand interval registers
     with DSS.EnergyMeterClass do
@@ -3081,29 +3118,58 @@ begin
     // Phase Voltage Report, if requested
     if FPhaseVoltageReport then
     begin
-        k := 0;
+        if CreateDI_Files then
+            with DSS.ActiveCircuit.Solution do
+                WriteintoMem(PHV_MHandle, DynaVars.dblHour);
+        
+        with PhaseVoltageReport do
+        begin
+            element := Name;
+            hour := DSS.ActiveCircuit.Solution.DynaVars.dblHour;
+            numValues := 0;
+        end;
+
         for i := 1 to MaxVBaseCount do
             if VBaseList^[i] > 0.0 then
             begin
-                for j := 1 to 3 do
+                if CreateDI_Files then
                 begin
-                    index := jiIndex(j, i);
-                    
-                    PHV_Values[k + 1] := 0.001 * VPhaseMax^[index];
-                    PHV_Values[k + 2] := 0.001 * VPhaseMin^[index];
-                    PHV_Values[k + 3] := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
-                    inc(k, 3);
-                    if CreateDI_Files then
+                    for j := 1 to 3 do
                     begin
                         WriteintoMem(PHV_MHandle, 0.001 * VPhaseMax^[jiIndex(j, i)]);
                         WriteintoMem(PHV_MHandle, 0.001 * VPhaseMin^[jiIndex(j, i)]);
                         WriteintoMem(PHV_MHandle, 0.001 * MyCount_Avg(VPhaseAccum^[jiIndex(j, i)], VPhaseAccumCount^[jiIndex(j, i)]));
                     end;
                 end;
+
+                with PhvValues[PhaseVoltageReport.numValues] do
+                begin
+                    vbase := VBaseList^[i] * SQRT3;
+                    index := jiIndex(1, i);
+
+                    phs1.max := 0.001 * VPhaseMax^[index];
+                    phs1.min := 0.001 * VPhaseMin^[index];
+                    phs1.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
+
+                    index := jiIndex(2, i);
+
+                    phs2.max := 0.001 * VPhaseMax^[index];
+                    phs2.min := 0.001 * VPhaseMin^[index];
+                    phs2.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
+
+                    index := jiIndex(3, i);
+
+                    phs3.max := 0.001 * VPhaseMax^[index];
+                    phs3.min := 0.001 * VPhaseMin^[index];
+                    phs3.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
+                end;
+                inc(PhaseVoltageReport.numValues, 1);
             end;
+
         if CreateDI_Files then
             WriteintoMemStr(PHV_MHandle, Char(10));
-        send_di_as_double(PHV_DI, Name, DSS.ActiveCircuit.Solution.DynaVars.dblHour, PHV_Values, PHV_Names.ToStringArray, PHV_Names.Count);
+        
+        send_phase_voltage_report(PhaseVoltageReport, PhvValues);
     end;
 end;
 
@@ -3111,7 +3177,6 @@ procedure TEnergyMeter.CloseAllDIFiles;
 var
     mtr: TEnergyMeterObj;
 begin
-    close_queue();
     if FSaveDemandInterval then
     begin
         // While closing DI files, write all meter registers to one file
@@ -3286,6 +3351,7 @@ var
     RatingIdx: Integer;
     dVector,
     dBuffer: pDoubleArray;
+    OverloadReport: TOverloadReport;
 
 begin
 // Scans the active circuit for overloaded PD elements and writes each to a file
@@ -3386,16 +3452,20 @@ begin
                         WriteintoMem(OV_MHandle, PDElem.NormAmps);
                         WriteintoMem(OV_MHandle, pdelem.EmergAmps);
                     end;
-                    OV_Values.Add(PDelem.FullName);
-                    OV_Values.Add(Format('%-g', [PDElem.NormAmps]));
-                    OV_Values.Add(Format('%-g', [PDElem.EmergAmps]));
+                    with OverloadReport do
+                    begin
+                        hour := DSS.ActiveCircuit.Solution.DynaVars.dblHour;
+                        element := PDelem.FullName;
+                        normalAmps := PDElem.NormAmps;
+                        emergAmps := PDElem.EmergAmps;
+                    end;
                     if PDElem.Normamps > 0.0 then
                         // Writing into memory will do nothing, so 
                         // not terrible for one off call
                         // but easier to manage if need to write out files
                     begin
                         WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0);
-                        OV_Values.Add(Format('%-g',[Cmax / PDElem.Normamps * 100.0]));
+                        OverloadReport.percentNormal := Cmax / PDElem.Normamps * 100.0;
                     end
                     else
                         // Writing into memory will do nothing, so 
@@ -3403,7 +3473,7 @@ begin
                         // but easier to manage if need to write out files
                     begin
                         WriteintoMem(OV_MHandle, 0.0);
-                        OV_Values.Add(Format('%-g',[0.0]));
+                        OverloadReport.percentNormal := 0.0;
                     end;
                     if PDElem.Emergamps > 0.0 then
                         // Writing into memory will do nothing, so 
@@ -3411,7 +3481,7 @@ begin
                         // but easier to manage if need to write out files
                     begin
                         WriteintoMem(OV_MHandle, Cmax / PDElem.Emergamps * 100.0);
-                        OV_Values.Add(Format('%-g',[Cmax / PDElem.Emergamps * 100.0]));
+                        OverloadReport.percentEmerg := Cmax / PDElem.Emergamps * 100.0;
                     end
                     else
                         // Writing into memory will do nothing, so 
@@ -3419,7 +3489,7 @@ begin
                         // but easier to manage if need to write out files
                     begin
                         WriteintoMem(OV_MHandle, 0.0);
-                        OV_Values.Add(Format('%-g',[0.0]));
+                        OverloadReport.percentEmerg := 0.0;
                     end;
                     with ActiveCircuit do // Find bus of first terminal
                     begin
@@ -3427,7 +3497,7 @@ begin
                         // not terrible for one off call
                         // but easier to manage if need to write out files
                         WriteintoMem(OV_MHandle, Buses^[MapNodeToBus^[PDElem.NodeRef^[1]].BusRef].kVBase);
-                        OV_Values.Add(Format('%-g', [Buses^[MapNodeToBus^[PDElem.NodeRef^[1]].BusRef].kVBase]));
+                        OverloadReport.kvBase := Buses^[MapNodeToBus^[PDElem.NodeRef^[1]].BusRef].kVBase;
                     end;
                     // Adds the currents in Amps per phase at the end of the report
                     for i := 1 to 3 do
@@ -3436,13 +3506,16 @@ begin
                         // not terrible for one off call
                         // but easier to manage if need to write out files
                         WriteintoMem(OV_MHandle, dVector^[i]);
-                        OV_Values.Add(Format('%-g',[dVector^[i]]));
+                    end;
+                    with OverloadReport do
+                    begin
+                        phase1Amps := dVector^[1];
+                        phase1Amps := dVector^[2];
+                        phase1Amps := dVector^[3];
                     end;
                     
-                    // Send the data and clear OV_Values for the next PDElem
                     WriteintoMemStr(OV_MHandle, Char(10));
-                    send_di_data(DI_OVERLOAD, '', DSS.ActiveCircuit.Solution.DynaVars.dblHour, OV_Values.ToStringArray, OV_Names.ToStringArray, OV_Names.Count);
-                    OV_Values.Clear;
+                    send_overload_report(OverloadReport);
                 end;
             end;
         end;
@@ -3803,6 +3876,7 @@ var
     MinBus: Integer;
     MaxBus: Integer;
     BusCounted: Boolean;
+    VoltageReport: TVoltageReport;
 begin
     // For any bus with a defined voltage base, test for > Vmax or < Vmin
 
@@ -3873,13 +3947,19 @@ begin
             WriteintoMemStr(VR_MHandle, Char(10));
         end;
 
-        VR_Values.Add(inttostr(UnderCount));
-        VR_Values.Add(Format('%-g', [UnderVmin]));
-        VR_Values.Add(inttostr(OverCount));
-        VR_Values.Add(Format('%-g', [OverVmax]));
-        VR_Values.Add(BusList.NameOfIndex(minbus));
-        VR_Values.Add(BusList.NameOfIndex(maxbus));
+        with VoltageReport do
+        begin
+            Hour := Solution.DynaVars.dblHour;
 
+            // We don't nest this in a `with hv do` block due to a name clash with min and max bus
+            Hv.UnderVoltages := UnderCount;
+            Hv.MinVoltage := UnderVmin;
+            Hv.OverVoltage := OverCount;
+            Hv.MaxVoltage := OverVmax;
+            Hv.MinBus := BusList.NameOfIndex(MinBus);
+            Hv.MaxBus := BusList.NameOfIndex(MaxBus);
+        end;
+        
         // Klugy but it works
         // now repeat for buses under 1 kV
         OverCount := 0;
@@ -3944,14 +4024,21 @@ begin
             WriteintoMemStr(VR_MHandle, ', ' + BusList.NameOfIndex(maxbus));
             WriteintoMemStr(VR_MHandle, Char(10));
         end;
-        VR_Values.Add(inttostr(UnderCount));
-        VR_Values.Add(Format('%-g', [UnderVmin]));
-        VR_Values.Add(inttostr(OverCount));
-        VR_Values.Add(Format('%-g', [OverVmax]));
-        VR_Values.Add(BusList.NameOfIndex(minbus));
-        VR_Values.Add(BusList.NameOfIndex(maxbus));
+
+        with VoltageReport do
+        begin
+            // We don't nest this in a `with lv do` block due to a name clash with min and max bus
+            Lv.UnderVoltages := UnderCount;
+            Lv.MinVoltage := UnderVmin;
+            Lv.OverVoltage := OverCount;
+            Lv.MaxVoltage := OverVmax;
+            Lv.MinBus := BusList.NameOfIndex(MinBus);
+            Lv.MaxBus := BusList.NameOfIndex(MaxBus);
+        end;
+
     end;
-    send_di_data(DI_VOLT_EXCEPTIONS, '', DSS.ActiveCircuit.Solution.DynaVars.dblHour, VR_Values.ToStringArray, VR_Names.ToStringArray, VR_Names.Count);
+
+    send_voltage_report(VoltageReport);
 end;
 
 procedure TEnergyMeter.OpenAllDIFiles;
@@ -3999,9 +4086,6 @@ var
     i: integer;
 begin
 
-    OV_Names.CommaText := 
-        ('"Element", "Normal Amps", "Emerg Amps", "% Normal", "% Emerg", "kVBase", "I1(A)", "I2(A)", "I3(A)"');
-
     if not CreateDI_Files then
         Exit;
 
@@ -4022,8 +4106,6 @@ procedure TEnergyMeter.OpenVoltageReportFile;
 var
     i: integer;
 begin
-
-    VR_Names.CommaText := ('"Undervoltages", "Min Voltage", "Overvoltage", "Max Voltage", "Min Bus", "Max Bus", "LV Undervoltages", "Min LV Voltage", "LV Overvoltage", "Max LV Voltage", "Min LV Bus", "Max LV Bus"');
 
     if not CreateDI_Files then
         Exit;
