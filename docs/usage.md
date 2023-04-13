@@ -68,7 +68,7 @@ The immediate/direct result getters use two parameters. Its usage is like the fo
 
 Until 0.9.8, `numZipv` here would be a simple integer:
 
-```
+```c
     // VALID ONLY FOR DSS C-API 0.9.8
     int numZipv = 0; 
     double *zipv = NULL;
