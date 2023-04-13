@@ -71,6 +71,10 @@ procedure WriteintoMemStr(Mem_Space: TBytesStream; Content: String); OVERLOAD;
 var
     wordBuf: Word;
 begin
+    if Mem_Space = NIL then
+    begin
+        Exit;
+    end;
     wordBuf := $01A0;
     Mem_Space.Write(wordBuf, 2);
     Write_String(Mem_Space, Content);
@@ -82,6 +86,10 @@ procedure WriteintoMem(Mem_Space: TBytesStream; Content: Double); OVERLOAD;
 var
     wordBuf: Word;
 begin
+    if Mem_Space = NIL then
+    begin
+        Exit;
+    end;
     wordBuf := $02A0;
     Mem_Space.Write(wordBuf, 2);
     Mem_Space.Write(Content, sizeof(Double));
@@ -115,6 +123,7 @@ begin
         On E: Exception do
         begin
             DoSimpleMsg(DSS, 'Error Attempting to open file: "%s". %s', [Dest_path, E.Message], 159000);
+            writeln(Format('Error Attempting to open file: "%s". %s', [Dest_path, E.Message]));
             FreeAndNil(F);
             FreeAndNil(Mem_Space);
             Exit;

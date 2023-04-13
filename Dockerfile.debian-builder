@@ -1,0 +1,25 @@
+FROM debian:bullseye-slim
+LABEL maintainer="Alex Lourie <alex.lourie@zepben.com>"
+LABEL name="D-CAPI builder"
+LABEL org.opencontainers.image.source https://github.com/zepben/dss_capi
+RUN apt -y update && apt install -y \
+ cmake \
+ make \
+ wget \
+ bzip2 \
+ python3 \
+ libprotobuf-c-dev \
+ librabbitmq-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV FPC_VERSION="3.2.2" \
+    FPC_ARCH="x86_64-linux"
+
+WORKDIR /tmp/
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN wget "ftp://ftp.hu.freepascal.org/pub/fpc/dist/${FPC_VERSION}/${FPC_ARCH}/fpc-${FPC_VERSION}.${FPC_ARCH}.tar" -O fpc.tar
+RUN tar vxf "fpc.tar"
+WORKDIR /tmp/"fpc-${FPC_VERSION}.${FPC_ARCH}"
+RUN echo -e '/usr\nN\nN\nN\n' | bash ./install.sh 
+RUN rm -rf /tmp/*
