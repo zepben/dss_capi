@@ -484,7 +484,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -819,7 +818,6 @@ begin
         finally
 
             FreeAndNil(F);
-            // FireOffEditor(DSS, FileNm);
             DSS.ParserVars.Add('@lastshowfile', FileNm);
 
         end;
@@ -1313,7 +1311,6 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
 
@@ -1825,7 +1822,6 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2000,7 +1996,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -2148,9 +2143,7 @@ begin
     finally
 
         FreeAndNil(FDisabled);
-        // FireOffEditor(DSS, DisabledFileNm);
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2212,7 +2205,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2282,7 +2274,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2333,7 +2324,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2383,7 +2373,6 @@ begin
         end;
     finally
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -2473,7 +2462,6 @@ begin
 
         case length(Param) of
             0:
-                // FireOffEditor(DSS, FileNm);
         else
             ShowTreeView(FileNm);
         end;
@@ -2589,7 +2577,6 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2648,7 +2635,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2659,7 +2645,6 @@ procedure ShowLosses(DSS: TDSSContext; FileNm: String);
 
 
 var
-    // F: TFileStream = nil;
     PDElem: TPDElement;
     PCElem: TPCElement;
 
@@ -2677,18 +2662,6 @@ begin
     setMaxDeviceNameLength(DSS);
 
     try
-
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-
-     // {Sequence Currents}
-     //    FSWriteln(F);
-     //    FSWriteln(F, 'LOSSES REPORT');
-     //    FSWriteln(F);
-     //    FSWriteln(F, 'Power Delivery Element Loss Report');
-     //    FSWriteln(F);
-     //    FSWriteln(F, 'Element                  kW Losses    % of Power   kvar Losses');
-     //    FSWriteln(F);
-
 
         TotalLosses := CZERO;
         LineLosses := CZERO;
@@ -2714,35 +2687,17 @@ begin
                 if (CLASSMASK and PDElem.DSSObjType) = LINE_ELEMENT then
                     LineLosses += kLosses;
 
-                // FSWrite(F, Pad(EncloseQuotes(PDelem.FullName), MaxDeviceNameLength + 2));
-                // FSWrite(F, Format('%10.5f, ', [kLosses.re]));
                 LossesEntry.element := PDElem.FullName;
                 LossesEntry.kLoss := kLosses.re;
                 if (TermPower.re <> 0.0) and (kLosses.re > 0.0009) then
-                    // FSWrite(F, Format('%8.2f', [(kLosses.re / Abs(TermPower.re) * 100.0)]))
                     LossesEntry.pctPower := (kLosses.re / Abs(TermPower.re) * 100.0)
                 else
-                    // FSWrite(F, Format('%8.1f', [CZERO.RE]));
                     LossesEntry.pctPower := CZERO.RE;
-                // FSWrite(F, Format('     %.6g', [kLosses.im]));
-                // FSWriteln(F);
                 LossesEntry.kvarLosses := kLosses.im;
                 send_losses_entry(LossesEntry);
             end;
             PDelem := DSS.ActiveCircuit.PDElements.Next;
         end;      {While}
-
-        // FSWriteln(F);
-        // WriteStr(sout, Pad('LINE LOSSES=', 30), LineLosses.re: 10: 1, ' kW');
-        // FSWriteln(F, sout);
-
-        // WriteStr(sout, Pad('TRANSFORMER LOSSES=', 30), TransLosses.re: 10: 1, ' kW');
-        // FSWriteln(F, sout);
-        // 
-        // FSWriteln(F);
-        // 
-        // WriteStr(sout, Pad('TOTAL LOSSES=', 30), TotalLosses.re: 10: 1, ' kW');
-        // FSWriteln(F, sout);
 
         LossesTotals.lineLosses := LineLosses.re;
         LossesTotals.transformerLosses := TransLosses.re;
@@ -2761,28 +2716,15 @@ begin
         end;
         LoadPower := LoadPower * 0.001;
 
-        // FSWriteln(F);
-        // WriteStr(sout, Pad('TOTAL LOAD POWER = ', 30), Abs(LoadPower.re): 10: 1, ' kW');
-        // FSWriteln(F, sout);
-
         LossesTotals.totalLoadPower := Abs(LoadPower.re);
         
-        // FSWrite(F, Pad('Percent Losses for Circuit = ', 30));
         if LoadPower.re <> 0.0 then
-        begin
-            // WriteStr(sout, Abs(TotalLosses.re / LoadPower.re) * 100.0: 8: 2, ' %');
-            // FSWriteln(F, sout);
             LossesTotals.totalPctLosses := Abs(TotalLosses.re / LoadPower.re) * 100.0;
-        end;
 
         send_losses_totals(LossesTotals);
 
     finally
-
-        // FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
-
     end;
 end;
 
@@ -2826,7 +2768,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2838,7 +2779,6 @@ var
     Branch_List,
     SubArea: TCktTree;      // Pointers to all circuit elements
 
-    // F: TFileStream = nil;
     TestElement, TestBranch, pElem: TDSSCktElement;
 
     i, j: Integer;
@@ -2880,32 +2820,17 @@ begin
 
     // Show Report of Elements connected and not connected
     try
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-        //
-        // FSWriteln(F);
-        // FSWriteln(F, 'ISOLATED CIRCUIT ELEMENT REPORT');
-        // FSWriteln(F);
-        // FSWriteln(F);
-        // FSWriteln(F, '***  THE FOLLOWING BUSES HAVE NO CONNECTION TO THE SOURCE ***');
-        // FSWriteln(F);
-
+    
         with DSS.ActiveCircuit do
         begin
             for j := 1 to NumBuses do
                 if not Buses^[j].BusChecked then
                 begin
-                    // FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
-
                     i := Length(isolatedBusesReport.disconnectedBuses) + 1;
                     SetLength(isolatedBusesReport.disconnectedBuses, i);
                     isolatedBusesReport.disconnectedBuses[i-1] := BusList.NameOfIndex(j);
                 end;
         end;
-
-
-        // FSWriteln(F);
-        // FSWriteln(F, '***********  THE FOLLOWING SUB NETWORKS ARE ISOLATED ************');
-        // FSWriteln(F);
 
         with DSS.ActiveCircuit do
         begin
@@ -2918,23 +2843,17 @@ begin
                         if (TestElement.DSSObjType and BASECLASSMASK) = PD_ELEMENT then
                         begin
                             SubArea := GetIsolatedSubArea(DSS.ActiveCircuit, TestElement);
-                            // FSWriteln(F, '*** START SUBAREA ***');
                             TestBranch := SubArea.First;
                             while TestBranch <> NIL do
                             begin
-                                // WriteStr(sout, '(', SubArea.Level: 0, ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name);
-                                // FSWriteln(F, sout);
                                 pElem := SubArea.FirstObject;
                                 isolatedArea.id := SubArea.Level; 
                                 isolatedArea.line := TestBranch.ParentClass.Name + '.' + TestBranch.Name;
                                 while pElem <> NIL do
                                 begin
-                                    // FSWriteln(F, ['[SHUNT], ', pElem.ParentClass.Name, '.', pElem.Name]);
-
                                     i := Length(isolatedArea.loads) + 1;
                                     SetLength(isolatedArea.loads, i);
                                     isolatedArea.loads[i-1] := pElem.ParentClass.Name + '.' + pElem.Name;
-
 
                                     pElem := Subarea.NextObject
                                 end;
@@ -2947,15 +2866,10 @@ begin
                                 TestBranch := SubArea.GoForward;
                             end;
                             SubArea.Free;
-                            // FSWriteln(F);
                         end;
                 TestElement := CktElements.Next;
             end;
         end;
-
-        // FSWriteln(F);
-        // FSWriteln(F, '***********  THE FOLLOWING ENABLED ELEMENTS ARE ISOLATED ************');
-        // FSWriteln(F);
 
         with DSS.ActiveCircuit do
         begin
@@ -2973,18 +2887,12 @@ begin
                 if TestElement.Enabled then
                     if not (Flg.Checked in TestElement.Flags) then
                     begin
-                        // FSWrite(F, '"' + TestElement.FullName + '"');
-                        // FSWrite(F, '  Buses:');
                         isolatedElement.name := TestElement.FullName;
                         for j := 1 to TestElement.nterms do
                         begin
-                            // FSWrite(F, '  "', TestElement.GetBus(j), '"');
-
-
                             i := Length(isolatedElement.buses) + 1;
                             SetLength(isolatedElement.buses, i); 
                             isolatedElement.buses[i-1] := TestElement.GetBus(j);
-
                         end;
 
                         i := Length(isolatedBusesReport.isolatedElements) + 1;
@@ -2992,7 +2900,6 @@ begin
 
                         isolatedElement.numBuses := Length(isolatedElement.buses);
                         isolatedBusesReport.isolatedElements[i-1] := isolatedElement;
-                        // FSWriteln(F);
                     end;
                 TestElement := CktElements.Next;
             end;
@@ -3003,43 +2910,8 @@ begin
         isolatedBusesReport.numElements := Length(isolatedBusesReport.isolatedElements);
         send_isolated_elements_report(isolatedBusesReport);
 
-        // FSWriteln(F);
-        // FSWriteln(F, '***  THE FOLLOWING BUSES ARE NOT CONNECTED TO ANY POWER DELIVERY ELEMENT ***');
-        // FSWriteln(F);
-
-        // with DSS.ActiveCircuit do
-        // begin
-        //     for j := 1 to NumBuses do
-        //         if not Buses^[j].BusChecked then
-        //             FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
-        // end;
-
-
-        // FSWriteln(F);
-        // FSWriteln(F, '***********  CONNECTED CIRCUIT ELEMENT TREE ************');
-        // FSWriteln(F);
-        // FSWriteln(F, '(Lexical Level) Element name');
-        // FSWriteln(F);
-        //
-        // TestBranch := Branch_List.First;
-        // while TestBranch <> NIL do
-        // begin
-        //     FSWriteln(F, ['(', IntToStr(Branch_List.Level), ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name]);
-        //     TestElement := Branch_List.FirstObject;
-        //     while TestElement <> NIL do
-        //     begin
-        //         FSWriteln(F, ['[SHUNT], ', TestElement.ParentClass.Name, '.', TestElement.Name]);
-        //         TestElement := Branch_List.NextObject
-        //     end;
-        //     TestBranch := Branch_List.GoForward;
-        // end;
-        //
-
     finally
-
-        // FreeAndNil(F);
         Branch_List.Free;
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3070,7 +2942,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3078,7 +2949,6 @@ end;
 procedure ShowLoops(DSS: TDSSContext; FileNm: String);
 // Show loops and paralleled branches in Meter zones
 var
-    // F: TFileStream = nil;
     pdElem: TPDElement;
     hMeter: Integer;
     pMtr: TEnergyMeterObj;
@@ -3086,11 +2956,6 @@ var
     lineObj: TDSSCktElement;
 begin
     try
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-
-        // FSWriteln(F, 'Loops and Paralleled Lines in all EnergyMeter Zones');
-        // FSWriteln(F);
-
         hMeter := DSS.EnergyMeterClass.First;
 
         while hMeter > 0 do
@@ -3105,12 +2970,6 @@ begin
                     // cycle through branches
                     with pMtr.BranchList.PresentBranch do
                     begin
-                        // // Reset loop obj
-                        // loop.meterName := '';
-                        // loop.lineA := '';
-                        // loop.lineB := '';
-                        // loop.relation := '';
-
                         lineObj := TDSSCktElement(LoopLineObj);
                         if lineObj <> NIL then
                         begin
@@ -3119,13 +2978,11 @@ begin
                             loop.lineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
                             if IsParallel then
                             begin
-                                // FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': PARALLEL WITH ', TDSSCktElement(LoopLineObj).Parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
                                 loop.relation := 'PARALLEL';
                                 send_loop_report(loop);
                             end;
                             if IsLoopedHere then
                             begin
-                                // FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': LOOPED TO     ', TDSSCktElement(LoopLineObj).parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
                                 loop.relation := 'LOOP';
                                 send_loop_report(loop);
                             end;
@@ -3140,8 +2997,6 @@ begin
 
     finally
 
-        // FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3294,7 +3149,6 @@ begin
     finally
         FreeAndNil(F);
         FreeAndNil(Ftree);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
         ShowTreeView(TreeNm);
     end;
@@ -3536,8 +3390,6 @@ begin
 
         FreeAndNil(F);
         FreeAndNil(F2);
-        // FireOffEditor(DSS, FileNm);
-        // FireOffEditor(DSS, LineCodesFileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3587,7 +3439,6 @@ begin
             FSWriteln(F, 'Yprim matrix is Nil');
     finally
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3647,7 +3498,6 @@ begin
 
     finally
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3659,7 +3509,6 @@ type
     NodeDoubleArray = array[0..100] of Double;
 
 var
-    F: TFileStream = nil;
     i, j, k: Integer;
     nRef: Integer;
     Bname: String;
@@ -3675,8 +3524,6 @@ var
 begin
     MaxNodeCurrent := NIL;
     try
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-
         with DSS.ActiveCircuit, DSS.ActiveCircuit.solution do
         begin
         // Zero out the nodal current array
@@ -3729,28 +3576,14 @@ begin
         // Now write report
 
             SetMaxBusNameLength(DSS);
-            // MaxBusNameLength := MaxBusNameLength + 2;
-            // FSWriteln(F);
-            // FSWriteln(F, 'Node Current Mismatch Report');
-            // FSWriteln(F);
-            // FSWriteln(F);
-            // FSWriteln(F, pad('Bus,', MaxBusNameLength), ' Node, "Current Sum (A)", "%error", "Max Current (A)"');
 
           // Ground Bus
             nref := 0;
             dTemp := Cabs(Currents^[nref]);
             if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-            begin
-                NodeMismatch.pctError := 0.0;
-                // pctError := Format('%10.1f', [0.0]);
-            end
+                NodeMismatch.pctError := 0.0
             else
-            begin
-                // pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
                 NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
-            end;
-            // BName := Pad('"System Ground"', MaxBusNameLength);
-            // FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, nref, dTemp, pctError, MaxNodeCurrent^[nRef]]));
 
             // send the report
             NodeMismatch.bus := 'System Ground';
@@ -3767,20 +3600,9 @@ begin
                     nref := Buses^[i].GetRef(j);
                     dTemp := Cabs(Currents^[nref]);
                     if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-                    begin
-                        NodeMismatch.pctError := 0.0;
-                        // pctError := Format('%10.1f', [0.0]);
-                    end
+                        NodeMismatch.pctError := 0.0
                     else
-                    begin
-                        // pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
                         NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
-                    end;
-                    // if j = 1 then
-                    //     Bname := Paddots(EncloseQuotes(BusList.NameOfIndex(i)), MaxBusNameLength)
-                    // else
-                    //     BName := Pad('"   -"', MaxBusNameLength);
-                    // FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, Buses^[i].GetNum(j), dTemp, pctError, MaxNodeCurrent^[nRef]]));
 
                     // send the report
                     NodeMismatch.bus := BusList.NameOfIndex(i);
@@ -3793,8 +3615,6 @@ begin
         end;
 
     finally
-        // FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
         ReallocMem(MaxNodeCurrent, 0); // Dispose of temp memory
     end;
@@ -3804,8 +3624,6 @@ end;
 procedure ShowkVBaseMismatch(DSS: TDSSContext; FileNm: String);
 
 var
-    F: TFileStream = nil;
-
     pLoad: TLoadObj;
     pGen: TGeneratorObj;
     pBus: TDSSBus;
@@ -3814,20 +3632,8 @@ var
 
     kvBaseMismatchReport: TKVBaseMismatch;
 
-
 begin
     try
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-
-        {Check Loads}
-        // if DSS.ActiveCircuit.Loads.Count > 0 then
-        // begin
-        //     FSWriteln(F);
-        //     FSWriteln(F, '!!!  LOAD VOLTAGE BASE MISMATCHES');
-        //     FSWriteln(F);
-        // end;
-
-
         pLoad := DSS.ActiveCircuit.Loads.First;
         while pLoad <> NIL do
         begin
@@ -3840,9 +3646,6 @@ begin
                 begin
                     if abs(pLoad.kVLoadBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        // FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), pBus.kVBase]));
-                        // FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pLoad.kVLoadBase]));
-                        // FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, pBus.kVBase]));
                         kvBaseMismatchReport.load := pLoad.FullName;
                         kvBaseMismatchReport.kv := pLoad.kVLoadBase;
                         kvBaseMismatchReport.bus := pLoad.GetBus(1);
@@ -3855,9 +3658,6 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pLoad.kVLoadBase - BuskV) > 0.10 * BuskV then
                     begin
-                        // FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), BuskV]));
-                        // FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pLoad.kVLoadBase]));
-                        // FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, BuskV]));
                         kvBaseMismatchReport.load := pLoad.FullName;
                         kvBaseMismatchReport.kv := pLoad.kVLoadBase;
                         kvBaseMismatchReport.bus := pLoad.GetBus(1);
@@ -3868,17 +3668,6 @@ begin
             end;
             pLoad := DSS.ActiveCircuit.Loads.Next;
         end;
-
-
-        {Check Generators}
-
-        // if DSS.ActiveCircuit.Generators.Count > 0 then
-        // begin
-        //     FSWriteln(F);
-        //     FSWriteln(F, '!!!  GENERATOR VOLTAGE BASE MISMATCHES');
-        //     FSWriteln(F);
-        // end;
-
 
         pGen := DSS.ActiveCircuit.Generators.First;
         while pGen <> NIL do
@@ -3892,9 +3681,6 @@ begin
                 begin
                     if abs(pGen.Genvars.kVGeneratorBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        // FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), pBus.kVBase]));
-                        // FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
-                        // FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, pBus.kVBase]));
                         kvBaseMismatchReport.load := pLoad.FullName;
                         kvBaseMismatchReport.kv := pLoad.kVLoadBase;
                         kvBaseMismatchReport.bus := pLoad.GetBus(1);
@@ -3907,9 +3693,6 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pGen.Genvars.kVGeneratorBase - BuskV) > 0.10 * BuskV then
                     begin
-                        // FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), BuskV]));
-                        // FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
-                        // FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, BuskV]));
                         kvBaseMismatchReport.load := pLoad.FullName;
                         kvBaseMismatchReport.kv := pLoad.kVLoadBase;
                         kvBaseMismatchReport.bus := pLoad.GetBus(1);
@@ -3923,8 +3706,6 @@ begin
         end;
 
     finally
-        // FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -4007,7 +3788,6 @@ begin
 
     finally
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -4042,7 +3822,6 @@ begin
 
     finally
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -4062,7 +3841,6 @@ begin
     finally
 
         FreeAndNil(F);
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -4070,14 +3848,12 @@ end;
 procedure ShowEventLog(DSS: TDSSContext; FileNm: String);
 begin
     try
-
-        DSS.EventStrings.SaveToFile(FileNm);
-        DSS.GlobalResult := FileNm;
+        // DSS.EventStrings.SaveToFile(FileNm);
+        // DSS.GlobalResult := FileNm;
         if Length(DSS.EventLog) > 0 then
             send_eventlog(DSS.EventLog, Length(DSS.EventLog));
 
     finally
-        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;

@@ -396,9 +396,6 @@ void send_loop_report(struct TLoopReport loop) {
     loopReport.lineb = loop.lineB;
     loopReport.relation = loop.relation;
 
-    printf("%s %s %s %s\n", loopReport.meter, loopReport.linea, loopReport.lineb, loopReport.relation);
-
-
     OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
     queueMsg.report_case = OPEN_DSS_REPORT__REPORT_LR;
     queueMsg.lr = &loopReport;
