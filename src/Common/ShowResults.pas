@@ -2765,7 +2765,7 @@ begin
         // WriteStr(sout, Pad('TOTAL LOAD POWER = ', 30), Abs(LoadPower.re): 10: 1, ' kW');
         // FSWriteln(F, sout);
 
-        LossesTotals.totalLoadPower := LoadPower.re;
+        LossesTotals.totalLoadPower := Abs(LoadPower.re);
         
         // FSWrite(F, Pad('Percent Losses for Circuit = ', 30));
         if LoadPower.re <> 0.0 then
@@ -3078,7 +3078,7 @@ end;
 procedure ShowLoops(DSS: TDSSContext; FileNm: String);
 // Show loops and paralleled branches in Meter zones
 var
-    F: TFileStream = nil;
+    // F: TFileStream = nil;
     pdElem: TPDElement;
     hMeter: Integer;
     pMtr: TEnergyMeterObj;
@@ -3105,11 +3105,11 @@ begin
                     // cycle through branches
                     with pMtr.BranchList.PresentBranch do
                     begin
-                        // Reset loop obj
-                        loop.meterName := '';
-                        loop.lineA := '';
-                        loop.lineB := '';
-                        loop.relation := '';
+                        // // Reset loop obj
+                        // loop.meterName := '';
+                        // loop.lineA := '';
+                        // loop.lineB := '';
+                        // loop.relation := '';
 
                         lineObj := TDSSCktElement(LoopLineObj);
                         if lineObj <> NIL then
