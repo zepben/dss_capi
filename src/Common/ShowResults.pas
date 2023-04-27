@@ -3670,10 +3670,12 @@ var
     pctError: String;
     dTemp: Double;
 
+    NodeMismatch: TNodeMismatch;
+
 begin
     MaxNodeCurrent := NIL;
     try
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
+        // F := TBufferedFileStream.Create(FileNm, fmCreate);
 
         with DSS.ActiveCircuit, DSS.ActiveCircuit.solution do
         begin
@@ -3727,22 +3729,35 @@ begin
         // Now write report
 
             SetMaxBusNameLength(DSS);
-            MaxBusNameLength := MaxBusNameLength + 2;
-            FSWriteln(F);
-            FSWriteln(F, 'Node Current Mismatch Report');
-            FSWriteln(F);
-            FSWriteln(F);
-            FSWriteln(F, pad('Bus,', MaxBusNameLength), ' Node, "Current Sum (A)", "%error", "Max Current (A)"');
+            // MaxBusNameLength := MaxBusNameLength + 2;
+            // FSWriteln(F);
+            // FSWriteln(F, 'Node Current Mismatch Report');
+            // FSWriteln(F);
+            // FSWriteln(F);
+            // FSWriteln(F, pad('Bus,', MaxBusNameLength), ' Node, "Current Sum (A)", "%error", "Max Current (A)"');
 
           // Ground Bus
             nref := 0;
             dTemp := Cabs(Currents^[nref]);
             if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-                pctError := Format('%10.1f', [0.0])
+            begin
+                NodeMismatch.pctError := 0.0;
+                // pctError := Format('%10.1f', [0.0]);
+            end
             else
-                pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
-            BName := Pad('"System Ground"', MaxBusNameLength);
-            FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, nref, dTemp, pctError, MaxNodeCurrent^[nRef]]));
+            begin
+                // pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
+                NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
+            end;
+            // BName := Pad('"System Ground"', MaxBusNameLength);
+            // FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, nref, dTemp, pctError, MaxNodeCurrent^[nRef]]));
+
+            // send the report
+            NodeMismatch.bus := 'System Ground';
+            NodeMismatch.node := nref;
+            NodeMismatch.currentSum := dTemp;
+            NodeMismatch.maxCurrent := MaxNodeCurrent^[nRef];
+            send_node_mismatch_report(NodeMismatch);
 
 
             for i := 1 to DSS.ActiveCircuit.NumBuses do
@@ -3752,21 +3767,34 @@ begin
                     nref := Buses^[i].GetRef(j);
                     dTemp := Cabs(Currents^[nref]);
                     if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-                        pctError := Format('%10.1f', [0.0])
+                    begin
+                        NodeMismatch.pctError := 0.0;
+                        // pctError := Format('%10.1f', [0.0]);
+                    end
                     else
-                        pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
-                    if j = 1 then
-                        Bname := Paddots(EncloseQuotes(BusList.NameOfIndex(i)), MaxBusNameLength)
-                    else
-                        BName := Pad('"   -"', MaxBusNameLength);
-                    FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, Buses^[i].GetNum(j), dTemp, pctError, MaxNodeCurrent^[nRef]]));
+                    begin
+                        // pctError := Format('%10.6f', [dTemp / MaxNodeCurrent^[nRef] * 100.0]);
+                        NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
+                    end;
+                    // if j = 1 then
+                    //     Bname := Paddots(EncloseQuotes(BusList.NameOfIndex(i)), MaxBusNameLength)
+                    // else
+                    //     BName := Pad('"   -"', MaxBusNameLength);
+                    // FSWriteln(F, Format('%s, %2d, %10.5f,       %s, %10.5f', [Bname, Buses^[i].GetNum(j), dTemp, pctError, MaxNodeCurrent^[nRef]]));
+
+                    // send the report
+                    NodeMismatch.bus := BusList.NameOfIndex(i);
+                    NodeMismatch.node := nref;
+                    NodeMismatch.currentSum := dTemp;
+                    NodeMismatch.maxCurrent := MaxNodeCurrent^[nRef];
+                    send_node_mismatch_report(NodeMismatch);
                 end;
             end;
         end;
 
     finally
-        FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FreeAndNil(F);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
         ReallocMem(MaxNodeCurrent, 0); // Dispose of temp memory
     end;
@@ -3784,17 +3812,20 @@ var
     BuskV: Double;
     BusName: String;
 
+    kvBaseMismatchReport: TKVBaseMismatch;
+
+
 begin
     try
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
+        // F := TBufferedFileStream.Create(FileNm, fmCreate);
 
         {Check Loads}
-        if DSS.ActiveCircuit.Loads.Count > 0 then
-        begin
-            FSWriteln(F);
-            FSWriteln(F, '!!!  LOAD VOLTAGE BASE MISMATCHES');
-            FSWriteln(F);
-        end;
+        // if DSS.ActiveCircuit.Loads.Count > 0 then
+        // begin
+        //     FSWriteln(F);
+        //     FSWriteln(F, '!!!  LOAD VOLTAGE BASE MISMATCHES');
+        //     FSWriteln(F);
+        // end;
 
 
         pLoad := DSS.ActiveCircuit.Loads.First;
@@ -3809,9 +3840,14 @@ begin
                 begin
                     if abs(pLoad.kVLoadBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), pBus.kVBase]));
-                        FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pLoad.kVLoadBase]));
-                        FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, pBus.kVBase]));
+                        // FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), pBus.kVBase]));
+                        // FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pLoad.kVLoadBase]));
+                        // FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, pBus.kVBase]));
+                        kvBaseMismatchReport.load := pLoad.FullName;
+                        kvBaseMismatchReport.kv := pLoad.kVLoadBase;
+                        kvBaseMismatchReport.bus := pLoad.GetBus(1);
+                        kvBaseMismatchReport.kvBase := pBus.kVBase;
+                        send_kvbase_mismatch_report(kvBaseMismatchReport);
                     end;
                 end
                 else
@@ -3819,9 +3855,14 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pLoad.kVLoadBase - BuskV) > 0.10 * BuskV then
                     begin
-                        FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), BuskV]));
-                        FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pLoad.kVLoadBase]));
-                        FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, BuskV]));
+                        // FSWriteln(F, Format('!!!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pLoad.FullName, pLoad.kVLoadBase, pLoad.GetBus(1), BuskV]));
+                        // FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pLoad.kVLoadBase]));
+                        // FSWriteln(F, Format('!%s.kV=%.6g', [pLoad.FullName, BuskV]));
+                        kvBaseMismatchReport.load := pLoad.FullName;
+                        kvBaseMismatchReport.kv := pLoad.kVLoadBase;
+                        kvBaseMismatchReport.bus := pLoad.GetBus(1);
+                        kvBaseMismatchReport.kvBase := pBus.kVBase;
+                        send_kvbase_mismatch_report(kvBaseMismatchReport);
                     end;
                 end;
             end;
@@ -3831,12 +3872,12 @@ begin
 
         {Check Generators}
 
-        if DSS.ActiveCircuit.Generators.Count > 0 then
-        begin
-            FSWriteln(F);
-            FSWriteln(F, '!!!  GENERATOR VOLTAGE BASE MISMATCHES');
-            FSWriteln(F);
-        end;
+        // if DSS.ActiveCircuit.Generators.Count > 0 then
+        // begin
+        //     FSWriteln(F);
+        //     FSWriteln(F, '!!!  GENERATOR VOLTAGE BASE MISMATCHES');
+        //     FSWriteln(F);
+        // end;
 
 
         pGen := DSS.ActiveCircuit.Generators.First;
@@ -3851,9 +3892,14 @@ begin
                 begin
                     if abs(pGen.Genvars.kVGeneratorBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), pBus.kVBase]));
-                        FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
-                        FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, pBus.kVBase]));
+                        // FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s LN kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), pBus.kVBase]));
+                        // FSWriteln(F, Format('!setkvbase %s kVLN=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
+                        // FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, pBus.kVBase]));
+                        kvBaseMismatchReport.load := pLoad.FullName;
+                        kvBaseMismatchReport.kv := pLoad.kVLoadBase;
+                        kvBaseMismatchReport.bus := pLoad.GetBus(1);
+                        kvBaseMismatchReport.kvBase := pBus.kVBase;
+                        send_kvbase_mismatch_report(kvBaseMismatchReport);
                     end;
                 end
                 else
@@ -3861,9 +3907,14 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pGen.Genvars.kVGeneratorBase - BuskV) > 0.10 * BuskV then
                     begin
-                        FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), BuskV]));
-                        FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
-                        FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, BuskV]));
+                        // FSWriteln(F, Format('!!! Voltage Base Mismatch, %s.kV=%.6g, Bus %s kvBase = %.6g', [pGen.FullName, pGen.Genvars.kVGeneratorBase, pGen.GetBus(1), BuskV]));
+                        // FSWriteln(F, Format('!setkvbase %s kVLL=%.6g', [Busname, pGen.Genvars.kVGeneratorBase]));
+                        // FSWriteln(F, Format('!%s.kV=%.6g', [pGen.FullName, BuskV]));
+                        kvBaseMismatchReport.load := pLoad.FullName;
+                        kvBaseMismatchReport.kv := pLoad.kVLoadBase;
+                        kvBaseMismatchReport.bus := pLoad.GetBus(1);
+                        kvBaseMismatchReport.kvBase := pBus.kVBase;
+                        send_kvbase_mismatch_report(kvBaseMismatchReport);
                     end;
                 end;
             end;
@@ -3872,8 +3923,8 @@ begin
         end;
 
     finally
-        FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FreeAndNil(F);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -4017,8 +4068,6 @@ begin
 end;
 
 procedure ShowEventLog(DSS: TDSSContext; FileNm: String);
-
-
 begin
     try
 

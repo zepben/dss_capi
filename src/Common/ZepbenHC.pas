@@ -242,6 +242,24 @@ type
         totalLoadPower: Double;
         totalPctLosses: Double;
     end;
+
+type
+    TNodeMismatch = record
+        bus: string;
+        node: Integer;
+        currentSum: Double;
+        pctError: Double;
+        maxCurrent: Double;
+    end;
+
+type
+    TKVBaseMismatch = record
+        load: string;
+        kv: double;
+        bus: string;
+        kvBase: Double;
+    end;
+
 // diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
 procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
 // phvValues should be in the phv record, but seems to cause issues, so pass it as a separate parameter.
@@ -257,6 +275,9 @@ procedure send_loop_report(loop: TLoopReport); RMQPUSH_CALL;
 procedure send_isolated_elements_report(ir: TIsolatedBusesReport); RMQPUSH_CALL;
 procedure send_losses_entry(lossentry: TLossesEntry); RMQPUSH_CALL;
 procedure send_losses_totals(losstotals: TLossesTotals); RMQPUSH_CALL;
+procedure send_node_mismatch_report(nm: TNodeMismatch); RMQPUSH_CALL;
+procedure send_kvbase_mismatch_report(nm: TKVBaseMismatch); RMQPUSH_CALL;
+
 implementation
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 

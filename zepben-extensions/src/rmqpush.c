@@ -432,6 +432,36 @@ void send_losses_totals(struct TLossesTotals lt) {
     send_opendss_message(&queueMsg);
 }
 
+void send_node_mismatch_report(struct TNodeMismatch nm) {
+    NodeMismatch mismatch = NODE_MISMATCH__INIT;
+
+    mismatch.bus = nm.bus;
+    mismatch.node = nm.node;
+    mismatch.currentsum = nm.currentSum;
+    mismatch.pcterror = nm.pctError;
+    mismatch.maxcurrent = nm.maxCurrent;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_NM;
+    queueMsg.nm = &mismatch;
+
+    send_opendss_message(&queueMsg);
+}
+
+void send_kvbase_mismatch_report(struct TKVBaseMismatch kvm) {
+    KVBaseMismatch mismatch = KVBASE_MISMATCH__INIT;
+
+    mismatch.load = kvm.load;
+    mismatch.kv = kvm.kv;
+    mismatch.bus = kvm.bus;
+    mismatch.kvbase = kvm.kvBase;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_KVM;
+    queueMsg.kvm = &mismatch;
+
+    send_opendss_message(&queueMsg);
+}
 
 void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
     IsolatedBusesReport report = ISOLATED_BUSES_REPORT__INIT;

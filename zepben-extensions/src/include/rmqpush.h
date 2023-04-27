@@ -190,6 +190,21 @@ struct TLossesTotals {
     double totalPctLosses;
 };
 
+struct TNodeMismatch {
+    char *bus;
+    int node;
+    double currentSum;
+    double pctError;
+    double maxCurrent;
+};
+
+struct TKVBaseMismatch {
+    char *load;
+    double kv;
+    char *bus;
+    double kvBase;
+};
+
 struct TIsolatedArea {
     int id;
     char *line;
@@ -224,6 +239,8 @@ void send_eventlog(struct TEventLog *eventlog, int numEvents);
 void send_loop_report(struct TLoopReport loop);
 void send_losses_entry(struct TLossesEntry lr);
 void send_losses_totals(struct TLossesTotals lr);
+void send_node_mismatch_report(struct TNodeMismatch nm);
+void send_kvbase_mismatch_report(struct TKVBaseMismatch bm);
 void send_isolated_elements_report(struct TIsolatedBusesReport ib);
 
 #endif
