@@ -388,3 +388,71 @@ void send_eventlog(struct TEventLog *el, int numEvents) {
 
 }
 
+
+void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
+    IsolatedBusesReport report = ISOLATED_BUSES_REPORT__INIT;
+
+    // isolatedBuses first; pick 1024b arbitrarily as I've never seen bus names this long 
+    report.disconnectedbuses = malloc(ib.numBuses * 1024);
+    for (int i = 0; i < ib.numBuses; i++) {
+        report.disconnectedbuses[i] = ib.isolatedBuses[i];
+    }
+
+
+    // IsolatedAreas
+    report.isolatedsubareas = malloc(ib.numAreas * sizeof(IsolatedArea));
+    for (int i = 0; i < ib.numAreas; i++) {
+        IsolatedArea area = ISOLATED_AREA__INIT;
+        struct TIsolatedArea ia = ib.isolatedArea[i];
+
+        area.id = ia.id;
+        area.line = ia.line;
+        area.loads = malloc(ia.numLoads * 1024);
+        for (int j = 0; i < ia.numLoads; i++) {
+            area.loads[j] = ia.loads[j];
+        }
+
+        IsolatedArea *a = (IsolatedArea*)malloc(sizeof(IsolatedArea));
+        *a = area;
+        report.isolatedsubareas[i] = a;
+    }
+
+    // IsolatedElements
+    report.isolatedelements = malloc(ib.numElements * sizeof(IsolatedElement));
+    for (int i = 0; i < ib.numElements; i++) {
+        IsolatedElement element = ISOLATED_ELEMENT__INIT;
+        struct TIsolatedElement ie = ib.isolatedElement[i];
+
+        element.name = ie.name;
+        element.buses = malloc(ie.numBuses * 1024);
+        for (int j = 0; i < ie.numBuses; i++) {
+            element.buses[j] = ie.buses[j];
+        }
+
+        IsolatedElement *el = (IsolatedElement*)malloc(sizeof(IsolatedElement));
+        *el = element;
+
+        report.isolatedelements[i] = el;
+    }
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_IB;
+    queueMsg.ib = &report;
+    send_opendss_message(&queueMsg);
+
+    // free stuff
+    free(report.disconnectedbuses);
+
+    for (int i = 0; i < ib.numAreas; i++) {
+        free(report.isolatedsubareas[i]->loads);
+        free(report.isolatedsubareas[i]);
+    }
+    free(report.isolatedsubareas);
+
+    for (int i = 0; i < ib.numElements; i++) {
+        free(report.isolatedelements[i]->buses);
+        free(report.isolatedelements[i]);
+    }
+    free(report.isolatedelements);
+}
+

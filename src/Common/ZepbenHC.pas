@@ -193,6 +193,30 @@ type
         position: Integer;
     end;
 
+// Records for streaming the Isolated elements
+type
+    TIsolatedArea = record
+        id: Integer;
+        line: string;
+        numLoads: Integer;
+        loads: array of string;
+    end;
+
+type
+    TIsolatedElement = record
+        name: string;
+        numBuses: Integer;
+        buses: array of string;
+    end;
+
+type
+    TIsolatedBusesReport = record
+        disconnectedBuses: array of string;
+        isolatedSubAreas: array of TIsolatedArea;
+        isolatedElements: array of TIsolatedElement;
+        numBuses, numAreas, numElements: Integer;
+    end;
+
 // diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
 procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
 // phvValues should be in the phv record, but seems to cause issues, so pass it as a separate parameter.
@@ -204,6 +228,7 @@ procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
 procedure send_summary_report(sr: TSummaryReport); RMQPUSH_CALL;
 procedure send_tap_report(tp: TTapReport); RMQPUSH_CALL;
 procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
+procedure send_isolated_elements_report(ir: TIsolatedBusesReport); RMQPUSH_CALL;
 implementation
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 

@@ -168,6 +168,26 @@ struct TTapReport {
     int position;
 };
 
+struct TIsolatedArea {
+    int id;
+    char *line;
+    int numLoads;
+    char **loads;
+};
+
+struct TIsolatedElement {
+    char *name;
+    int numBuses;
+    char **buses;
+};
+
+struct TIsolatedBusesReport {
+    char **isolatedBuses;
+    struct TIsolatedArea *isolatedArea;
+    struct TIsolatedElement *isolatedElement;
+    int numBuses, numAreas, numElements;
+};
+
 // diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
 void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBaseRegisters diVoltBases[]);
 // phvValues should be in the phv struct, but seems to cause issues, so pass it as a separate parameter.
@@ -179,5 +199,6 @@ void send_voltage_report(struct TVoltageReport vr);
 void send_summary_report(struct TSummaryReport sr);
 void send_tap_report(struct TTapReport tap);
 void send_eventlog(struct TEventLog *eventlog, int numEvents);
+void send_isolated_elements_report(struct TIsolatedBusesReport ib);
 
 #endif

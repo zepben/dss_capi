@@ -2820,11 +2820,16 @@ var
     Branch_List,
     SubArea: TCktTree;      // Pointers to all circuit elements
 
-    F: TFileStream = nil;
+    // F: TFileStream = nil;
     TestElement, TestBranch, pElem: TDSSCktElement;
 
     i, j: Integer;
     sout: String;
+
+    isolatedBusesReport: TIsolatedBusesReport;
+    isolatedArea: TIsolatedArea;
+    isolatedElement: TIsolatedElement;
+
 begin
      // Make sure bus list is built
     if DSS.ActiveCircuit.BusNameRedefined then
@@ -2857,25 +2862,32 @@ begin
 
     // Show Report of Elements connected and not connected
     try
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
-
-        FSWriteln(F);
-        FSWriteln(F, 'ISOLATED CIRCUIT ELEMENT REPORT');
-        FSWriteln(F);
-        FSWriteln(F);
-        FSWriteln(F, '***  THE FOLLOWING BUSES HAVE NO CONNECTION TO THE SOURCE ***');
-        FSWriteln(F);
+        // F := TBufferedFileStream.Create(FileNm, fmCreate);
+        //
+        // FSWriteln(F);
+        // FSWriteln(F, 'ISOLATED CIRCUIT ELEMENT REPORT');
+        // FSWriteln(F);
+        // FSWriteln(F);
+        // FSWriteln(F, '***  THE FOLLOWING BUSES HAVE NO CONNECTION TO THE SOURCE ***');
+        // FSWriteln(F);
 
         with DSS.ActiveCircuit do
         begin
             for j := 1 to NumBuses do
                 if not Buses^[j].BusChecked then
-                    FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
+                begin
+                    // FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
+
+                    i := Length(isolatedBusesReport.disconnectedBuses) + 1;
+                    SetLength(isolatedBusesReport.disconnectedBuses, i);
+                    isolatedBusesReport.disconnectedBuses[i-1] := BusList.NameOfIndex(j);
+                end;
         end;
 
-        FSWriteln(F);
-        FSWriteln(F, '***********  THE FOLLOWING SUB NETWORKS ARE ISOLATED ************');
-        FSWriteln(F);
+
+        // FSWriteln(F);
+        // FSWriteln(F, '***********  THE FOLLOWING SUB NETWORKS ARE ISOLATED ************');
+        // FSWriteln(F);
 
         with DSS.ActiveCircuit do
         begin
@@ -2888,30 +2900,44 @@ begin
                         if (TestElement.DSSObjType and BASECLASSMASK) = PD_ELEMENT then
                         begin
                             SubArea := GetIsolatedSubArea(DSS.ActiveCircuit, TestElement);
-                            FSWriteln(F, '*** START SUBAREA ***');
+                            // FSWriteln(F, '*** START SUBAREA ***');
                             TestBranch := SubArea.First;
                             while TestBranch <> NIL do
                             begin
-                                WriteStr(sout, '(', SubArea.Level: 0, ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name);
-                                FSWriteln(F, sout);
+                                // WriteStr(sout, '(', SubArea.Level: 0, ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name);
+                                // FSWriteln(F, sout);
                                 pElem := SubArea.FirstObject;
+                                isolatedArea.id := SubArea.Level; 
+                                isolatedArea.line := TestBranch.ParentClass.Name + '.' + TestBranch.Name;
                                 while pElem <> NIL do
                                 begin
-                                    FSWriteln(F, ['[SHUNT], ', pElem.ParentClass.Name, '.', pElem.Name]);
+                                    // FSWriteln(F, ['[SHUNT], ', pElem.ParentClass.Name, '.', pElem.Name]);
+
+                                    i := Length(isolatedArea.loads) + 1;
+                                    SetLength(isolatedArea.loads, i);
+                                    isolatedArea.loads[i-1] := pElem.ParentClass.Name + '.' + pElem.Name;
+
+
                                     pElem := Subarea.NextObject
                                 end;
+
+                                i := Length(isolatedBusesReport.isolatedSubAreas) + 1;
+                                SetLength(isolatedBusesReport.isolatedSubAreas, i); 
+                                isolatedBusesReport.isolatedSubAreas[Length(isolatedBusesReport.isolatedSubAreas)] := isolatedArea;
+
+
                                 TestBranch := SubArea.GoForward;
                             end;
                             SubArea.Free;
-                            FSWriteln(F);
+                            // FSWriteln(F);
                         end;
                 TestElement := CktElements.Next;
             end;
         end;
 
-        FSWriteln(F);
-        FSWriteln(F, '***********  THE FOLLOWING ENABLED ELEMENTS ARE ISOLATED ************');
-        FSWriteln(F);
+        // FSWriteln(F);
+        // FSWriteln(F, '***********  THE FOLLOWING ENABLED ELEMENTS ARE ISOLATED ************');
+        // FSWriteln(F);
 
         with DSS.ActiveCircuit do
         begin
@@ -2929,53 +2955,73 @@ begin
                 if TestElement.Enabled then
                     if not (Flg.Checked in TestElement.Flags) then
                     begin
-                        FSWrite(F, '"' + TestElement.FullName + '"');
-                        FSWrite(F, '  Buses:');
+                        // FSWrite(F, '"' + TestElement.FullName + '"');
+                        // FSWrite(F, '  Buses:');
+                        isolatedElement.name := TestElement.FullName;
                         for j := 1 to TestElement.nterms do
-                            FSWrite(F, '  "', TestElement.GetBus(j), '"');
-                        FSWriteln(F);
+                        begin
+                            // FSWrite(F, '  "', TestElement.GetBus(j), '"');
+
+
+                            i := Length(isolatedElement.buses) + 1;
+                            SetLength(isolatedElement.buses, i); 
+                            isolatedElement.buses[i-1] := TestElement.GetBus(j);
+
+                        end;
+
+                        i := Length(isolatedBusesReport.isolatedElements) + 1;
+                        SetLength(isolatedBusesReport.isolatedElements, i); 
+
+                        isolatedElement.numBuses := Length(isolatedElement.buses);
+                        isolatedBusesReport.isolatedElements[i-1] := isolatedElement;
+                        // FSWriteln(F);
                     end;
                 TestElement := CktElements.Next;
             end;
         end;
 
-        FSWriteln(F);
-        FSWriteln(F, '***  THE FOLLOWING BUSES ARE NOT CONNECTED TO ANY POWER DELIVERY ELEMENT ***');
-        FSWriteln(F);
+        isolatedBusesReport.numBuses := Length(isolatedBusesReport.disconnectedBuses);
+        isolatedBusesReport.numAreas := Length(isolatedBusesReport.isolatedSubAreas);
+        isolatedBusesReport.numElements := Length(isolatedBusesReport.isolatedElements);
+        send_isolated_elements_report(isolatedBusesReport);
 
-        with DSS.ActiveCircuit do
-        begin
-            for j := 1 to NumBuses do
-                if not Buses^[j].BusChecked then
-                    FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
-        end;
+        // FSWriteln(F);
+        // FSWriteln(F, '***  THE FOLLOWING BUSES ARE NOT CONNECTED TO ANY POWER DELIVERY ELEMENT ***');
+        // FSWriteln(F);
+
+        // with DSS.ActiveCircuit do
+        // begin
+        //     for j := 1 to NumBuses do
+        //         if not Buses^[j].BusChecked then
+        //             FSWriteln(F, EncloseQuotes(BusList.NameOfIndex(j)));
+        // end;
 
 
-        FSWriteln(F);
-        FSWriteln(F, '***********  CONNECTED CIRCUIT ELEMENT TREE ************');
-        FSWriteln(F);
-        FSWriteln(F, '(Lexical Level) Element name');
-        FSWriteln(F);
-
-        TestBranch := Branch_List.First;
-        while TestBranch <> NIL do
-        begin
-            FSWriteln(F, ['(', IntToStr(Branch_List.Level), ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name]);
-            TestElement := Branch_List.FirstObject;
-            while TestElement <> NIL do
-            begin
-                FSWriteln(F, ['[SHUNT], ', TestElement.ParentClass.Name, '.', TestElement.Name]);
-                TestElement := Branch_List.NextObject
-            end;
-            TestBranch := Branch_List.GoForward;
-        end;
-
+        // FSWriteln(F);
+        // FSWriteln(F, '***********  CONNECTED CIRCUIT ELEMENT TREE ************');
+        // FSWriteln(F);
+        // FSWriteln(F, '(Lexical Level) Element name');
+        // FSWriteln(F);
+        //
+        // TestBranch := Branch_List.First;
+        // while TestBranch <> NIL do
+        // begin
+        //     FSWriteln(F, ['(', IntToStr(Branch_List.Level), ') ', TestBranch.ParentClass.Name, '.', TestBranch.Name]);
+        //     TestElement := Branch_List.FirstObject;
+        //     while TestElement <> NIL do
+        //     begin
+        //         FSWriteln(F, ['[SHUNT], ', TestElement.ParentClass.Name, '.', TestElement.Name]);
+        //         TestElement := Branch_List.NextObject
+        //     end;
+        //     TestBranch := Branch_List.GoForward;
+        // end;
+        //
 
     finally
 
-        FreeAndNil(F);
+        // FreeAndNil(F);
         Branch_List.Free;
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
