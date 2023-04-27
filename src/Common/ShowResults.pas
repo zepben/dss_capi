@@ -2659,7 +2659,7 @@ procedure ShowLosses(DSS: TDSSContext; FileNm: String);
 
 
 var
-    F: TFileStream = nil;
+    // F: TFileStream = nil;
     PDElem: TPDElement;
     PCElem: TPCElement;
 
@@ -2669,22 +2669,25 @@ var
     TransLosses,
     TermPower, LoadPower: Complex;
 
+    LossesEntry: TLossesEntry;
+    LossesTotals: TLossesTotals;
+
     sout: String;
 begin
     setMaxDeviceNameLength(DSS);
 
     try
 
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
+        // F := TBufferedFileStream.Create(FileNm, fmCreate);
 
-     {Sequence Currents}
-        FSWriteln(F);
-        FSWriteln(F, 'LOSSES REPORT');
-        FSWriteln(F);
-        FSWriteln(F, 'Power Delivery Element Loss Report');
-        FSWriteln(F);
-        FSWriteln(F, 'Element                  kW Losses    % of Power   kvar Losses');
-        FSWriteln(F);
+     // {Sequence Currents}
+     //    FSWriteln(F);
+     //    FSWriteln(F, 'LOSSES REPORT');
+     //    FSWriteln(F);
+     //    FSWriteln(F, 'Power Delivery Element Loss Report');
+     //    FSWriteln(F);
+     //    FSWriteln(F, 'Element                  kW Losses    % of Power   kvar Losses');
+     //    FSWriteln(F);
 
 
         TotalLosses := CZERO;
@@ -2711,29 +2714,39 @@ begin
                 if (CLASSMASK and PDElem.DSSObjType) = LINE_ELEMENT then
                     LineLosses += kLosses;
 
-                FSWrite(F, Pad(EncloseQuotes(PDelem.FullName), MaxDeviceNameLength + 2));
-                FSWrite(F, Format('%10.5f, ', [kLosses.re]));
+                // FSWrite(F, Pad(EncloseQuotes(PDelem.FullName), MaxDeviceNameLength + 2));
+                // FSWrite(F, Format('%10.5f, ', [kLosses.re]));
+                LossesEntry.element := PDElem.FullName;
+                LossesEntry.kLoss := kLosses.re;
                 if (TermPower.re <> 0.0) and (kLosses.re > 0.0009) then
-                    FSWrite(F, Format('%8.2f', [(kLosses.re / Abs(TermPower.re) * 100.0)]))
+                    // FSWrite(F, Format('%8.2f', [(kLosses.re / Abs(TermPower.re) * 100.0)]))
+                    LossesEntry.pctPower := (kLosses.re / Abs(TermPower.re) * 100.0)
                 else
-                    FSWrite(F, Format('%8.1f', [CZERO.RE]));
-                FSWrite(F, Format('     %.6g', [kLosses.im]));
-                FSWriteln(F);
+                    // FSWrite(F, Format('%8.1f', [CZERO.RE]));
+                    LossesEntry.pctPower := CZERO.RE;
+                // FSWrite(F, Format('     %.6g', [kLosses.im]));
+                // FSWriteln(F);
+                LossesEntry.kvarLosses := kLosses.im;
+                send_losses_entry(LossesEntry);
             end;
             PDelem := DSS.ActiveCircuit.PDElements.Next;
         end;      {While}
 
-        FSWriteln(F);
-        WriteStr(sout, Pad('LINE LOSSES=', 30), LineLosses.re: 10: 1, ' kW');
-        FSWriteln(F, sout);
+        // FSWriteln(F);
+        // WriteStr(sout, Pad('LINE LOSSES=', 30), LineLosses.re: 10: 1, ' kW');
+        // FSWriteln(F, sout);
+
+        // WriteStr(sout, Pad('TRANSFORMER LOSSES=', 30), TransLosses.re: 10: 1, ' kW');
+        // FSWriteln(F, sout);
+        // 
+        // FSWriteln(F);
+        // 
+        // WriteStr(sout, Pad('TOTAL LOSSES=', 30), TotalLosses.re: 10: 1, ' kW');
+        // FSWriteln(F, sout);
+
+        LossesTotals.lineLosses := LineLosses.re;
+        LossesTotals.transformerLosses := TransLosses.re;
         
-        WriteStr(sout, Pad('TRANSFORMER LOSSES=', 30), TransLosses.re: 10: 1, ' kW');
-        FSWriteln(F, sout);
-        
-        FSWriteln(F);
-        
-        WriteStr(sout, Pad('TOTAL LOSSES=', 30), TotalLosses.re: 10: 1, ' kW');
-        FSWriteln(F, sout);
 
         LoadPower := CZERO;
      // Sum the total load kW being served in the Ckt Model
@@ -2748,21 +2761,26 @@ begin
         end;
         LoadPower := LoadPower * 0.001;
 
-        FSWriteln(F);
-        WriteStr(sout, Pad('TOTAL LOAD POWER = ', 30), Abs(LoadPower.re): 10: 1, ' kW');
-        FSWriteln(F, sout);
+        // FSWriteln(F);
+        // WriteStr(sout, Pad('TOTAL LOAD POWER = ', 30), Abs(LoadPower.re): 10: 1, ' kW');
+        // FSWriteln(F, sout);
+
+        LossesTotals.totalLoadPower := LoadPower.re;
         
-        FSWrite(F, Pad('Percent Losses for Circuit = ', 30));
+        // FSWrite(F, Pad('Percent Losses for Circuit = ', 30));
         if LoadPower.re <> 0.0 then
         begin
-            WriteStr(sout, Abs(TotalLosses.re / LoadPower.re) * 100.0: 8: 2, ' %');
-            FSWriteln(F, sout);
+            // WriteStr(sout, Abs(TotalLosses.re / LoadPower.re) * 100.0: 8: 2, ' %');
+            // FSWriteln(F, sout);
+            LossesTotals.totalPctLosses := Abs(TotalLosses.re / LoadPower.re) * 100.0;
         end;
+
+        send_losses_totals(LossesTotals);
 
     finally
 
-        FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FreeAndNil(F);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -3064,12 +3082,14 @@ var
     pdElem: TPDElement;
     hMeter: Integer;
     pMtr: TEnergyMeterObj;
+    loop: TLoopReport;
+    lineObj: TDSSCktElement;
 begin
     try
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
+        // F := TBufferedFileStream.Create(FileNm, fmCreate);
 
-        FSWriteln(F, 'Loops and Paralleled Lines in all EnergyMeter Zones');
-        FSWriteln(F);
+        // FSWriteln(F, 'Loops and Paralleled Lines in all EnergyMeter Zones');
+        // FSWriteln(F);
 
         hMeter := DSS.EnergyMeterClass.First;
 
@@ -3082,12 +3102,34 @@ begin
                 PDElem := pMtr.BranchList.First;
                 while PDElem <> NIL do
                 begin
+                    // cycle through branches
                     with pMtr.BranchList.PresentBranch do
                     begin
-                        if IsParallel then
-                            FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': PARALLEL WITH ', TDSSCktElement(LoopLineObj).Parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
-                        if IsLoopedHere then
-                            FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': LOOPED TO     ', TDSSCktElement(LoopLineObj).parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
+                        // Reset loop obj
+                        loop.meterName := '';
+                        loop.lineA := '';
+                        loop.lineB := '';
+                        loop.relation := '';
+
+                        lineObj := TDSSCktElement(LoopLineObj);
+                        if lineObj <> NIL then
+                        begin
+                            loop.meterName := pMtr.Name;
+                            loop.lineA := PDElem.ParentClass.Name + '.' + PDelem.Name;
+                            loop.lineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
+                            if IsParallel then
+                            begin
+                                // FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': PARALLEL WITH ', TDSSCktElement(LoopLineObj).Parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
+                                loop.relation := 'PARALLEL';
+                                send_loop_report(loop);
+                            end;
+                            if IsLoopedHere then
+                            begin
+                                // FSWriteln(F, ['(', pMtr.Name, ') ', PDElem.ParentClass.Name, '.', AnsiUpperCase(PDelem.Name), ': LOOPED TO     ', TDSSCktElement(LoopLineObj).parentclass.Name, '.', TDSSCktElement(LoopLineObj).Name]);
+                                loop.relation := 'LOOP';
+                                send_loop_report(loop);
+                            end;
+                        end;
                     end;
                     PDElem := pMtr.BranchList.GoForward;
                 end;
@@ -3098,8 +3140,8 @@ begin
 
     finally
 
-        FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FreeAndNil(F);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;

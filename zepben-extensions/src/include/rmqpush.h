@@ -168,6 +168,28 @@ struct TTapReport {
     int position;
 };
 
+// Record for Loop/Parallel lines report
+struct TLoopReport {
+    char *meter;
+    char *lineA;
+    char *lineB;
+    char *relation;
+};
+
+struct TLossesEntry {
+    char  *element;
+    double kLoss;
+    double pctPower;
+    double kvarLosses;
+};
+
+struct TLossesTotals {
+    double lineLosses;
+    double transformerLosses;
+    double totalLoadPower;
+    double totalPctLosses;
+};
+
 struct TIsolatedArea {
     int id;
     char *line;
@@ -199,6 +221,9 @@ void send_voltage_report(struct TVoltageReport vr);
 void send_summary_report(struct TSummaryReport sr);
 void send_tap_report(struct TTapReport tap);
 void send_eventlog(struct TEventLog *eventlog, int numEvents);
+void send_loop_report(struct TLoopReport loop);
+void send_losses_entry(struct TLossesEntry lr);
+void send_losses_totals(struct TLossesTotals lr);
 void send_isolated_elements_report(struct TIsolatedBusesReport ib);
 
 #endif

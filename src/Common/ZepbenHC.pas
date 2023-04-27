@@ -193,6 +193,15 @@ type
         position: Integer;
     end;
 
+// Record for streaming the Loops/Parallel lines in Energy Meter Zone
+type
+    TLoopReport = record
+        meterName: string;
+        lineA: string;
+        lineB: string;
+        relation: string;
+    end;
+
 // Records for streaming the Isolated elements
 type
     TIsolatedArea = record
@@ -217,6 +226,22 @@ type
         numBuses, numAreas, numElements: Integer;
     end;
 
+// Record for streaming the losses reports
+type
+    TLossesEntry = record
+        element: string;
+        kLoss: Double;
+        pctPower: Double;
+        kvarLosses: Double;
+    end;
+
+type
+    TLossesTotals = record
+        lineLosses: Double;
+        transformerLosses: Double;
+        totalLoadPower: Double;
+        totalPctLosses: Double;
+    end;
 // diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
 procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
 // phvValues should be in the phv record, but seems to cause issues, so pass it as a separate parameter.
@@ -228,7 +253,10 @@ procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
 procedure send_summary_report(sr: TSummaryReport); RMQPUSH_CALL;
 procedure send_tap_report(tp: TTapReport); RMQPUSH_CALL;
 procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
+procedure send_loop_report(loop: TLoopReport); RMQPUSH_CALL;
 procedure send_isolated_elements_report(ir: TIsolatedBusesReport); RMQPUSH_CALL;
+procedure send_losses_entry(lossentry: TLossesEntry); RMQPUSH_CALL;
+procedure send_losses_totals(losstotals: TLossesTotals); RMQPUSH_CALL;
 implementation
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 

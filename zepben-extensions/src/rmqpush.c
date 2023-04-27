@@ -388,6 +388,50 @@ void send_eventlog(struct TEventLog *el, int numEvents) {
 
 }
 
+void send_loop_report(struct TLoopReport loop) {
+    LoopReport loopReport = LOOP_REPORT__INIT;
+
+    loopReport.meter = loop.meter;
+    loopReport.linea = loop.lineA;
+    loopReport.lineb = loop.lineB;
+    loopReport.relation = loop.relation;
+
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_LR;
+    queueMsg.lr = &loopReport;
+    send_opendss_message(&queueMsg);
+}
+
+void send_losses_entry(struct TLossesEntry le) {
+    LossesEntry lossEntry = LOSSES_ENTRY__INIT;
+
+    lossEntry.element = le.element;
+    lossEntry.kloss = le.kLoss;
+    lossEntry.pctpower = le.pctPower;
+    lossEntry.kvarlosses = le.kvarLosses;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_LE;
+    queueMsg.le = &lossEntry;
+
+    send_opendss_message(&queueMsg);
+}
+
+void send_losses_totals(struct TLossesTotals lt) {
+    LossesTotals totals = LOSSES_TOTALS__INIT;
+
+    totals.linelosses = lt.lineLosses;
+    totals.totalpctlosses = lt.totalPctLosses;
+    totals.totalloadpower = lt.totalLoadPower;
+    totals.transformerlosses = lt.transformerLosses;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_LOSSES;
+    queueMsg.losses = &totals;
+    send_opendss_message(&queueMsg);
+}
+
 
 void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
     IsolatedBusesReport report = ISOLATED_BUSES_REPORT__INIT;
