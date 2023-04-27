@@ -3325,7 +3325,6 @@ end;
 procedure ExportSummary(DSS: TDSSContext; FileNm: String);
 var
     SummaryReport: TSummaryReport;
-    // F: TFileStream = nil;
     cPower, cLosses: Complex;
 
 begin
@@ -3333,73 +3332,26 @@ begin
     
         with SummaryReport do
         begin
-            // if FileExists(FileNm) then
-            // begin
-            //     F := TBufferedFileStream.Create(FileNm, fmOpenReadWrite); 
-            //     F.Seek(0, soEnd);
-            // end
-            // else
-            // begin    // Create and write the header
-            //     F := TBufferedFileStream.Create(FileNm, fmCreate); 
-            //     FSWrite(F, 'DateTime, CaseName, ');
-            //     FSWrite(F, 'Status, Mode, Number, LoadMult, NumDevices, NumBuses, NumNodes');
-            //     FSWrite(F, ', Iterations, ControlMode, ControlIterations');
-            //     FSWrite(F, ', MostIterationsDone');
-            //     if DSS.ActiveCircuit <> NIL then
-            //         if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
-            //         begin
-            //             FSWrite(F, ', Year, Hour, MaxPuVoltage, MinPuVoltage, TotalMW, TotalMvar');
-            //             FSWrite(F, ', MWLosses, pctLosses, MvarLosses, Frequency');
-            //         end;
-            //
-            //     FSWriteln(F);
-            // end;
 
-            // FSWrite(F, Format('"%s", ', [DateTimeToStr(Now)]));
             if DSS.ActiveCircuit <> NIL then
             begin
-                // FSWrite(F, Format('%s, ', [DSS.ActiveCircuit.CaseName]));
-                circuitName := Format('%s, ', [DSS.ActiveCircuit.CaseName]);
+                circuitName := DSS.ActiveCircuit.CaseName;
+                solved := DSS.ActiveCircuit.Issolved;
+                mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
+                number := DSS.ActiveCircuit.Solution.NumberofTimes;
+                loadMult := DSS.ActiveCircuit.LoadMultiplier;
+                numDevices := DSS.ActiveCircuit.NumDevices;
+                numBuses := DSS.ActiveCircuit.NumBuses;
+                numNodes := DSS.ActiveCircuit.NumNodes;
+                iterations := DSS.ActiveCircuit.Solution.Iteration;
+                controlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
+                controlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
+                mostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
             end
             else
-            begin
-                // FSWrite(F, 'NONE, ');
                 circuitName := 'NONE';
-            end;
-
-            if DSS.ActiveCircuit.Issolved then
-            begin
-                solved := True;
-                // FSWrite(F, 'SOLVED')
-            end
-            else
-            begin
-                solved := False;
-                // FSWrite(F, 'UnSolved');
-            end;
-
-            mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
-            number := DSS.ActiveCircuit.Solution.NumberofTimes;
-            loadMult := DSS.ActiveCircuit.LoadMultiplier;
-            numDevices := DSS.ActiveCircuit.NumDevices;
-            numBuses := DSS.ActiveCircuit.NumBuses;
-            numNodes := DSS.ActiveCircuit.NumNodes;
-            iterations := DSS.ActiveCircuit.Solution.Iteration;
-            controlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
-            controlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
-            mostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
 
 
-            // FSWrite(F, Format(', %s', [DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode))]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.NumberofTimes]));
-            // FSWrite(F, Format(', %8.3f', [DSS.ActiveCircuit.LoadMultiplier]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumDevices]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumBuses]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumNodes]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.Iteration]));
-            // FSWrite(F, Format(', %s', [DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode)]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.ControlIteration]));
-            // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.MostIterationsDone]));
 
             if DSS.ActiveCircuit <> NIL then
                 if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
@@ -3410,13 +3362,7 @@ begin
                     maxPuVoltage := GetMaxPUVoltage(DSS);
                     minPuVoltage := GetMinPUVoltage(DSS, TRUE);
 
-                    // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.Year]));
-                    // FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.DynaVars.intHour]));
-                    // FSWrite(F, Format(', %-.5g', [GetMaxPUVoltage(DSS)]));
-                    // FSWrite(F, Format(', %-.5g', [GetMinPUVoltage(DSS, TRUE)]));
                     cPower := GetTotalPowerFromSources(DSS) * 0.000001;  // MVA
-                    // FSWrite(F, Format(', %-.6g', [cPower.re]));
-                    // FSWrite(F, Format(', %-.6g', [cPower.im]));
                     totalMW := cPower.re;
                     totalMvar := cPower.im;
                     cLosses := DSS.ActiveCircuit.Losses * 0.000001;
@@ -3424,32 +3370,21 @@ begin
                     begin
                         MWLosses := cLosses.re;
                         pctLosses := Closses.re / cPower.re * 100.0;
-                        // FSWrite(F, Format(', %-.6g, %-.4g', [cLosses.re, (Closses.re / cPower.re * 100.0)]))
                     end
                     else
                     begin
                         MWLosses := 99999999.99;
                         pctLosses := 0.0;
-                        // FSWrite(F, 'Total Active Losses:   ****** MW, (**** %%)');
                     end;
 
                     mvarLosses := cLosses.im;
                     frequency := DSS.ActiveCircuit.Solution.Frequency;
-
-                    // FSWrite(F, Format(', %-.6g', [cLosses.im]));
-                    // FSWrite(F, Format(', %-g', [DSS.ActiveCircuit.Solution.Frequency]));
                 end;
-
-            // FSWriteln(F);
 
             DSS.GlobalResult := FileNm;
             send_summary_report(SummaryReport);
         end;
-
-
-
     finally
-        // FreeAndNil(F);
     end;
 end;
 
@@ -4127,15 +4062,11 @@ end;
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 procedure ExportTaps(DSS: TDSSContext; FileNm: String);
 var
-    // F: TFileStream = nil;
     iWind: Integer;
     pReg: TRegControlObj;
     TapReport: TTapReport;
 begin
     try
-        // F := TBufferedFileStream.Create(FileNm, fmCreate);
-        // FSWriteln(F, 'Name, Tap, Min, Max, Step, Position');
-
         with DSS.ActiveCircuit do
         begin
             pReg := RegControls.First;
@@ -4144,9 +4075,7 @@ begin
                 with pReg.Transformer do
                 begin
                     iWind := pReg.TrWinding;
-                    // FSWrite(F, Name);
                     TapReport.name := Name;
-                    // FSWriteln(F, Format(', %8.5f, %8.5f, %8.5f, %8.5f, %d', [PresentTap[iWind], MinTap[iWind], MaxTap[iWind], TapIncrement[iWind], TapPosition(pREg.Transformer, iWind)]));
                     TapReport.tap := PresentTap[iWind];
                     TapReport.mintap := MinTap[iWind];
                     TapReport.maxtap := MaxTap[iWind];
@@ -4161,7 +4090,6 @@ begin
 
         DSS.GlobalResult := FileNm;
     finally
-        // FreeAndNil(F);
     end;
 end;
 
