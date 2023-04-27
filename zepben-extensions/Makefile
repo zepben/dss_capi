@@ -11,7 +11,7 @@ PROTODIR = src/proto/hc/opendss
 SRCDIR = src
 OBJDIR = obj
 LIBDIR = lib
-OBJS = $(addprefix $(OBJDIR)/, rmqpush.o utils.o EnergyMeter.pb-c.o)
+OBJS = $(addprefix $(OBJDIR)/, rmqpush.o utils.o EnergyMeter.pb-c.o Diagnostics.pb-c.o QueueMessage.pb-c.o)
 
 default: $(NAME) 
 
