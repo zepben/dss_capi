@@ -152,6 +152,47 @@ type
         Event: string;
     end;
 
+// Record for streaming the summary from Common/ExportResults
+// We should calculate the time on the C side, as this is a one-off and will be simpler
+// to keep as a timestamp instead of performing string tranformations
+type 
+    TSummaryReport = record
+        circuitName: string;
+        solved: Boolean;
+        mode: string;
+        number: Integer;
+        loadMult: Double;
+        numDevices: Integer;
+        numBuses: Integer;
+        numNodes: Integer;
+        iterations: Integer;
+        controlMode: string;
+        controlIterations: Integer;
+        mostIterationsDone: Integer;
+        year: Integer;
+        hour: Integer;
+        maxPuVoltage: Double;
+        minPuVoltage: Double;
+        totalMW: Double;
+        totalMvar: Double;
+        MWLosses: Double;
+        pctLosses: Double;
+        mvarLosses: Double;
+        frequency: Double;
+    end;
+
+// Record for streaming the Tap report from Common/ExportResults
+
+type 
+    TTapReport = record
+        name: string; 
+        tap: Double;
+        mintap: Double;
+        maxtap: Double;
+        step: Double;
+        position: Integer;
+    end;
+
 // diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
 procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
 // phvValues should be in the phv record, but seems to cause issues, so pass it as a separate parameter.
@@ -159,6 +200,9 @@ procedure send_phase_voltage_report(phv: TPhaseVoltageReport; phvValues: TPhaseV
 procedure send_overload_report(ov: TOverloadReport); RMQPUSH_CALL;
 procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
 
+// Diagnotics 
+procedure send_summary_report(sr: TSummaryReport); RMQPUSH_CALL;
+procedure send_tap_report(tp: TTapReport); RMQPUSH_CALL;
 procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
 implementation
 

@@ -1,5 +1,7 @@
 // Zepben
 
+#include <stdbool.h>
+
 #ifndef rmq_push_h
 #define rmq_push_h
 
@@ -117,6 +119,34 @@ struct TVoltageReport {
     struct TVoltageReportValues lv;
 };
 
+// Record for streaming the summary from Common/ExportResults
+// We should calculate the time on the C side, as this is a one-off and will be simpler
+// to keep as a timestamp instead of performing string tranformations
+struct TSummaryReport {
+    char *circuitName;
+    bool solved;
+    char *mode;
+    int number;
+    double loadMult;
+    int numDevices;
+    int numBuses;
+    int numNodes;
+    int iterations;
+    char *controlMode;
+    int controlIterations;
+    int mostIterationsDone;
+    int year;
+    int hour;
+    double maxPuVoltage;
+    double minPuVoltage;
+    double totalMW;
+    double totalMvar;
+    double MWLosses;
+    double pctLosses;
+    double mvarLosses;
+    double frequency;
+};
+
 // Record for streaming the event log from opendss
 struct TEventLog {
     int hour;
@@ -127,6 +157,17 @@ struct TEventLog {
     char *action;
     char *event;
 };
+
+// Record for streaming the Tap report from Common/ExportResults
+struct TTapReport {
+    char *name; 
+    double tap;
+    double mintap;
+    double maxtap;
+    double step;
+    int position;
+};
+
 // diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
 void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBaseRegisters diVoltBases[]);
 // phvValues should be in the phv struct, but seems to cause issues, so pass it as a separate parameter.
@@ -135,5 +176,8 @@ void send_overload_report(struct TOverloadReport ov);
 void send_voltage_report(struct TVoltageReport vr);
 
 // Diagnostics reports
+void send_summary_report(struct TSummaryReport sr);
+void send_tap_report(struct TTapReport tap);
 void send_eventlog(struct TEventLog *eventlog, int numEvents);
+
 #endif

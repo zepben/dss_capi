@@ -298,12 +298,64 @@ void send_voltage_report(struct TVoltageReport vr) {
     hv.minbus = (char*)vr.lv.min_bus;
     hv.maxbus = (char*)vr.lv.max_bus;
 
-    EnergyMeterReport emr = ENERGY_METER_REPORT__INIT;
-    emr.report_case = ENERGY_METER_REPORT__REPORT_VR;
-    emr.vr = &report;
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_VR;
+    queueMsg.vr = &report;
     
-    send_energy_meter_report(&emr);
+    send_opendss_message(&queueMsg);
 }
+
+void send_summary_report(struct TSummaryReport sr) {
+    SummaryReport report = SUMMARY_REPORT__INIT;
+
+    report.timestamp = time(NULL);
+    report.circuitname = sr.circuitName;
+    report.solved = sr.solved;
+    report.mode = sr.mode;
+    report.number = sr.number;
+    report.loadmult = sr.loadMult;
+    report.numdevices = sr.numDevices;
+    report.numbuses = sr.numBuses;
+    report.numnodes = sr.numNodes;
+    report.iterations = sr.iterations;
+    report.controlmode = sr.controlMode;
+    report.controliterations = sr.controlIterations;
+    report.mostiterationsdone = sr.mostIterationsDone;
+    report.year = sr.year;
+    report.hour = sr.hour;
+    report.maxpuvoltage = sr.maxPuVoltage;
+    report.minpuvoltage = sr.minPuVoltage;
+    report.totalmw = sr.totalMW;
+    report.totalmvar = sr.totalMvar;
+    report.mwlosses = sr.MWLosses;
+    report.pctlosses = sr.pctLosses;
+    report.mvarlosses = sr.mvarLosses;
+    report.frequency = sr.frequency;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_VR;
+    queueMsg.sr = &report;
+    
+    send_opendss_message(&queueMsg);
+}
+
+void send_tap_report(struct TTapReport tap) {
+    TapsReport report = TAPS_REPORT__INIT;
+
+    report.name = tap.name;
+    report.tap = tap.tap;
+    report.mintap = tap.mintap;
+    report.maxtap = tap.maxtap;
+    report.step = tap.step;
+    report.position = tap.position;
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_TR;
+    queueMsg.tr = &report;
+
+    send_opendss_message(&queueMsg);
+}
+
 void send_eventlog(struct TEventLog *el, int numEvents) {
     EventLog log = EVENT_LOG__INIT;
 
@@ -335,3 +387,4 @@ void send_eventlog(struct TEventLog *el, int numEvents) {
     free(log.logentry);
 
 }
+
