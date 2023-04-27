@@ -5,7 +5,9 @@ unit ZepbenHC;
 
 interface
 uses
-    SysUtils;
+    Dynamics,
+    SysUtils,
+    Classes;
 
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 
@@ -90,7 +92,7 @@ type
         phs3: TMaxMinAvg;
     end;
 
-// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from Energyeter.pas.
+// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from EnergyMeter.pas.
 type
     TPhaseVoltageReportValuesArray = array [0..10] of TPhaseVoltageReportValues;
 
@@ -138,6 +140,17 @@ type
         Lv: TVoltageReportValues;
     end;
 
+// Record for even log from Common/Utilities
+type
+    TEventLog = record
+        Hour: Integer;
+        Sec: Double;
+        ControlIter: Integer;
+        Iteration: Integer;
+        Element: string;
+        Action: string;
+        Event: string;
+    end;
 
 // diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
 procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
@@ -146,6 +159,7 @@ procedure send_phase_voltage_report(phv: TPhaseVoltageReport; phvValues: TPhaseV
 procedure send_overload_report(ov: TOverloadReport); RMQPUSH_CALL;
 procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
 
+procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
 implementation
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 

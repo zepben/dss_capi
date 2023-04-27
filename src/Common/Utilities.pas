@@ -1,4 +1,5 @@
 
+
 unit Utilities;
 
 {
@@ -18,6 +19,7 @@ uses
     UcMatrix,
     DSSClass,
     Classes,
+    ZepbenHC,
     Dynamics;
 
 type
@@ -1435,20 +1437,45 @@ begin
 end;
 
 procedure LogThisEvent(DSS: TDSSContext; const EventName: String);
+var
+    EventLog: TEventLog;
 begin
     with DSS.ActiveCircuit.Solution do
+    begin
         DSS.EventStrings.Add(Format('Hour=%d, Sec=%-.8g, Iteration=%d, ControlIter=%d, Event=%s',
             [DynaVars.intHour, Dynavars.t, iteration, ControlIteration, EventName]));
+        EventLog.Hour := DynaVars.intHour;
+        EventLog.Sec := DynaVars.t;
+        EventLog.Iteration := iteration;
+        EventLog.ControlIter := ControlIteration;
+        EventLog.Event := EventName;
+        EventLog.Element := '';
+        EventLog.Action := '';
+        SetLength(DSS.EventLog, DSS.EventStrings.count);
+        DSS.EventLog[DSS.EventStrings.count - 1] := EventLog;
+    end;
 end;
 
 procedure AppendToEventLog(DSS: TDSSContext; const opdev: String; const action: String);
 var
     S: String;
+    EventLog: TEventLog;
 begin
     with  DSS.ActiveCircuit.Solution do
+    begin
         S := Format('Hour=%d, Sec=%-.5g, ControlIter=%d, Element=%s, Action=%s',
             [DynaVars.intHour, Dynavars.t, ControlIteration, OpDev, AnsiUpperCase(action)]);
-    DSS.EventStrings.Add(S);
+        DSS.EventStrings.Add(S);
+        EventLog.Hour := DynaVars.intHour;
+        EventLog.Sec := DynaVars.t;
+        EventLog.ControlIter := ControlIteration;
+        EventLog.Element := OpDev;
+        EventLog.Action := AnsiUpperCase(action);
+        EventLog.Event := '';
+        EventLog.Iteration := -1;
+        SetLength(DSS.EventLog, DSS.EventStrings.count);
+        DSS.EventLog[DSS.EventStrings.count - 1] := EventLog;
+    end;
 end;
 
 

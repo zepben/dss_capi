@@ -117,6 +117,16 @@ struct TVoltageReport {
     struct TVoltageReportValues lv;
 };
 
+// Record for streaming the event log from opendss
+struct TEventLog {
+    int hour;
+    double sec;
+    int controlIter;
+    int iteration;
+    char *element;
+    char *action;
+    char *event;
+};
 // diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
 void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBaseRegisters diVoltBases[]);
 // phvValues should be in the phv struct, but seems to cause issues, so pass it as a separate parameter.
@@ -124,4 +134,6 @@ void send_phase_voltage_report(struct TPhaseVoltageReport phv, struct TPhaseVolt
 void send_overload_report(struct TOverloadReport ov);
 void send_voltage_report(struct TVoltageReport vr);
 
+// Diagnostics reports
+void send_eventlog(struct TEventLog *eventlog, int numEvents);
 #endif

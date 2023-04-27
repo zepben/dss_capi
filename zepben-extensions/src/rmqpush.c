@@ -12,13 +12,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include <rabbitmq-c/amqp.h>
 #include <rabbitmq-c/tcp_socket.h>
 
 #include "proto/hc/opendss/EnergyMeter.pb-c.h"
+#include "proto/hc/opendss/Diagnostics.pb-c.h"
+#include "proto/hc/opendss/QueueMessage.pb-c.h"
 #include "include/utils.h"
-#include "rmqpush.h"
+#include "include/rmqpush.h"
 
 typedef enum ERabbitMQStatus {
     OK,
@@ -116,10 +119,10 @@ int disconnect_rabbitmq() {
     return OK;
 }
 
-void send_energy_meter_report(EnergyMeterReport *emr) {
-    int len = energy_meter_report__get_packed_size(emr);
+void send_opendss_message(OpenDssReport *report) {
+    int len = open_dss_report__get_packed_size(report);
     void *buf = malloc(len);
-    energy_meter_report__pack(emr, buf);
+    open_dss_report__pack(report, buf);
 
     amqp_bytes_t body;
     body.len = len;
@@ -189,11 +192,11 @@ void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBa
         report.voltbases[i] = voltBasePtr;
     }
 
-    EnergyMeterReport emr = ENERGY_METER_REPORT__INIT;
-    emr.report_case = ENERGY_METER_REPORT__REPORT_DI;
-    emr.di = &report;
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_DI;
+    queueMsg.di = &report;
     
-    send_energy_meter_report(&emr);
+    send_opendss_message(&queueMsg);
 
     for (int i = 0; i < di.numVoltBases; ++i)
         free(report.voltbases[i]);
@@ -236,11 +239,11 @@ void send_phase_voltage_report(struct TPhaseVoltageReport phv, struct TPhaseVolt
         report.values[i] = valuesPtr;
     }
 
-    EnergyMeterReport emr = ENERGY_METER_REPORT__INIT;
-    emr.report_case = ENERGY_METER_REPORT__REPORT_PHV;
-    emr.phv = &report;
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_PHV;
+    queueMsg.phv = &report;
     
-    send_energy_meter_report(&emr);
+    send_opendss_message(&queueMsg);
 
     for (int i = 0; i < phv.numValues; ++i) {
         free(report.values[i]->phs1);
@@ -265,11 +268,11 @@ void send_overload_report(struct TOverloadReport ov) {
     report.phase2amps = ov.phase2Amps;
     report.phase3amps = ov.phase3Amps;
 
-    EnergyMeterReport emr = ENERGY_METER_REPORT__INIT;
-    emr.report_case = ENERGY_METER_REPORT__REPORT_OV;
-    emr.ov = &report;
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_OV;
+    queueMsg.ov = &report;
     
-    send_energy_meter_report(&emr);
+    send_opendss_message(&queueMsg);
 }
 
 void send_voltage_report(struct TVoltageReport vr) {
@@ -300,4 +303,35 @@ void send_voltage_report(struct TVoltageReport vr) {
     emr.vr = &report;
     
     send_energy_meter_report(&emr);
+}
+void send_eventlog(struct TEventLog *el, int numEvents) {
+    EventLog log = EVENT_LOG__INIT;
+
+    log.logentry = (EventLogEntry**)malloc(numEvents*sizeof(EventLogEntry*));
+
+    for (int i = 0; i < numEvents; i++) {
+        EventLogEntry logEntry = EVENT_LOG_ENTRY__INIT;
+        logEntry.hour = el[i].hour;
+        logEntry.sec = el[i].sec;
+        logEntry.controliter = el[i].controlIter;
+        logEntry.iteration = el[i].iteration;
+        logEntry.element = el[i].element;
+        logEntry.event = el[i].event;
+        logEntry.action = el[i].action;
+
+        EventLogEntry* entry = (EventLogEntry*)malloc(sizeof(EventLogEntry));
+        *entry = logEntry;
+        log.logentry[i] = entry;
+    }
+
+    OpenDssReport queueMsg = OPEN_DSS_REPORT__INIT;
+    queueMsg.report_case = OPEN_DSS_REPORT__REPORT_EL;
+    queueMsg.el = &log;
+    send_opendss_message(&queueMsg);
+
+    for (int i = 0; i < numEvents; i++) {
+        free(log.logentry[i]);
+    }
+    free(log.logentry);
+
 }

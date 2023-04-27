@@ -10,6 +10,7 @@ unit ShowResults;
 interface
 
 uses 
+    ZepbenHC,
     DSSClass;
 
 procedure ShowVoltages(DSS: TDSSContext; FileNm: String; LL: Boolean; ShowOptionCode: Integer);
@@ -483,7 +484,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -818,7 +819,7 @@ begin
         finally
 
             FreeAndNil(F);
-            FireOffEditor(DSS, FileNm);
+            // FireOffEditor(DSS, FileNm);
             DSS.ParserVars.Add('@lastshowfile', FileNm);
 
         end;
@@ -1312,7 +1313,7 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
 
@@ -1824,7 +1825,7 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -1999,7 +2000,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -2147,9 +2148,9 @@ begin
     finally
 
         FreeAndNil(FDisabled);
-        FireOffEditor(DSS, DisabledFileNm);
+        // FireOffEditor(DSS, DisabledFileNm);
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2211,7 +2212,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2281,7 +2282,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2332,7 +2333,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2382,7 +2383,7 @@ begin
         end;
     finally
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -2472,7 +2473,7 @@ begin
 
         case length(Param) of
             0:
-                FireOffEditor(DSS, FileNm);
+                // FireOffEditor(DSS, FileNm);
         else
             ShowTreeView(FileNm);
         end;
@@ -2588,7 +2589,7 @@ begin
         if Assigned(C_buffer) then
             Freemem(c_Buffer);
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2647,7 +2648,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -2807,7 +2808,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
 
     end;
@@ -3005,7 +3006,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3205,7 +3206,7 @@ begin
     finally
         FreeAndNil(F);
         FreeAndNil(Ftree);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
         ShowTreeView(TreeNm);
     end;
@@ -3447,8 +3448,8 @@ begin
 
         FreeAndNil(F);
         FreeAndNil(F2);
-        FireOffEditor(DSS, FileNm);
-        FireOffEditor(DSS, LineCodesFileNm);
+        // FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, LineCodesFileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3498,7 +3499,7 @@ begin
             FSWriteln(F, 'Yprim matrix is Nil');
     finally
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3558,7 +3559,7 @@ begin
 
     finally
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3867,7 +3868,7 @@ begin
 
     finally
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3902,7 +3903,7 @@ begin
 
     finally
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3922,7 +3923,7 @@ begin
     finally
 
         FreeAndNil(F);
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3935,9 +3936,11 @@ begin
 
         DSS.EventStrings.SaveToFile(FileNm);
         DSS.GlobalResult := FileNm;
+        if Length(DSS.EventLog) > 0 then
+            send_eventlog(DSS.EventLog, Length(DSS.EventLog));
 
     finally
-        FireOffEditor(DSS, FileNm);
+        // FireOffEditor(DSS, FileNm);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
