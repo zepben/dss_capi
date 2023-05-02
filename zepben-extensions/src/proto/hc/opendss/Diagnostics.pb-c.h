@@ -34,6 +34,10 @@ typedef struct KVBaseMismatch KVBaseMismatch;
 
 /* --- messages --- */
 
+/*
+ **
+ * Message for streaming the summary report
+ */
 struct  SummaryReport
 {
   ProtobufCMessage base;
@@ -66,6 +70,10 @@ struct  SummaryReport
     , 0, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
+/*
+ **
+ * Message for a single Event Log Entry
+ */
 struct  EventLogEntry
 {
   ProtobufCMessage base;
@@ -82,6 +90,10 @@ struct  EventLogEntry
     , 0, 0, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
 
 
+/*
+ **
+ * Message for streaming the opendss eventlog 
+ */
 struct  EventLog
 {
   ProtobufCMessage base;
@@ -93,13 +105,17 @@ struct  EventLog
     , 0,NULL }
 
 
+/*
+ **
+ * Message for streaming the registry taps report
+ */
 struct  TapsReport
 {
   ProtobufCMessage base;
   char *name;
   double tap;
-  double mintap;
-  double maxtap;
+  double min;
+  double max;
   double step;
   int32_t position;
 };
@@ -108,24 +124,33 @@ struct  TapsReport
     , (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0 }
 
 
+/*
+ **
+ * Message for streaming the loops report
+ */
 struct  LoopReport
 {
   ProtobufCMessage base;
   char *meter;
   char *linea;
   char *lineb;
-  char *relation;
+  protobuf_c_boolean parallel;
+  protobuf_c_boolean looped;
 };
 #define LOOP_REPORT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&loop_report__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0 }
 
 
+/*
+ **
+ * Message for one specific isolated area report (a level/id, line, and the related loads)
+ */
 struct  IsolatedArea
 {
   ProtobufCMessage base;
-  int32_t id;
-  char *line;
+  int32_t level;
+  char *element;
   size_t n_loads;
   char **loads;
 };
@@ -134,6 +159,10 @@ struct  IsolatedArea
     , 0, (char *)protobuf_c_empty_string, 0,NULL }
 
 
+/*
+ **
+ * Message for one specific isolated element report (a name of an element, and the related buses)
+ */
 struct  IsolatedElement
 {
   ProtobufCMessage base;
@@ -146,6 +175,10 @@ struct  IsolatedElement
     , (char *)protobuf_c_empty_string, 0,NULL }
 
 
+/*
+ **
+ * Messages for streaming the isolated elements report (disconnected buses, areas and elements)
+ */
 struct  IsolatedBusesReport
 {
   ProtobufCMessage base;
@@ -163,13 +196,13 @@ struct  IsolatedBusesReport
 
 /*
  **
- * Messages for streaming the losses report
+ * Message for streaming one specific Losses entry
  */
 struct  LossesEntry
 {
   ProtobufCMessage base;
   char *element;
-  double kloss;
+  double kwlosses;
   double pctpower;
   double kvarlosses;
 };
@@ -178,17 +211,22 @@ struct  LossesEntry
     , (char *)protobuf_c_empty_string, 0, 0, 0 }
 
 
+/*
+ **
+ * Messages for streaming the losses report
+ */
 struct  LossesTotals
 {
   ProtobufCMessage base;
   double linelosses;
   double transformerlosses;
+  double totallosses;
   double totalloadpower;
   double totalpctlosses;
 };
 #define LOSSES_TOTALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&losses_totals__descriptor) \
-    , 0, 0, 0, 0 }
+    , 0, 0, 0, 0, 0 }
 
 
 /*

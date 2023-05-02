@@ -7,60 +7,60 @@
 #endif
 
 #include "hc/opendss/QueueMessage.pb-c.h"
-void   open_dss_report__init
-                     (OpenDssReport         *message)
+void   queue_message__init
+                     (QueueMessage         *message)
 {
-  static const OpenDssReport init_value = OPEN_DSS_REPORT__INIT;
+  static const QueueMessage init_value = QUEUE_MESSAGE__INIT;
   *message = init_value;
 }
-size_t open_dss_report__get_packed_size
-                     (const OpenDssReport *message)
+size_t queue_message__get_packed_size
+                     (const QueueMessage *message)
 {
-  assert(message->base.descriptor == &open_dss_report__descriptor);
+  assert(message->base.descriptor == &queue_message__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t open_dss_report__pack
-                     (const OpenDssReport *message,
+size_t queue_message__pack
+                     (const QueueMessage *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &open_dss_report__descriptor);
+  assert(message->base.descriptor == &queue_message__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t open_dss_report__pack_to_buffer
-                     (const OpenDssReport *message,
+size_t queue_message__pack_to_buffer
+                     (const QueueMessage *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &open_dss_report__descriptor);
+  assert(message->base.descriptor == &queue_message__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-OpenDssReport *
-       open_dss_report__unpack
+QueueMessage *
+       queue_message__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (OpenDssReport *)
-     protobuf_c_message_unpack (&open_dss_report__descriptor,
+  return (QueueMessage *)
+     protobuf_c_message_unpack (&queue_message__descriptor,
                                 allocator, len, data);
 }
-void   open_dss_report__free_unpacked
-                     (OpenDssReport *message,
+void   queue_message__free_unpacked
+                     (QueueMessage *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &open_dss_report__descriptor);
+  assert(message->base.descriptor == &queue_message__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
+static const ProtobufCFieldDescriptor queue_message__field_descriptors[13] =
 {
   {
     "di",
     1,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, di),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, di),
     &demand_interval_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -71,8 +71,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, phv),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, phv),
     &phase_voltage_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -83,8 +83,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     3,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, ov),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, ov),
     &overload_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -95,8 +95,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     4,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, vr),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, vr),
     &voltage_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -107,8 +107,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     5,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, sr),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, sr),
     &summary_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -119,8 +119,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     6,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, el),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, el),
     &event_log__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -131,8 +131,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     7,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, tr),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, tr),
     &taps_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -143,20 +143,20 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     8,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, lr),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, lr),
     &loop_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "ib",
+    "ibr",
     9,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, ib),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, ibr),
     &isolated_buses_report__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -167,8 +167,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     10,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, le),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, le),
     &losses_entry__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -179,8 +179,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     11,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, losses),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, losses),
     &losses_totals__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -191,8 +191,8 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     12,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, nm),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, nm),
     &node_mismatch__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -203,18 +203,18 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     13,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(OpenDssReport, report_case),
-    offsetof(OpenDssReport, kvm),
+    offsetof(QueueMessage, report_case),
+    offsetof(QueueMessage, kvm),
     &kvbase_mismatch__descriptor,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned open_dss_report__field_indices_by_name[] = {
+static const unsigned queue_message__field_indices_by_name[] = {
   0,   /* field[0] = di */
   5,   /* field[5] = el */
-  8,   /* field[8] = ib */
+  8,   /* field[8] = ibr */
   12,   /* field[12] = kvm */
   9,   /* field[9] = le */
   10,   /* field[10] = losses */
@@ -226,23 +226,23 @@ static const unsigned open_dss_report__field_indices_by_name[] = {
   6,   /* field[6] = tr */
   3,   /* field[3] = vr */
 };
-static const ProtobufCIntRange open_dss_report__number_ranges[1 + 1] =
+static const ProtobufCIntRange queue_message__number_ranges[1 + 1] =
 {
   { 1, 0 },
   { 0, 13 }
 };
-const ProtobufCMessageDescriptor open_dss_report__descriptor =
+const ProtobufCMessageDescriptor queue_message__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "OpenDssReport",
-  "OpenDssReport",
-  "OpenDssReport",
+  "QueueMessage",
+  "QueueMessage",
+  "QueueMessage",
   "",
-  sizeof(OpenDssReport),
+  sizeof(QueueMessage),
   13,
-  open_dss_report__field_descriptors,
-  open_dss_report__field_indices_by_name,
-  1,  open_dss_report__number_ranges,
-  (ProtobufCMessageInit) open_dss_report__init,
+  queue_message__field_descriptors,
+  queue_message__field_indices_by_name,
+  1,  queue_message__number_ranges,
+  (ProtobufCMessageInit) queue_message__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

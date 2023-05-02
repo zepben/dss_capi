@@ -24,7 +24,7 @@ type
         kvLoadEnergy: Double;
     end;
 
-// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from Energyeter.pas.
+// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from EnergyMeter.pas.
 type
     TVoltBaseRegistersArray = array [0..10] of TVoltBaseRegisters;
 
@@ -140,7 +140,7 @@ type
         Lv: TVoltageReportValues;
     end;
 
-// Record for even log from Common/Utilities
+// Record for event log from Common/Utilities
 type
     TEventLog = record
         Hour: Integer;
@@ -175,14 +175,13 @@ type
         minPuVoltage: Double;
         totalMW: Double;
         totalMvar: Double;
-        MWLosses: Double;
+        mWLosses: Double;
         pctLosses: Double;
         mvarLosses: Double;
         frequency: Double;
     end;
 
 // Record for streaming the Tap report from Common/ExportResults
-
 type 
     TTapReport = record
         name: string; 
@@ -199,18 +198,21 @@ type
         meterName: string;
         lineA: string;
         lineB: string;
-        relation: string;
+        parallel: Boolean;
+        looped: Boolean;
     end;
 
 // Records for streaming the Isolated elements
+// Repeated values for the isolatedAreas.
 type
     TIsolatedArea = record
-        id: Integer;
-        line: string;
+        level: Integer;
+        element: string;
         numLoads: Integer;
         loads: array of string;
     end;
 
+// Repeated values for the isolatedElements.
 type
     TIsolatedElement = record
         name: string;
@@ -218,6 +220,7 @@ type
         buses: array of string;
     end;
 
+// The complete record of the Isolated Buses report 
 type
     TIsolatedBusesReport = record
         disconnectedBuses: array of string;
@@ -226,23 +229,26 @@ type
         numBuses, numAreas, numElements: Integer;
     end;
 
-// Record for streaming the losses reports
+// Repeated record for a single losses entry
 type
     TLossesEntry = record
         element: string;
-        kLoss: Double;
+        kwLosses: Double;
         pctPower: Double;
         kvarLosses: Double;
     end;
 
+// Record for streaming the total losses report
 type
     TLossesTotals = record
         lineLosses: Double;
         transformerLosses: Double;
+        totalLosses: Double;
         totalLoadPower: Double;
         totalPctLosses: Double;
     end;
 
+// Record for a node mismatch report
 type
     TNodeMismatch = record
         bus: string;
@@ -252,6 +258,7 @@ type
         maxCurrent: Double;
     end;
 
+// Record for a kvbase settings mismatch report
 type
     TKVBaseMismatch = record
         load: string;
@@ -269,14 +276,14 @@ procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
 
 // Diagnotics 
 procedure send_summary_report(sr: TSummaryReport); RMQPUSH_CALL;
-procedure send_tap_report(tp: TTapReport); RMQPUSH_CALL;
+procedure send_taps_report(tp: TTapReport); RMQPUSH_CALL;
 procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
-procedure send_loop_report(loop: TLoopReport); RMQPUSH_CALL;
-procedure send_isolated_elements_report(ir: TIsolatedBusesReport); RMQPUSH_CALL;
-procedure send_losses_entry(lossentry: TLossesEntry); RMQPUSH_CALL;
-procedure send_losses_totals(losstotals: TLossesTotals); RMQPUSH_CALL;
+procedure send_loop_report(lr: TLoopReport); RMQPUSH_CALL;
+procedure send_isolated_elements_report(ib: TIsolatedBusesReport); RMQPUSH_CALL;
+procedure send_losses_entry(le: TLossesEntry); RMQPUSH_CALL;
+procedure send_losses_totals(lt: TLossesTotals); RMQPUSH_CALL;
 procedure send_node_mismatch_report(nm: TNodeMismatch); RMQPUSH_CALL;
-procedure send_kvbase_mismatch_report(nm: TKVBaseMismatch); RMQPUSH_CALL;
+procedure send_kvbase_mismatch_report(kvm: TKVBaseMismatch); RMQPUSH_CALL;
 
 implementation
 

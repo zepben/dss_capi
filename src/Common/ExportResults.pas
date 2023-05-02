@@ -3324,7 +3324,30 @@ end;
 
 procedure ExportSummary(DSS: TDSSContext; FileNm: String);
 var
-    SummaryReport: TSummaryReport;
+    SummaryReport: TSummaryReport = (
+        circuitName : '';
+        solved : False;
+        mode : '';
+        number : 0;
+        loadMult : 0.0;
+        numDevices : 0;
+        numBuses : 0;
+        numNodes : 0;
+        iterations : 0;
+        controlMode : '';
+        controlIterations : 0;
+        mostIterationsDone : 0;
+        year : 0;
+        hour : 0;
+        maxpuvoltage : 0.0;
+        minpuvoltage : 0.0;
+        totalMW : 0.0;
+        totalMvar : 0.0;
+        mWLosses : 99999999.99;
+        pctLosses : 0.0;
+        mvarLosses : 0.0;
+        frequency : 0.0;
+    );
     cPower, cLosses: Complex;
 
 begin
@@ -3347,13 +3370,7 @@ begin
                 controlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
                 controlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
                 mostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
-            end
-            else
-                circuitName := 'NONE';
 
-
-
-            if DSS.ActiveCircuit <> NIL then
                 if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
                 begin
 
@@ -3368,21 +3385,19 @@ begin
                     cLosses := DSS.ActiveCircuit.Losses * 0.000001;
                     if cPower.re <> 0.0 then
                     begin
-                        MWLosses := cLosses.re;
+                        mWLosses := cLosses.re;
                         pctLosses := Closses.re / cPower.re * 100.0;
-                    end
-                    else
-                    begin
-                        MWLosses := 99999999.99;
-                        pctLosses := 0.0;
                     end;
 
                     mvarLosses := cLosses.im;
                     frequency := DSS.ActiveCircuit.Solution.Frequency;
                 end;
 
+                // Only send report if ActiveCircuit
+                send_summary_report(SummaryReport);
+            end;
+
             DSS.GlobalResult := FileNm;
-            send_summary_report(SummaryReport);
         end;
     finally
     end;
@@ -4082,7 +4097,7 @@ begin
                     TapReport.step := TapIncrement[iWind];
                     TapReport.position := TapPosition(pREg.Transformer, iWind);
 
-                    send_tap_report(TapReport);
+                    send_taps_report(TapReport);
                 end;
                 pReg := RegControls.Next;
             end;

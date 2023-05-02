@@ -17,7 +17,7 @@ PROTOBUF_C__BEGIN_DECLS
 #include "hc/opendss/EnergyMeter.pb-c.h"
 #include "hc/opendss/Diagnostics.pb-c.h"
 
-typedef struct OpenDssReport OpenDssReport;
+typedef struct QueueMessage QueueMessage;
 
 
 /* --- enums --- */
@@ -26,31 +26,31 @@ typedef struct OpenDssReport OpenDssReport;
 /* --- messages --- */
 
 typedef enum {
-  OPEN_DSS_REPORT__REPORT__NOT_SET = 0,
-  OPEN_DSS_REPORT__REPORT_DI = 1,
-  OPEN_DSS_REPORT__REPORT_PHV = 2,
-  OPEN_DSS_REPORT__REPORT_OV = 3,
-  OPEN_DSS_REPORT__REPORT_VR = 4,
-  OPEN_DSS_REPORT__REPORT_SR = 5,
-  OPEN_DSS_REPORT__REPORT_EL = 6,
-  OPEN_DSS_REPORT__REPORT_TR = 7,
-  OPEN_DSS_REPORT__REPORT_LR = 8,
-  OPEN_DSS_REPORT__REPORT_IB = 9,
-  OPEN_DSS_REPORT__REPORT_LE = 10,
-  OPEN_DSS_REPORT__REPORT_LOSSES = 11,
-  OPEN_DSS_REPORT__REPORT_NM = 12,
-  OPEN_DSS_REPORT__REPORT_KVM = 13
-    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(OPEN_DSS_REPORT__REPORT__CASE)
-} OpenDssReport__ReportCase;
+  QUEUE_MESSAGE__REPORT__NOT_SET = 0,
+  QUEUE_MESSAGE__REPORT_DI = 1,
+  QUEUE_MESSAGE__REPORT_PHV = 2,
+  QUEUE_MESSAGE__REPORT_OV = 3,
+  QUEUE_MESSAGE__REPORT_VR = 4,
+  QUEUE_MESSAGE__REPORT_SR = 5,
+  QUEUE_MESSAGE__REPORT_EL = 6,
+  QUEUE_MESSAGE__REPORT_TR = 7,
+  QUEUE_MESSAGE__REPORT_LR = 8,
+  QUEUE_MESSAGE__REPORT_IBR = 9,
+  QUEUE_MESSAGE__REPORT_LE = 10,
+  QUEUE_MESSAGE__REPORT_LOSSES = 11,
+  QUEUE_MESSAGE__REPORT_NM = 12,
+  QUEUE_MESSAGE__REPORT_KVM = 13
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(QUEUE_MESSAGE__REPORT__CASE)
+} QueueMessage__ReportCase;
 
 /*
  **
  * The message type we actually stream, which contains one of the above reports.
  */
-struct  OpenDssReport
+struct  QueueMessage
 {
   ProtobufCMessage base;
-  OpenDssReport__ReportCase report_case;
+  QueueMessage__ReportCase report_case;
   union {
     DemandIntervalReport *di;
     PhaseVoltageReport *phv;
@@ -60,41 +60,41 @@ struct  OpenDssReport
     EventLog *el;
     TapsReport *tr;
     LoopReport *lr;
-    IsolatedBusesReport *ib;
+    IsolatedBusesReport *ibr;
     LossesEntry *le;
     LossesTotals *losses;
     NodeMismatch *nm;
     KVBaseMismatch *kvm;
   };
 };
-#define OPEN_DSS_REPORT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&open_dss_report__descriptor) \
-    , OPEN_DSS_REPORT__REPORT__NOT_SET, {0} }
+#define QUEUE_MESSAGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&queue_message__descriptor) \
+    , QUEUE_MESSAGE__REPORT__NOT_SET, {0} }
 
 
-/* OpenDssReport methods */
-void   open_dss_report__init
-                     (OpenDssReport         *message);
-size_t open_dss_report__get_packed_size
-                     (const OpenDssReport   *message);
-size_t open_dss_report__pack
-                     (const OpenDssReport   *message,
+/* QueueMessage methods */
+void   queue_message__init
+                     (QueueMessage         *message);
+size_t queue_message__get_packed_size
+                     (const QueueMessage   *message);
+size_t queue_message__pack
+                     (const QueueMessage   *message,
                       uint8_t             *out);
-size_t open_dss_report__pack_to_buffer
-                     (const OpenDssReport   *message,
+size_t queue_message__pack_to_buffer
+                     (const QueueMessage   *message,
                       ProtobufCBuffer     *buffer);
-OpenDssReport *
-       open_dss_report__unpack
+QueueMessage *
+       queue_message__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   open_dss_report__free_unpacked
-                     (OpenDssReport *message,
+void   queue_message__free_unpacked
+                     (QueueMessage *message,
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
-typedef void (*OpenDssReport_Closure)
-                 (const OpenDssReport *message,
+typedef void (*QueueMessage_Closure)
+                 (const QueueMessage *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -102,7 +102,7 @@ typedef void (*OpenDssReport_Closure)
 
 /* --- descriptors --- */
 
-extern const ProtobufCMessageDescriptor open_dss_report__descriptor;
+extern const ProtobufCMessageDescriptor queue_message__descriptor;
 
 PROTOBUF_C__END_DECLS
 

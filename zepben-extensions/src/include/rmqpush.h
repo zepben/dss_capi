@@ -11,11 +11,11 @@ int disconnect_rabbitmq();
 // Repeated values for the DemandIntervalReport.
 struct TVoltBaseRegisters {
     double vbase;
-    double kvLosses;
-    double kvLineLoss;
-    double kvLoadLoss;
-    double kvNoLoadLoss;
-    double kvLoadEnergy;
+    double kv_losses;
+    double kv_line_loss;
+    double kv_load_loss;
+    double kv_no_load_loss;
+    double kv_load_energy;
 };
 
 // Record for streaming the records written to DI_MHandle in WriteDemandIntervalData (top).
@@ -25,41 +25,41 @@ struct TDemandIntervalReport {
 
     double kwh;
     double kvarh;
-    double maxKw;
-    double maxKva;
-    double zoneKwh;
-    double zoneKvarh;
-    double zoneMaxKw;
-    double zoneMaxKva;
-    double overloadKwhNormal;
-    double overloadKwhEmerg;
-    double loadEEN;
-    double loadUE;
-    double zoneLossesKwh;
-    double zoneLossesKvarh;
-    double zoneMaxKwLosses;
-    double zoneMaxKvarLosses;
-    double loadLossesKwh;
-    double loadLossesKvarh;
-    double noLoadLossesKwh;
-    double noLoadLossesKvarh;
-    double maxKwLoadLosses;
-    double maxKwNoLoadLosses;
-    double lineLosses;
-    double transformerLosses;
+    double max_kw;
+    double max_kva;
+    double zone_kwh;
+    double zone_kvarh;
+    double zone_max_kw;
+    double zone_max_kva;
+    double overload_kwh_normal;
+    double overload_kwh_emerg;
+    double load_een;
+    double load_ue;
+    double zone_losses_kwh;
+    double zone_losses_kvarh;
+    double zone_max_kw_losses;
+    double zone_max_kvar_losses;
+    double load_losses_kwh;
+    double load_losses_kvarh;
+    double no_load_losses_kwh;
+    double no_load_losses_kvarh;
+    double max_kw_load_losses;
+    double max_kw_no_load_losses;
+    double line_losses;
+    double transformer_losses;
 
-    double lineModeLineLosses;
-    double zeroModeLineLosses;
+    double line_mode_line_losses;
+    double zero_mode_line_losses;
 
-    double phaseLineLosses3;
-    double phaseLineLosses12;
+    double phase_line_losses_3;
+    double phase_line_losses_12;
 
-    double genKwh;
-    double genKvarh;
-    double genMaxKw;
-    double genMaxKva;
-    
-    int numVoltBases;
+    double gen_kwh;
+    double gen_kvarh;
+    double gen_max_kw;
+    double gen_max_kva;
+
+    int num_volt_bases;
     // voltBases should be here, but seems to cause issues, so pass it as a separate parameter.
     // struct TVoltBaseRegisters voltBases[];
 };
@@ -83,7 +83,7 @@ struct TPhaseVoltageReportValues {
 struct TPhaseVoltageReport {
     const char *element;
     double hour;
-    int numValues;
+    int num_values;
     // values should be here, but seems to cause issues, so pass it as a separate parameter.
     // struct TPhaseVoltageReportValues values[];
 };
@@ -92,14 +92,14 @@ struct TPhaseVoltageReport {
 struct TOverloadReport {
     double hour;
     const char *element;
-    double normalAmps;
-    double emergAmps;
-    double percentNormal;
-    double percentEmerg;
-    double kvBase;
-    double phase1Amps;
-    double phase2Amps;
-    double phase3Amps;
+    double normal_amps;
+    double emerg_amps;
+    double percent_normal;
+    double percent_emerg;
+    double kv_base;
+    double phase1_amps;
+    double phase2_amps;
+    double phase3_amps;
 };
 
 // Repeated values for the VoltageReport.
@@ -123,27 +123,27 @@ struct TVoltageReport {
 // We should calculate the time on the C side, as this is a one-off and will be simpler
 // to keep as a timestamp instead of performing string tranformations
 struct TSummaryReport {
-    char *circuitName;
+    char *circuit_name;
     bool solved;
     char *mode;
     int number;
-    double loadMult;
-    int numDevices;
-    int numBuses;
-    int numNodes;
+    double load_mult;
+    int num_devices;
+    int num_buses;
+    int num_nodes;
     int iterations;
-    char *controlMode;
-    int controlIterations;
-    int mostIterationsDone;
+    char *control_mode;
+    int control_iterations;
+    int most_iterations_done;
     int year;
     int hour;
-    double maxPuVoltage;
-    double minPuVoltage;
-    double totalMW;
-    double totalMvar;
-    double MWLosses;
-    double pctLosses;
-    double mvarLosses;
+    double max_pu_voltage;
+    double min_pu_voltage;
+    double total_mw;
+    double total_mvar;
+    double mw_losses;
+    double pct_losses;
+    double mvar_losses;
     double frequency;
 };
 
@@ -151,7 +151,7 @@ struct TSummaryReport {
 struct TEventLog {
     int hour;
     double sec;
-    int controlIter;
+    int control_iter;
     int iteration;
     char *element;
     char *action;
@@ -160,10 +160,10 @@ struct TEventLog {
 
 // Record for streaming the Tap report from Common/ExportResults
 struct TTapReport {
-    char *name; 
+    char *name;
     double tap;
-    double mintap;
-    double maxtap;
+    double min;
+    double max;
     double step;
     int position;
 };
@@ -173,56 +173,58 @@ struct TLoopReport {
     char *meter;
     char *lineA;
     char *lineB;
-    char *relation;
+    bool parallel;
+    bool looped;
 };
 
 struct TLossesEntry {
-    char  *element;
-    double kLoss;
-    double pctPower;
-    double kvarLosses;
+    char *element;
+    double kw_losses;
+    double pct_power;
+    double kvar_losses;
 };
 
 struct TLossesTotals {
-    double lineLosses;
-    double transformerLosses;
-    double totalLoadPower;
-    double totalPctLosses;
+    double line_losses;
+    double transformer_losses;
+    double total_losses;
+    double total_load_power;
+    double total_pct_losses;
 };
 
 struct TNodeMismatch {
     char *bus;
     int node;
-    double currentSum;
-    double pctError;
-    double maxCurrent;
+    double current_sum;
+    double pct_error;
+    double max_current;
 };
 
 struct TKVBaseMismatch {
     char *load;
     double kv;
     char *bus;
-    double kvBase;
+    double kv_base;
 };
 
 struct TIsolatedArea {
-    int id;
-    char *line;
-    int numLoads;
+    int level;
+    char *element;
+    int num_loads;
     char **loads;
 };
 
 struct TIsolatedElement {
     char *name;
-    int numBuses;
+    int num_buses;
     char **buses;
 };
 
 struct TIsolatedBusesReport {
-    char **isolatedBuses;
-    struct TIsolatedArea *isolatedArea;
-    struct TIsolatedElement *isolatedElement;
-    int numBuses, numAreas, numElements;
+    char **isolated_buses;
+    struct TIsolatedArea *isolated_area;
+    struct TIsolatedElement *isolated_element;
+    int num_buses, num_areas, num_elements;
 };
 
 // diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
@@ -234,13 +236,13 @@ void send_voltage_report(struct TVoltageReport vr);
 
 // Diagnostics reports
 void send_summary_report(struct TSummaryReport sr);
-void send_tap_report(struct TTapReport tap);
-void send_eventlog(struct TEventLog *eventlog, int numEvents);
-void send_loop_report(struct TLoopReport loop);
-void send_losses_entry(struct TLossesEntry lr);
-void send_losses_totals(struct TLossesTotals lr);
-void send_node_mismatch_report(struct TNodeMismatch nm);
-void send_kvbase_mismatch_report(struct TKVBaseMismatch bm);
+void send_taps_report(struct TTapReport tp);
+void send_eventlog(struct TEventLog *el, int num_events);
+void send_loop_report(struct TLoopReport lr);
 void send_isolated_elements_report(struct TIsolatedBusesReport ib);
+void send_losses_entry(struct TLossesEntry le);
+void send_losses_totals(struct TLossesTotals lt);
+void send_node_mismatch_report(struct TNodeMismatch nm);
+void send_kvbase_mismatch_report(struct TKVBaseMismatch kvm);
 
 #endif

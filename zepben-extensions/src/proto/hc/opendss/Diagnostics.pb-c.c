@@ -778,7 +778,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "MWLosses",
+    "mWLosses",
     20,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
@@ -827,7 +827,6 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
 };
 static const unsigned summary_report__field_indices_by_name[] = {
-  19,   /* field[19] = MWLosses */
   1,   /* field[1] = circuitName */
   11,   /* field[11] = controlIterations */
   10,   /* field[10] = controlMode */
@@ -835,6 +834,7 @@ static const unsigned summary_report__field_indices_by_name[] = {
   14,   /* field[14] = hour */
   9,   /* field[9] = iterations */
   5,   /* field[5] = loadMult */
+  19,   /* field[19] = mWLosses */
   15,   /* field[15] = maxPuVoltage */
   16,   /* field[16] = minPuVoltage */
   3,   /* field[3] = mode */
@@ -1052,24 +1052,24 @@ static const ProtobufCFieldDescriptor taps_report__field_descriptors[6] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "mintap",
+    "min",
     3,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
-    offsetof(TapsReport, mintap),
+    offsetof(TapsReport, min),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "maxtap",
+    "max",
     4,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
-    offsetof(TapsReport, maxtap),
+    offsetof(TapsReport, max),
     NULL,
     NULL,
     0,             /* flags */
@@ -1101,8 +1101,8 @@ static const ProtobufCFieldDescriptor taps_report__field_descriptors[6] =
   },
 };
 static const unsigned taps_report__field_indices_by_name[] = {
-  3,   /* field[3] = maxtap */
-  2,   /* field[2] = mintap */
+  3,   /* field[3] = max */
+  2,   /* field[2] = min */
   0,   /* field[0] = name */
   5,   /* field[5] = position */
   4,   /* field[4] = step */
@@ -1128,7 +1128,7 @@ const ProtobufCMessageDescriptor taps_report__descriptor =
   (ProtobufCMessageInit) taps_report__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor loop_report__field_descriptors[4] =
+static const ProtobufCFieldDescriptor loop_report__field_descriptors[5] =
 {
   {
     "meter",
@@ -1167,14 +1167,26 @@ static const ProtobufCFieldDescriptor loop_report__field_descriptors[4] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "relation",
+    "parallel",
     4,
     PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_STRING,
+    PROTOBUF_C_TYPE_BOOL,
     0,   /* quantifier_offset */
-    offsetof(LoopReport, relation),
+    offsetof(LoopReport, parallel),
     NULL,
-    &protobuf_c_empty_string,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "looped",
+    5,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BOOL,
+    0,   /* quantifier_offset */
+    offsetof(LoopReport, looped),
+    NULL,
+    NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
@@ -1182,13 +1194,14 @@ static const ProtobufCFieldDescriptor loop_report__field_descriptors[4] =
 static const unsigned loop_report__field_indices_by_name[] = {
   1,   /* field[1] = lineA */
   2,   /* field[2] = lineB */
+  4,   /* field[4] = looped */
   0,   /* field[0] = meter */
-  3,   /* field[3] = relation */
+  3,   /* field[3] = parallel */
 };
 static const ProtobufCIntRange loop_report__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 4 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor loop_report__descriptor =
 {
@@ -1198,7 +1211,7 @@ const ProtobufCMessageDescriptor loop_report__descriptor =
   "LoopReport",
   "",
   sizeof(LoopReport),
-  4,
+  5,
   loop_report__field_descriptors,
   loop_report__field_indices_by_name,
   1,  loop_report__number_ranges,
@@ -1208,24 +1221,24 @@ const ProtobufCMessageDescriptor loop_report__descriptor =
 static const ProtobufCFieldDescriptor isolated_area__field_descriptors[3] =
 {
   {
-    "id",
+    "level",
     1,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
-    offsetof(IsolatedArea, id),
+    offsetof(IsolatedArea, level),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "line",
+    "element",
     2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(IsolatedArea, line),
+    offsetof(IsolatedArea, element),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
@@ -1245,8 +1258,8 @@ static const ProtobufCFieldDescriptor isolated_area__field_descriptors[3] =
   },
 };
 static const unsigned isolated_area__field_indices_by_name[] = {
-  0,   /* field[0] = id */
-  1,   /* field[1] = line */
+  1,   /* field[1] = element */
+  0,   /* field[0] = level */
   2,   /* field[2] = loads */
 };
 static const ProtobufCIntRange isolated_area__number_ranges[1 + 1] =
@@ -1399,12 +1412,12 @@ static const ProtobufCFieldDescriptor losses_entry__field_descriptors[4] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "kLoss",
+    "kwLosses",
     2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
-    offsetof(LossesEntry, kloss),
+    offsetof(LossesEntry, kwlosses),
     NULL,
     NULL,
     0,             /* flags */
@@ -1437,8 +1450,8 @@ static const ProtobufCFieldDescriptor losses_entry__field_descriptors[4] =
 };
 static const unsigned losses_entry__field_indices_by_name[] = {
   0,   /* field[0] = element */
-  1,   /* field[1] = kLoss */
   3,   /* field[3] = kvarLosses */
+  1,   /* field[1] = kwLosses */
   2,   /* field[2] = pctPower */
 };
 static const ProtobufCIntRange losses_entry__number_ranges[1 + 1] =
@@ -1461,7 +1474,7 @@ const ProtobufCMessageDescriptor losses_entry__descriptor =
   (ProtobufCMessageInit) losses_entry__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor losses_totals__field_descriptors[4] =
+static const ProtobufCFieldDescriptor losses_totals__field_descriptors[5] =
 {
   {
     "lineLosses",
@@ -1488,8 +1501,20 @@ static const ProtobufCFieldDescriptor losses_totals__field_descriptors[4] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "totalLoadPower",
+    "totalLosses",
     3,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_DOUBLE,
+    0,   /* quantifier_offset */
+    offsetof(LossesTotals, totallosses),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "totalLoadPower",
+    4,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -1501,7 +1526,7 @@ static const ProtobufCFieldDescriptor losses_totals__field_descriptors[4] =
   },
   {
     "totalPctLosses",
-    4,
+    5,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -1514,14 +1539,15 @@ static const ProtobufCFieldDescriptor losses_totals__field_descriptors[4] =
 };
 static const unsigned losses_totals__field_indices_by_name[] = {
   0,   /* field[0] = lineLosses */
-  2,   /* field[2] = totalLoadPower */
-  3,   /* field[3] = totalPctLosses */
+  3,   /* field[3] = totalLoadPower */
+  2,   /* field[2] = totalLosses */
+  4,   /* field[4] = totalPctLosses */
   1,   /* field[1] = transformerLosses */
 };
 static const ProtobufCIntRange losses_totals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 4 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor losses_totals__descriptor =
 {
@@ -1531,7 +1557,7 @@ const ProtobufCMessageDescriptor losses_totals__descriptor =
   "LossesTotals",
   "",
   sizeof(LossesTotals),
-  4,
+  5,
   losses_totals__field_descriptors,
   losses_totals__field_indices_by_name,
   1,  losses_totals__number_ranges,

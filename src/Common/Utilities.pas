@@ -1420,6 +1420,7 @@ procedure ClearEventLog;
 begin
     try
         DSS.EventStrings.Clear;
+        SetLength(DSS.EventLog, 0);
     except
         On E: Exception do
             DoSimpleMsg(DSS, 'Exception clearing event log: %s, @EventStrings=%p', [E.Message, @DSS.EventStrings], 7151);
@@ -1439,11 +1440,10 @@ end;
 procedure LogThisEvent(DSS: TDSSContext; const EventName: String);
 var
     EventLog: TEventLog;
+    i: Integer;
 begin
     with DSS.ActiveCircuit.Solution do
     begin
-        DSS.EventStrings.Add(Format('Hour=%d, Sec=%-.8g, Iteration=%d, ControlIter=%d, Event=%s',
-            [DynaVars.intHour, Dynavars.t, iteration, ControlIteration, EventName]));
         EventLog.Hour := DynaVars.intHour;
         EventLog.Sec := DynaVars.t;
         EventLog.Iteration := iteration;
@@ -1451,8 +1451,10 @@ begin
         EventLog.Event := EventName;
         EventLog.Element := '';
         EventLog.Action := '';
-        SetLength(DSS.EventLog, DSS.EventStrings.count);
-        DSS.EventLog[DSS.EventStrings.count - 1] := EventLog;
+
+        i := Length(DSS.EventLog)
+        SetLength(DSS.EventLog, i + 1);
+        DSS.EventLog[i] := EventLog;
     end;
 end;
 
@@ -1463,9 +1465,6 @@ var
 begin
     with  DSS.ActiveCircuit.Solution do
     begin
-        S := Format('Hour=%d, Sec=%-.5g, ControlIter=%d, Element=%s, Action=%s',
-            [DynaVars.intHour, Dynavars.t, ControlIteration, OpDev, AnsiUpperCase(action)]);
-        DSS.EventStrings.Add(S);
         EventLog.Hour := DynaVars.intHour;
         EventLog.Sec := DynaVars.t;
         EventLog.ControlIter := ControlIteration;
@@ -1473,8 +1472,10 @@ begin
         EventLog.Action := AnsiUpperCase(action);
         EventLog.Event := '';
         EventLog.Iteration := -1;
-        SetLength(DSS.EventLog, DSS.EventStrings.count);
-        DSS.EventLog[DSS.EventStrings.count - 1] := EventLog;
+
+        i := Length(DSS.EventLog)
+        SetLength(DSS.EventLog, i + 1);
+        DSS.EventLog[i] := EventLog;
     end;
 end;
 
