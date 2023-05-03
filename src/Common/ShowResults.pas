@@ -3843,8 +3843,6 @@ end;
 procedure ShowEventLog(DSS: TDSSContext; FileNm: String);
 begin
     try
-        // DSS.EventStrings.SaveToFile(FileNm);
-        // DSS.GlobalResult := FileNm;
         if Length(DSS.EventLog) > 0 then
             send_eventlog(DSS.EventLog, Length(DSS.EventLog));
 

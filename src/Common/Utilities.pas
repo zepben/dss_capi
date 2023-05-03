@@ -1452,7 +1452,7 @@ begin
         EventLog.Element := '';
         EventLog.Action := '';
 
-        i := Length(DSS.EventLog)
+        i := Length(DSS.EventLog);
         SetLength(DSS.EventLog, i + 1);
         DSS.EventLog[i] := EventLog;
     end;
@@ -1460,8 +1460,8 @@ end;
 
 procedure AppendToEventLog(DSS: TDSSContext; const opdev: String; const action: String);
 var
-    S: String;
     EventLog: TEventLog;
+    i: Integer;
 begin
     with  DSS.ActiveCircuit.Solution do
     begin
@@ -1473,7 +1473,7 @@ begin
         EventLog.Event := '';
         EventLog.Iteration := -1;
 
-        i := Length(DSS.EventLog)
+        i := Length(DSS.EventLog);
         SetLength(DSS.EventLog, i + 1);
         DSS.EventLog[i] := EventLog;
     end;
