@@ -52,7 +52,7 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
         return ALREADY_CALLED;
     
     connect_called = true;
-
+    
     printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", username, hostname, port);
 
     exchange = copy_str(_exchange);
@@ -74,7 +74,7 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
         return SOCKET_OPEN_FAILED;
 
     printf("login...");
-
+    
     // Login
     if (has_amqp_error(amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, username, password), "login"))
         return LOGIN_FAILED;
@@ -91,7 +91,7 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
         props.content_type = amqp_cstring_bytes("binary/proto");
         props.delivery_mode = AMQP_DELIVERY_PERSISTENT; /* persistent delivery mode */
     }
-
+  
     printf("done.\n");
     return OK;
 }
@@ -102,19 +102,19 @@ int disconnect_rabbitmq() {
 
     free((void*)exchange);
     exchange = NULL;
-
+    
     free((void*)routing_key);
     routing_key = NULL;
-
+    
     // Cleanup the connection if there is one.
     if (conn != NULL) {
         // This will implicitly clean up the channels and sockets.
         if (has_error(amqp_destroy_connection(conn), "cleanup"))
             return CLEANUP_FAILED;
-
+        
         conn = NULL;
     }
-
+    
     return OK;
 }
 
@@ -282,7 +282,7 @@ void send_voltage_report(struct TVoltageReport vr) {
     report.hour = vr.hour;
     report.hv = &hv;
     report.lv = &lv;
-
+    
     hv.undervoltages = vr.hv.under_voltages;
     hv.minvoltage = vr.hv.min_voltage;
     hv.overvoltage = vr.hv.over_voltage;
