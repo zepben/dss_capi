@@ -202,7 +202,7 @@ void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBa
     free(report.voltbases);
 }
 
-MaxMinAvg *copyMaxMinAvg(struct TMaxMinAvg *source) {
+MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg *source) {
     MaxMinAvg phs = MAX_MIN_AVG__INIT;
     MaxMinAvg *phs_ptr = (MaxMinAvg*)malloc(sizeof(MaxMinAvg));
 
