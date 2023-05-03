@@ -177,6 +177,7 @@ struct TLoopReport {
     bool looped;
 };
 
+// Record for a single losses entry
 struct TLossesEntry {
     char *element;
     double kw_losses;
@@ -184,6 +185,7 @@ struct TLossesEntry {
     double kvar_losses;
 };
 
+// Record for streaming the total losses report
 struct TLossesTotals {
     double line_losses;
     double transformer_losses;
@@ -192,6 +194,7 @@ struct TLossesTotals {
     double total_pct_losses;
 };
 
+// Record for a node mismatch report
 struct TNodeMismatch {
     char *bus;
     int node;
@@ -200,6 +203,7 @@ struct TNodeMismatch {
     double max_current;
 };
 
+// Record for a kv/base settings mismatch report
 struct TKVBaseMismatch {
     char *load;
     double kv;
@@ -207,6 +211,7 @@ struct TKVBaseMismatch {
     double kv_base;
 };
 
+// Record for the isolatedAreas.
 struct TIsolatedArea {
     int level;
     char *element;
@@ -214,12 +219,14 @@ struct TIsolatedArea {
     char **loads;
 };
 
+// Record for the isolatedElements.
 struct TIsolatedElement {
     char *name;
     int num_buses;
     char **buses;
 };
 
+// The complete record of the Isolated Buses report 
 struct TIsolatedBusesReport {
     char **isolated_buses;
     struct TIsolatedArea *isolated_area;
