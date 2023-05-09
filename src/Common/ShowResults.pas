@@ -2974,14 +2974,15 @@ begin
                     begin
                         lineObj := TDSSCktElement(LoopLineObj);
                         if lineObj <> NIL then
-                        begin
-                            loop.meterName := pMtr.Name;
-                            loop.lineA := PDElem.ParentClass.Name + '.' + PDelem.Name;
-                            loop.lineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
-                            loop.parallel := IsParallel;
-                            loop.looped := IsLoopedHere;
-                            send_loop_report(loop);
-                        end;
+                            if IsParallel OR IsLoopedHere then
+                            begin
+                                loop.meterName := pMtr.Name;
+                                loop.lineA := PDElem.ParentClass.Name + '.' + PDelem.Name;
+                                loop.lineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
+                                loop.parallel := IsParallel;
+                                loop.looped := IsLoopedHere;
+                                send_loop_report(loop);
+                            end;
                     end;
                     PDElem := pMtr.BranchList.GoForward;
                 end;
