@@ -41,8 +41,7 @@ typedef struct KVBaseMismatch KVBaseMismatch;
 struct  SummaryReport
 {
   ProtobufCMessage base;
-  int64_t timestamp;
-  char *circuitname;
+  char *casename;
   protobuf_c_boolean solved;
   char *mode;
   int32_t number;
@@ -67,7 +66,7 @@ struct  SummaryReport
 };
 #define SUMMARY_REPORT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&summary_report__descriptor) \
-    , 0, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    , (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, (char *)protobuf_c_empty_string, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
 /*

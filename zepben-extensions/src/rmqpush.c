@@ -307,8 +307,7 @@ void send_voltage_report(struct TVoltageReport vr) {
 void send_summary_report(struct TSummaryReport sr) {
     SummaryReport report = SUMMARY_REPORT__INIT;
 
-    report.timestamp = time(NULL);
-    report.circuitname = sr.circuit_name;
+    report.casename = sr.case_name;
     report.solved = sr.solved;
     report.mode = sr.mode;
     report.number = sr.number;

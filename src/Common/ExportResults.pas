@@ -3325,7 +3325,7 @@ end;
 procedure ExportSummary(DSS: TDSSContext; FileNm: String);
 var
     SummaryReport: TSummaryReport = (
-        circuitName : '';
+        caseName : '';
         solved : False;
         mode : '';
         number : 0;
@@ -3358,7 +3358,7 @@ begin
 
             if DSS.ActiveCircuit <> NIL then
             begin
-                circuitName := DSS.ActiveCircuit.CaseName;
+                caseName := DSS.ActiveCircuit.CaseName;
                 solved := DSS.ActiveCircuit.Issolved;
                 mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
                 number := DSS.ActiveCircuit.Solution.NumberofTimes;

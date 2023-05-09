@@ -547,27 +547,15 @@ void   kvbase_mismatch__free_unpacked
   assert(message->base.descriptor == &kvbase_mismatch__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
+static const ProtobufCFieldDescriptor summary_report__field_descriptors[22] =
 {
   {
-    "timestamp",
+    "caseName",
     1,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_INT64,
-    0,   /* quantifier_offset */
-    offsetof(SummaryReport, timestamp),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "circuitName",
-    2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(SummaryReport, circuitname),
+    offsetof(SummaryReport, casename),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
@@ -575,7 +563,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "solved",
-    3,
+    2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_BOOL,
     0,   /* quantifier_offset */
@@ -587,7 +575,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "mode",
-    4,
+    3,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -599,7 +587,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "number",
-    5,
+    4,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -611,7 +599,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "loadMult",
-    6,
+    5,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -623,7 +611,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "numDevices",
-    7,
+    6,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -635,7 +623,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "numBuses",
-    8,
+    7,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -647,7 +635,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "numNodes",
-    9,
+    8,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -659,7 +647,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "iterations",
-    10,
+    9,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -671,7 +659,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "controlMode",
-    11,
+    10,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -683,7 +671,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "controlIterations",
-    12,
+    11,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -695,7 +683,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "mostIterationsDone",
-    13,
+    12,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -707,7 +695,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "year",
-    14,
+    13,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -719,7 +707,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "hour",
-    15,
+    14,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
@@ -731,7 +719,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "maxPuVoltage",
-    16,
+    15,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -743,7 +731,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "minPuVoltage",
-    17,
+    16,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -755,7 +743,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "totalMW",
-    18,
+    17,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -767,7 +755,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "totalMvar",
-    19,
+    18,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -778,8 +766,8 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "mWLosses",
-    20,
+    "mwLosses",
+    19,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -791,7 +779,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "pctLosses",
-    21,
+    20,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -803,7 +791,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "mvarLosses",
-    22,
+    21,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -815,7 +803,7 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
   {
     "frequency",
-    23,
+    22,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_DOUBLE,
     0,   /* quantifier_offset */
@@ -827,34 +815,33 @@ static const ProtobufCFieldDescriptor summary_report__field_descriptors[23] =
   },
 };
 static const unsigned summary_report__field_indices_by_name[] = {
-  1,   /* field[1] = circuitName */
-  11,   /* field[11] = controlIterations */
-  10,   /* field[10] = controlMode */
-  22,   /* field[22] = frequency */
-  14,   /* field[14] = hour */
-  9,   /* field[9] = iterations */
-  5,   /* field[5] = loadMult */
-  19,   /* field[19] = mWLosses */
-  15,   /* field[15] = maxPuVoltage */
-  16,   /* field[16] = minPuVoltage */
-  3,   /* field[3] = mode */
-  12,   /* field[12] = mostIterationsDone */
-  21,   /* field[21] = mvarLosses */
-  7,   /* field[7] = numBuses */
-  6,   /* field[6] = numDevices */
-  8,   /* field[8] = numNodes */
-  4,   /* field[4] = number */
-  20,   /* field[20] = pctLosses */
-  2,   /* field[2] = solved */
-  0,   /* field[0] = timestamp */
-  17,   /* field[17] = totalMW */
-  18,   /* field[18] = totalMvar */
-  13,   /* field[13] = year */
+  0,   /* field[0] = caseName */
+  10,   /* field[10] = controlIterations */
+  9,   /* field[9] = controlMode */
+  21,   /* field[21] = frequency */
+  13,   /* field[13] = hour */
+  8,   /* field[8] = iterations */
+  4,   /* field[4] = loadMult */
+  14,   /* field[14] = maxPuVoltage */
+  15,   /* field[15] = minPuVoltage */
+  2,   /* field[2] = mode */
+  11,   /* field[11] = mostIterationsDone */
+  20,   /* field[20] = mvarLosses */
+  18,   /* field[18] = mwLosses */
+  6,   /* field[6] = numBuses */
+  5,   /* field[5] = numDevices */
+  7,   /* field[7] = numNodes */
+  3,   /* field[3] = number */
+  19,   /* field[19] = pctLosses */
+  1,   /* field[1] = solved */
+  16,   /* field[16] = totalMW */
+  17,   /* field[17] = totalMvar */
+  12,   /* field[12] = year */
 };
 static const ProtobufCIntRange summary_report__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 23 }
+  { 0, 22 }
 };
 const ProtobufCMessageDescriptor summary_report__descriptor =
 {
@@ -864,7 +851,7 @@ const ProtobufCMessageDescriptor summary_report__descriptor =
   "SummaryReport",
   "",
   sizeof(SummaryReport),
-  23,
+  22,
   summary_report__field_descriptors,
   summary_report__field_indices_by_name,
   1,  summary_report__number_ranges,

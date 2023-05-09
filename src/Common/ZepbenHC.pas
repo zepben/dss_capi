@@ -157,7 +157,7 @@ type
 // to keep as a timestamp instead of performing string tranformations
 type 
     TSummaryReport = record
-        circuitName: string;
+        caseName: string;
         solved: Boolean;
         mode: string;
         number: Integer;
@@ -175,7 +175,7 @@ type
         minPuVoltage: Double;
         totalMW: Double;
         totalMvar: Double;
-        mWLosses: Double;
+        mwLosses: Double;
         pctLosses: Double;
         mvarLosses: Double;
         frequency: Double;

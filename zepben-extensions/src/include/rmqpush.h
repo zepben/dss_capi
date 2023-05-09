@@ -123,7 +123,7 @@ struct TVoltageReport {
 // We should calculate the time on the C side, as this is a one-off and will be simpler
 // to keep as a timestamp instead of performing string tranformations
 struct TSummaryReport {
-    char *circuit_name;
+    char *case_name;
     bool solved;
     char *mode;
     int number;

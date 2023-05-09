@@ -36,6 +36,7 @@ package: lib/linux_x64/libdss_capi.so
 	cd ${current_dir}/package && tar cjvf dss-libs.bz2 *
 
 runner: dss-runner.c
+	cp zepben-extensions/src/include/rmqpush.h include/rmqpush.h
 	gcc -Llib/linux_x64 -ldss_capi -lrabbitmq -lrmqpush -o dss-runner dss-runner.c
 
 clean:
@@ -44,6 +45,7 @@ clean:
 
 cleanall:
 	make -C ./zepben-extensions/ clean
+	rm -rf include/rmqpush.h
 	rm -rf lib/linux_x64/lib*.so
 	rm -rf ${current_dir}/package
 	cp ../rabbitmq-c/librabbitmq/librabbitmq.so.0.14.0 lib/linux_x64/librabbitmq.so
