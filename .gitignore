@@ -12,6 +12,7 @@
 *.ilk
 #*.map
 *.exp
+.ccls*
 
 # Precompiled Headers
 *.gch
@@ -22,6 +23,7 @@
 *.a
 *.la
 *.lo
+lib/
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -51,6 +53,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+usr/
 
 # Recommended KLUSolve build folder
 klusolve/build
@@ -73,3 +76,4 @@ docs/doxygen
 docs/build
 
 .idea
+*.iml
