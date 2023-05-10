@@ -59,9 +59,8 @@ struct TDemandIntervalReport {
     double gen_max_kw;
     double gen_max_kva;
 
+    struct TVoltBaseRegisters* volt_bases;
     int num_volt_bases;
-    // voltBases should be here, but seems to cause issues, so pass it as a separate parameter.
-    // struct TVoltBaseRegisters voltBases[];
 };
 
 // Repeated values for the TPhaseVoltageReportValues.
@@ -83,9 +82,8 @@ struct TPhaseVoltageReportValues {
 struct TPhaseVoltageReport {
     const char *element;
     double hour;
+    struct TPhaseVoltageReportValues* values;
     int num_values;
-    // values should be here, but seems to cause issues, so pass it as a separate parameter.
-    // struct TPhaseVoltageReportValues values[];
 };
 
 // Record for streaming the records written to OV_MHandle in WriteOverloadReport.
@@ -121,7 +119,7 @@ struct TVoltageReport {
 
 // Record for streaming the summary from Common/ExportResults
 // We should calculate the time on the C side, as this is a one-off and will be simpler
-// to keep as a timestamp instead of performing string tranformations
+// to keep as a timestamp instead of performing string transformations
 struct TSummaryReport {
     char *case_name;
     bool solved;
@@ -159,7 +157,7 @@ struct TEventLog {
 };
 
 // Record for streaming the Tap report from Common/ExportResults
-struct TTapReport {
+struct TTapsReport {
     char *name;
     double tap;
     double min;
@@ -171,8 +169,8 @@ struct TTapReport {
 // Record for Loop/Parallel lines report
 struct TLoopReport {
     char *meter;
-    char *lineA;
-    char *lineB;
+    char *line_a;
+    char *line_b;
     bool parallel;
     bool looped;
 };
@@ -215,41 +213,42 @@ struct TKVBaseMismatch {
 struct TIsolatedArea {
     int level;
     char *element;
-    int num_loads;
     char **loads;
+    int num_loads;
 };
 
 // Record for the isolatedElements.
 struct TIsolatedElement {
     char *name;
-    int num_buses;
     char **buses;
+    int num_buses;
 };
 
 // The complete record of the Isolated Buses report 
 struct TIsolatedBusesReport {
     char **isolated_buses;
+    int num_buses;
     struct TIsolatedArea *isolated_area;
+    int num_areas;
     struct TIsolatedElement *isolated_element;
-    int num_buses, num_areas, num_elements;
+    int num_elements;
 };
 
-// diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
-void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBaseRegisters diVoltBases[]);
-// phvValues should be in the phv struct, but seems to cause issues, so pass it as a separate parameter.
-void send_phase_voltage_report(struct TPhaseVoltageReport phv, struct TPhaseVoltageReportValues phvValues[]);
-void send_overload_report(struct TOverloadReport ov);
-void send_voltage_report(struct TVoltageReport vr);
+// Energy meter reports
+void send_demand_interval_report(struct TDemandIntervalReport data);
+void send_phase_voltage_report(struct TPhaseVoltageReport data);
+void send_overload_report(struct TOverloadReport data);
+void send_voltage_report(struct TVoltageReport data);
 
-// Diagnostics reports
-void send_summary_report(struct TSummaryReport sr);
-void send_taps_report(struct TTapReport tp);
-void send_eventlog(struct TEventLog *el, int num_events);
-void send_loop_report(struct TLoopReport lr);
-void send_isolated_elements_report(struct TIsolatedBusesReport ib);
-void send_losses_entry(struct TLossesEntry le);
-void send_losses_totals(struct TLossesTotals lt);
-void send_node_mismatch_report(struct TNodeMismatch nm);
-void send_kvbase_mismatch_report(struct TKVBaseMismatch kvm);
+// Diagnostic reports
+void send_summary_report(struct TSummaryReport data);
+void send_taps_report(struct TTapsReport data);
+void send_eventlog(struct TEventLog *data, int num_events);
+void send_loop_report(struct TLoopReport data);
+void send_isolated_elements_report(struct TIsolatedBusesReport data);
+void send_losses_entry(struct TLossesEntry data);
+void send_losses_totals(struct TLossesTotals data);
+void send_node_mismatch_report(struct TNodeMismatch data);
+void send_kvbase_mismatch_report(struct TKVBaseMismatch data);
 
 #endif

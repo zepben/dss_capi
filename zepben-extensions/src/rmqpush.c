@@ -20,7 +20,7 @@
 #include "include/utils.h"
 #include "proto/hc/opendss/Diagnostics.pb-c.h"
 #include "proto/hc/opendss/EnergyMeter.pb-c.h"
-#include "proto/hc/opendss/QueueMessage.pb-c.h"
+#include "proto/hc/opendss/OpenDssReport.pb-c.h"
 
 typedef enum ERabbitMQStatus {
     OK,
@@ -118,10 +118,10 @@ int disconnect_rabbitmq() {
     return OK;
 }
 
-void send_opendss_message(QueueMessage *message) {
-    int len = queue_message__get_packed_size(message);
+void send_opendss_message(OpenDssReport *message) {
+    int len = open_dss_report__get_packed_size(message);
     void *buf = malloc(len);
-    queue_message__pack(message, buf);
+    open_dss_report__pack(message, buf);
 
     amqp_bytes_t body;
     body.len = len;
@@ -133,73 +133,72 @@ void send_opendss_message(QueueMessage *message) {
     free(buf);
 }
 
-// diVoltBases should be in the di struct, but seems to cause issues, so pass it as a separate parameter.
-void send_demand_interval_report(struct TDemandIntervalReport di, struct TVoltBaseRegisters diVoltBases[]) {
-    DemandIntervalReport report = DEMAND_INTERVAL_REPORT__INIT;
+void send_demand_interval_report(struct TDemandIntervalReport data) {
+    DemandIntervalReport di = DEMAND_INTERVAL_REPORT__INIT;
 
-    report.element = (char*)di.element;
-    report.hour = di.hour;
-    report.kwh = di.kwh;
-    report.kvarh = di.kvarh;
-    report.maxkw = di.max_kw;
-    report.maxkva = di.max_kva;
-    report.zonekwh = di.zone_kwh;
-    report.zonekvarh = di.zone_kvarh;
-    report.zonemaxkw = di.zone_max_kw;
-    report.zonemaxkva = di.zone_max_kva;
-    report.overloadkwhnormal = di.overload_kwh_normal;
-    report.overloadkwhemerg = di.overload_kwh_emerg;
-    report.loadeen = di.load_een;
-    report.loadue = di.load_ue;
-    report.zonelosseskwh = di.zone_losses_kwh;
-    report.zonelosseskvarh = di.zone_losses_kvarh;
-    report.zonemaxkwlosses = di.zone_max_kw_losses;
-    report.zonemaxkvarlosses = di.zone_max_kvar_losses;
-    report.loadlosseskwh = di.load_losses_kwh;
-    report.loadlosseskvarh = di.load_losses_kvarh;
-    report.noloadlosseskwh = di.no_load_losses_kwh;
-    report.noloadlosseskvarh = di.no_load_losses_kvarh;
-    report.maxkwloadlosses = di.max_kw_load_losses;
-    report.maxkwnoloadlosses = di.max_kw_no_load_losses;
-    report.linelosses = di.line_losses;
-    report.transformerlosses = di.transformer_losses;
-    report.linemodelinelosses = di.line_mode_line_losses;
-    report.zeromodelinelosses = di.zero_mode_line_losses;
-    report.phaselinelosses3 = di.phase_line_losses_3;
-    report.phaselinelosses12 = di.phase_line_losses_12;
-    report.genkwh = di.gen_kwh;
-    report.genkvarh = di.gen_kvarh;
-    report.genmaxkw = di.gen_max_kw;
-    report.genmaxkva = di.gen_max_kva;
+    di.element = (char*)data.element;
+    di.hour = data.hour;
+    di.kwh = data.kwh;
+    di.kvarh = data.kvarh;
+    di.maxkw = data.max_kw;
+    di.maxkva = data.max_kva;
+    di.zonekwh = data.zone_kwh;
+    di.zonekvarh = data.zone_kvarh;
+    di.zonemaxkw = data.zone_max_kw;
+    di.zonemaxkva = data.zone_max_kva;
+    di.overloadkwhnormal = data.overload_kwh_normal;
+    di.overloadkwhemerg = data.overload_kwh_emerg;
+    di.loadeen = data.load_een;
+    di.loadue = data.load_ue;
+    di.zonelosseskwh = data.zone_losses_kwh;
+    di.zonelosseskvarh = data.zone_losses_kvarh;
+    di.zonemaxkwlosses = data.zone_max_kw_losses;
+    di.zonemaxkvarlosses = data.zone_max_kvar_losses;
+    di.loadlosseskwh = data.load_losses_kwh;
+    di.loadlosseskvarh = data.load_losses_kvarh;
+    di.noloadlosseskwh = data.no_load_losses_kwh;
+    di.noloadlosseskvarh = data.no_load_losses_kvarh;
+    di.maxkwloadlosses = data.max_kw_load_losses;
+    di.maxkwnoloadlosses = data.max_kw_no_load_losses;
+    di.linelosses = data.line_losses;
+    di.transformerlosses = data.transformer_losses;
+    di.linemodelinelosses = data.line_mode_line_losses;
+    di.zeromodelinelosses = data.zero_mode_line_losses;
+    di.phaselinelosses3 = data.phase_line_losses_3;
+    di.phaselinelosses12 = data.phase_line_losses_12;
+    di.genkwh = data.gen_kwh;
+    di.genkvarh = data.gen_kvarh;
+    di.genmaxkw = data.gen_max_kw;
+    di.genmaxkva = data.gen_max_kva;
 
-    report.n_voltbases = di.num_volt_bases;
-    report.voltbases = (VoltBaseRegisters**)malloc(di.num_volt_bases * sizeof(VoltBaseRegisters*));
+    di.n_voltbases = data.num_volt_bases;
+    di.voltbases = (VoltBaseRegisters**)malloc(data.num_volt_bases * sizeof(VoltBaseRegisters*));
 
-    for (int i = 0; i < di.num_volt_bases; ++i) {
+    for (int i = 0; i < data.num_volt_bases; ++i) {
         VoltBaseRegisters volt_base = VOLT_BASE_REGISTERS__INIT;
 
-        volt_base.vbase = diVoltBases[i].vbase;
-        volt_base.kvlosses = diVoltBases[i].kv_losses;
-        volt_base.kvlineloss = diVoltBases[i].kv_line_loss;
-        volt_base.kvloadloss = diVoltBases[i].kv_load_loss;
-        volt_base.kvnoloadloss = diVoltBases[i].kv_no_load_loss;
-        volt_base.kvloadenergy = diVoltBases[i].kv_load_energy;
+        volt_base.vbase = data.volt_bases[i].vbase;
+        volt_base.kvlosses = data.volt_bases[i].kv_losses;
+        volt_base.kvlineloss = data.volt_bases[i].kv_line_loss;
+        volt_base.kvloadloss = data.volt_bases[i].kv_load_loss;
+        volt_base.kvnoloadloss = data.volt_bases[i].kv_no_load_loss;
+        volt_base.kvloadenergy = data.volt_bases[i].kv_load_energy;
 
         VoltBaseRegisters *volt_base_ptr = (VoltBaseRegisters*)malloc(sizeof(VoltBaseRegisters));
         *volt_base_ptr = volt_base;
 
-        report.voltbases[i] = volt_base_ptr;
+        di.voltbases[i] = volt_base_ptr;
     }
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_DI;
-    queue_message.di = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_DI;
+    report.di = &di;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 
-    for (int i = 0; i < di.num_volt_bases; ++i)
-        free(report.voltbases[i]);
-    free(report.voltbases);
+    for (int i = 0; i < data.num_volt_bases; ++i)
+        free(di.voltbases[i]);
+    free(di.voltbases);
 }
 
 MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg *source) {
@@ -215,269 +214,269 @@ MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg *source) {
     return phs_ptr;
 }
 
-// phvValues should be in the phv struct, but seems to cause issues, so pass it as a separate parameter.
-void send_phase_voltage_report(struct TPhaseVoltageReport phv, struct TPhaseVoltageReportValues phvValues[]) {
-    PhaseVoltageReport report = PHASE_VOLTAGE_REPORT__INIT;
+void send_phase_voltage_report(struct TPhaseVoltageReport data) {
+    PhaseVoltageReport phv = PHASE_VOLTAGE_REPORT__INIT;
 
-    report.element = (char*)phv.element;
-    report.hour = phv.hour;
-    report.n_values = phv.num_values;
-    report.values = (PhaseVoltageReportValues**)malloc(phv.num_values * sizeof(PhaseVoltageReportValues*));
+    phv.element = (char*)data.element;
+    phv.hour = data.hour;
+    phv.n_values = data.num_values;
+    phv.values = (PhaseVoltageReportValues**)malloc(data.num_values * sizeof(PhaseVoltageReportValues*));
 
-    for (int i = 0; i < phv.num_values; ++i) {
+    for (int i = 0; i < data.num_values; ++i) {
         PhaseVoltageReportValues values = PHASE_VOLTAGE_REPORT_VALUES__INIT;
 
-        values.vbase = phvValues[i].vbase;
-        values.phs1 = copyMaxMinAvg(&phvValues[i].phs1);
-        values.phs2 = copyMaxMinAvg(&phvValues[i].phs2);
-        values.phs3 = copyMaxMinAvg(&phvValues[i].phs3);
+        values.vbase = data.values[i].vbase;
+        values.phs1 = copyMaxMinAvg(&data.values[i].phs1);
+        values.phs2 = copyMaxMinAvg(&data.values[i].phs2);
+        values.phs3 = copyMaxMinAvg(&data.values[i].phs3);
 
         PhaseVoltageReportValues *values_ptr = (PhaseVoltageReportValues*)malloc(sizeof(PhaseVoltageReportValues));
         *values_ptr = values;
 
-        report.values[i] = values_ptr;
+        phv.values[i] = values_ptr;
     }
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_PHV;
-    queue_message.phv = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_PHV;
+    report.phv = &phv;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 
-    for (int i = 0; i < phv.num_values; ++i) {
-        free(report.values[i]->phs1);
-        free(report.values[i]->phs2);
-        free(report.values[i]->phs3);
-        free(report.values[i]);
+    for (int i = 0; i < data.num_values; ++i) {
+        free(phv.values[i]->phs1);
+        free(phv.values[i]->phs2);
+        free(phv.values[i]->phs3);
+        free(phv.values[i]);
     }
-    free(report.values);
+    free(phv.values);
 }
 
-void send_overload_report(struct TOverloadReport ov) {
-    OverloadReport report = OVERLOAD_REPORT__INIT;
+void send_overload_report(struct TOverloadReport data) {
+    OverloadReport ov = OVERLOAD_REPORT__INIT;
 
-    report.hour = ov.hour;
-    report.element = (char*)ov.element;
-    report.normalamps = ov.normal_amps;
-    report.emergamps = ov.emerg_amps;
-    report.percentnormal = ov.percent_normal;
-    report.percentemerg = ov.percent_emerg;
-    report.kvbase = ov.kv_base;
-    report.phase1amps = ov.phase1_amps;
-    report.phase2amps = ov.phase2_amps;
-    report.phase3amps = ov.phase3_amps;
+    ov.hour = data.hour;
+    ov.element = (char*)data.element;
+    ov.normalamps = data.normal_amps;
+    ov.emergamps = data.emerg_amps;
+    ov.percentnormal = data.percent_normal;
+    ov.percentemerg = data.percent_emerg;
+    ov.kvbase = data.kv_base;
+    ov.phase1amps = data.phase1_amps;
+    ov.phase2amps = data.phase2_amps;
+    ov.phase3amps = data.phase3_amps;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_OV;
-    queue_message.ov = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_OV;
+    report.ov = &ov;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_voltage_report(struct TVoltageReport vr) {
-    VoltageReport report = VOLTAGE_REPORT__INIT;
+void send_voltage_report(struct TVoltageReport data) {
+    VoltageReport vr = VOLTAGE_REPORT__INIT;
     VoltageReportValues hv = VOLTAGE_REPORT_VALUES__INIT;
     VoltageReportValues lv = VOLTAGE_REPORT_VALUES__INIT;
 
-    report.hour = vr.hour;
-    report.hv = &hv;
-    report.lv = &lv;
+    vr.hour = data.hour;
+    vr.hv = &hv;
+    vr.lv = &lv;
     
-    hv.undervoltages = vr.hv.under_voltages;
-    hv.minvoltage = vr.hv.min_voltage;
-    hv.overvoltage = vr.hv.over_voltage;
-    hv.maxvoltage = vr.hv.max_voltage;
-    hv.minbus = (char*)vr.hv.min_bus;
-    hv.maxbus = (char*)vr.hv.max_bus;
+    hv.undervoltages = data.hv.under_voltages;
+    hv.minvoltage = data.hv.min_voltage;
+    hv.overvoltage = data.hv.over_voltage;
+    hv.maxvoltage = data.hv.max_voltage;
+    hv.minbus = (char*)data.hv.min_bus;
+    hv.maxbus = (char*)data.hv.max_bus;
 
-    hv.undervoltages = vr.lv.under_voltages;
-    hv.minvoltage = vr.lv.min_voltage;
-    hv.overvoltage = vr.lv.over_voltage;
-    hv.maxvoltage = vr.lv.max_voltage;
-    hv.minbus = (char*)vr.lv.min_bus;
-    hv.maxbus = (char*)vr.lv.max_bus;
+    hv.undervoltages = data.lv.under_voltages;
+    hv.minvoltage = data.lv.min_voltage;
+    hv.overvoltage = data.lv.over_voltage;
+    hv.maxvoltage = data.lv.max_voltage;
+    hv.minbus = (char*)data.lv.min_bus;
+    hv.maxbus = (char*)data.lv.max_bus;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_VR;
-    queue_message.vr = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_VR;
+    report.vr = &vr;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_summary_report(struct TSummaryReport sr) {
-    SummaryReport report = SUMMARY_REPORT__INIT;
+void send_summary_report(struct TSummaryReport data) {
+    SummaryReport sr = SUMMARY_REPORT__INIT;
 
-    report.casename = sr.case_name;
-    report.solved = sr.solved;
-    report.mode = sr.mode;
-    report.number = sr.number;
-    report.loadmult = sr.load_mult;
-    report.numdevices = sr.num_devices;
-    report.numbuses = sr.num_buses;
-    report.numnodes = sr.num_nodes;
-    report.iterations = sr.iterations;
-    report.controlmode = sr.control_mode;
-    report.controliterations = sr.control_iterations;
-    report.mostiterationsdone = sr.most_iterations_done;
-    report.year = sr.year;
-    report.hour = sr.hour;
-    report.maxpuvoltage = sr.max_pu_voltage;
-    report.minpuvoltage = sr.min_pu_voltage;
-    report.totalmw = sr.total_mw;
-    report.totalmvar = sr.total_mvar;
-    report.mwlosses = sr.mw_losses;
-    report.pctlosses = sr.pct_losses;
-    report.mvarlosses = sr.mvar_losses;
-    report.frequency = sr.frequency;
+    sr.casename = data.case_name;
+    sr.solved = data.solved;
+    sr.mode = data.mode;
+    sr.number = data.number;
+    sr.loadmult = data.load_mult;
+    sr.numdevices = data.num_devices;
+    sr.numbuses = data.num_buses;
+    sr.numnodes = data.num_nodes;
+    sr.iterations = data.iterations;
+    sr.controlmode = data.control_mode;
+    sr.controliterations = data.control_iterations;
+    sr.mostiterationsdone = data.most_iterations_done;
+    sr.year = data.year;
+    sr.hour = data.hour;
+    sr.maxpuvoltage = data.max_pu_voltage;
+    sr.minpuvoltage = data.min_pu_voltage;
+    sr.totalmw = data.total_mw;
+    sr.totalmvar = data.total_mvar;
+    sr.mwlosses = data.mw_losses;
+    sr.pctlosses = data.pct_losses;
+    sr.mvarlosses = data.mvar_losses;
+    sr.frequency = data.frequency;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_SR;
-    queue_message.sr = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_SR;
+    report.sr = &sr;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_taps_report(struct TTapReport tp) {
-    TapsReport report = TAPS_REPORT__INIT;
+void send_taps_report(struct TTapsReport data) {
+    TapsReport tr = TAPS_REPORT__INIT;
 
-    report.name = tp.name;
-    report.tap = tp.tap;
-    report.min = tp.min;
-    report.max = tp.max;
-    report.step = tp.step;
-    report.position = tp.position;
+    tr.name = data.name;
+    tr.tap = data.tap;
+    tr.min = data.min;
+    tr.max = data.max;
+    tr.step = data.step;
+    tr.position = data.position;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_TR;
-    queue_message.tr = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_TR;
+    report.tr = &tr;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_eventlog(struct TEventLog *el, int num_events) {
-    EventLog log = EVENT_LOG__INIT;
+void send_eventlog(struct TEventLog *data, int num_events) {
+    EventLog el = EVENT_LOG__INIT;
 
-    log.logentry = (EventLogEntry**)malloc(num_events * sizeof(EventLogEntry*));
+    el.logentry = (EventLogEntry**)malloc(num_events * sizeof(EventLogEntry*));
 
     for (int i = 0; i < num_events; i++) {
         EventLogEntry log_entry = EVENT_LOG_ENTRY__INIT;
-        log_entry.hour = el[i].hour;
-        log_entry.sec = el[i].sec;
-        log_entry.controliter = el[i].control_iter;
-        log_entry.iteration = el[i].iteration;
-        log_entry.element = el[i].element;
-        log_entry.event = el[i].event;
-        log_entry.action = el[i].action;
+
+        log_entry.hour = data[i].hour;
+        log_entry.sec = data[i].sec;
+        log_entry.controliter = data[i].control_iter;
+        log_entry.iteration = data[i].iteration;
+        log_entry.element = data[i].element;
+        log_entry.event = data[i].event;
+        log_entry.action = data[i].action;
 
         EventLogEntry *entry = (EventLogEntry*)malloc(sizeof(EventLogEntry));
         *entry = log_entry;
-        log.logentry[i] = entry;
+        el.logentry[i] = entry;
     }
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_EL;
-    queue_message.el = &log;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_EL;
+    report.el = &el;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 
     for (int i = 0; i < num_events; i++) {
-        free(log.logentry[i]);
+        free(el.logentry[i]);
     }
-    free(log.logentry);
+    free(el.logentry);
 }
 
-void send_loop_report(struct TLoopReport lr) {
-    LoopReport loop_report = LOOP_REPORT__INIT;
+void send_loop_report(struct TLoopReport data) {
+    LoopReport lr = LOOP_REPORT__INIT;
 
-    loop_report.meter = lr.meter;
-    loop_report.linea = lr.lineA;
-    loop_report.lineb = lr.lineB;
-    loop_report.parallel = lr.parallel;
-    loop_report.looped = lr.looped;
+    lr.meter = data.meter;
+    lr.linea = data.line_a;
+    lr.lineb = data.line_b;
+    lr.parallel = data.parallel;
+    lr.looped = data.looped;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_LR;
-    queue_message.lr = &loop_report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_LR;
+    report.lr = &lr;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_losses_entry(struct TLossesEntry le) {
-    LossesEntry loss_entry = LOSSES_ENTRY__INIT;
+void send_losses_entry(struct TLossesEntry data) {
+    LossesEntry le = LOSSES_ENTRY__INIT;
 
-    loss_entry.element = le.element;
-    loss_entry.kwlosses = le.kw_losses;
-    loss_entry.pctpower = le.pct_power;
-    loss_entry.kvarlosses = le.kvar_losses;
+    le.element = data.element;
+    le.kwlosses = data.kw_losses;
+    le.pctpower = data.pct_power;
+    le.kvarlosses = data.kvar_losses;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_LE;
-    queue_message.le = &loss_entry;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_LE;
+    report.le = &le;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_losses_totals(struct TLossesTotals lt) {
-    LossesTotals totals = LOSSES_TOTALS__INIT;
+void send_losses_totals(struct TLossesTotals data) {
+    LossesTotals losses = LOSSES_TOTALS__INIT;
 
-    totals.totalpctlosses = lt.total_pct_losses;
-    totals.totalloadpower = lt.total_load_power;
-    totals.transformerlosses = lt.transformer_losses;
-    totals.linelosses = lt.line_losses;
-    totals.totallosses = lt.total_losses;
+    losses.totalpctlosses = data.total_pct_losses;
+    losses.totalloadpower = data.total_load_power;
+    losses.transformerlosses = data.transformer_losses;
+    losses.linelosses = data.line_losses;
+    losses.totallosses = data.total_losses;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_LOSSES;
-    queue_message.losses = &totals;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_LOSSES;
+    report.losses = &losses;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_node_mismatch_report(struct TNodeMismatch nm) {
-    NodeMismatch mismatch = NODE_MISMATCH__INIT;
+void send_node_mismatch_report(struct TNodeMismatch data) {
+    NodeMismatch nm = NODE_MISMATCH__INIT;
 
-    mismatch.bus = nm.bus;
-    mismatch.node = nm.node;
-    mismatch.currentsum = nm.current_sum;
-    mismatch.pcterror = nm.pct_error;
-    mismatch.maxcurrent = nm.max_current;
+    nm.bus = data.bus;
+    nm.node = data.node;
+    nm.currentsum = data.current_sum;
+    nm.pcterror = data.pct_error;
+    nm.maxcurrent = data.max_current;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_NM;
-    queue_message.nm = &mismatch;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_NM;
+    report.nm = &nm;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_kvbase_mismatch_report(struct TKVBaseMismatch kvm) {
-    KVBaseMismatch mismatch = KVBASE_MISMATCH__INIT;
+void send_kvbase_mismatch_report(struct TKVBaseMismatch data) {
+    KVBaseMismatch kvm = KVBASE_MISMATCH__INIT;
 
-    mismatch.load = kvm.load;
-    mismatch.kv = kvm.kv;
-    mismatch.bus = kvm.bus;
-    mismatch.kvbase = kvm.kv_base;
+    kvm.load = data.load;
+    kvm.kv = data.kv;
+    kvm.bus = data.bus;
+    kvm.kvbase = data.kv_base;
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_KVM;
-    queue_message.kvm = &mismatch;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_KVM;
+    report.kvm = &kvm;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 }
 
-void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
-    IsolatedBusesReport report = ISOLATED_BUSES_REPORT__INIT;
+void send_isolated_elements_report(struct TIsolatedBusesReport data) {
+    IsolatedBusesReport ibr = ISOLATED_BUSES_REPORT__INIT;
 
     // isolatedBuses first; pick 1024b arbitrarily as I've never seen bus names this long
-    report.disconnectedbuses = malloc(ib.num_buses * 1024);
-    for (int i = 0; i < ib.num_buses; i++) {
-        report.disconnectedbuses[i] = ib.isolated_buses[i];
+    ibr.disconnectedbuses = malloc(data.num_buses * 1024);
+    for (int i = 0; i < data.num_buses; i++) {
+        ibr.disconnectedbuses[i] = data.isolated_buses[i];
     }
 
     // IsolatedAreas
-    report.isolatedsubareas = malloc(ib.num_areas * sizeof(IsolatedArea));
-    for (int i = 0; i < ib.num_areas; i++) {
+    ibr.isolatedsubareas = malloc(data.num_areas * sizeof(IsolatedArea));
+    for (int i = 0; i < data.num_areas; i++) {
         IsolatedArea area = ISOLATED_AREA__INIT;
-        struct TIsolatedArea ia = ib.isolated_area[i];
+        struct TIsolatedArea ia = data.isolated_area[i];
 
         area.level = ia.level;
         area.element = ia.element;
@@ -488,14 +487,14 @@ void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
 
         IsolatedArea *a = (IsolatedArea *)malloc(sizeof(IsolatedArea));
         *a = area;
-        report.isolatedsubareas[i] = a;
+        ibr.isolatedsubareas[i] = a;
     }
 
     // IsolatedElements
-    report.isolatedelements = malloc(ib.num_elements * sizeof(IsolatedElement));
-    for (int i = 0; i < ib.num_elements; i++) {
+    ibr.isolatedelements = malloc(data.num_elements * sizeof(IsolatedElement));
+    for (int i = 0; i < data.num_elements; i++) {
         IsolatedElement element = ISOLATED_ELEMENT__INIT;
-        struct TIsolatedElement ie = ib.isolated_element[i];
+        struct TIsolatedElement ie = data.isolated_element[i];
 
         element.name = ie.name;
         element.buses = malloc(ie.num_buses * 1024);
@@ -506,27 +505,27 @@ void send_isolated_elements_report(struct TIsolatedBusesReport ib) {
         IsolatedElement *el = (IsolatedElement*)malloc(sizeof(IsolatedElement));
         *el = element;
 
-        report.isolatedelements[i] = el;
+        ibr.isolatedelements[i] = el;
     }
 
-    QueueMessage queue_message = QUEUE_MESSAGE__INIT;
-    queue_message.report_case = QUEUE_MESSAGE__REPORT_IBR;
-    queue_message.ibr = &report;
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_IBR;
+    report.ibr = &ibr;
 
-    send_opendss_message(&queue_message);
+    send_opendss_message(&report);
 
     // free stuff
-    free(report.disconnectedbuses);
+    free(ibr.disconnectedbuses);
 
-    for (int i = 0; i < ib.num_areas; i++) {
-        free(report.isolatedsubareas[i]->loads);
-        free(report.isolatedsubareas[i]);
+    for (int i = 0; i < data.num_areas; i++) {
+        free(ibr.isolatedsubareas[i]->loads);
+        free(ibr.isolatedsubareas[i]);
     }
-    free(report.isolatedsubareas);
+    free(ibr.isolatedsubareas);
 
-    for (int i = 0; i < ib.num_elements; i++) {
-        free(report.isolatedelements[i]->buses);
-        free(report.isolatedelements[i]);
+    for (int i = 0; i < data.num_elements; i++) {
+        free(ibr.isolatedelements[i]->buses);
+        free(ibr.isolatedelements[i]);
     }
-    free(report.isolatedelements);
+    free(ibr.isolatedelements);
 }

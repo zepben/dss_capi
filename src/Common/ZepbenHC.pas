@@ -16,109 +16,99 @@ procedure debug(msg: String);
 // Repeated values for the DemandIntervalReport.
 type
     TVoltBaseRegisters = record
-        vbase: Double;
-        kvLosses: Double;
-        kvLineLoss: Double;
-        kvLoadLoss: Double;
-        kvNoLoadLoss: Double;
-        kvLoadEnergy: Double;
+        Vbase: Double;
+        KvLosses: Double;
+        KvLineLoss: Double;
+        KvLoadLoss: Double;
+        KvNoLoadLoss: Double;
+        KvLoadEnergy: Double;
     end;
-
-// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from EnergyMeter.pas.
-type
-    TVoltBaseRegistersArray = array [0..10] of TVoltBaseRegisters;
 
 // Record for streaming the records written to DI_MHandle in WriteDemandIntervalData (top).
 type
     TDemandIntervalReport = record
-        element: string;
-        hour: Double;
+        Element: string;
+        Hour: Double;
 
-        kwh: Double;
-        kvarh: Double;
-        maxKw: Double;
-        maxKva: Double;
-        zoneKwh: Double;
-        zoneKvarh: Double;
-        zoneMaxKw: Double;
-        zoneMaxKva: Double;
-        overloadKwhNormal: Double;
-        overloadKwhEmerg: Double;
-        loadEEN: Double;
-        loadUE: Double;
-        zoneLossesKwh: Double;
-        zoneLossesKvarh: Double;
-        zoneMaxKwLosses: Double;
-        zoneMaxKvarLosses: Double;
-        loadLossesKwh: Double;
-        loadLossesKvarh: Double;
-        noLoadLossesKwh: Double;
-        noLoadLossesKvarh: Double;
-        maxKwLoadLosses: Double;
-        maxKwNoLoadLosses: Double;
-        lineLosses: Double;
-        transformerLosses: Double;
+        Kwh: Double;
+        Kvarh: Double;
+        MaxKw: Double;
+        MaxKva: Double;
+        ZoneKwh: Double;
+        ZoneKvarh: Double;
+        ZoneMaxKw: Double;
+        ZoneMaxKva: Double;
+        OverloadKwhNormal: Double;
+        OverloadKwhEmerg: Double;
+        LoadEEN: Double;
+        LoadUE: Double;
+        ZoneLossesKwh: Double;
+        ZoneLossesKvarh: Double;
+        ZoneMaxKwLosses: Double;
+        ZoneMaxKvarLosses: Double;
+        LoadLossesKwh: Double;
+        LoadLossesKvarh: Double;
+        NoLoadLossesKwh: Double;
+        NoLoadLossesKvarh: Double;
+        MaxKwLoadLosses: Double;
+        MaxKwNoLoadLosses: Double;
+        LineLosses: Double;
+        TransformerLosses: Double;
 
-        lineModeLineLosses: Double;
-        zeroModeLineLosses: Double;
+        LineModeLineLosses: Double;
+        ZeroModeLineLosses: Double;
 
-        phaseLineLosses3: Double;
-        phaseLineLosses12: Double;
+        PhaseLineLosses3: Double;
+        PhaseLineLosses12: Double;
 
-        genKwh: Double;
-        genKvarh: Double;
-        genMaxKw: Double;
-        genMaxKva: Double;
-        
-        numVoltBases: Integer;
-        // voltBases should be here, but seems to cause issues, so pass it as a separate parameter.
-        // voltBases: TVoltBaseRegistersArray;
+        GenKwh: Double;
+        GenKvarh: Double;
+        GenMaxKw: Double;
+        GenMaxKva: Double;
+
+        VoltBases: array of TVoltBaseRegisters;
+        NumVoltBases: Integer;
     end;
 
 // Repeated values for the TPhaseVoltageReportValues.
 type
     TMaxMinAvg = record
-        max: Double;
-        min: Double;
-        avg: Double;
+        Max: Double;
+        Min: Double;
+        Avg: Double;
     end;
 
 // Repeated values for the PhaseVoltageReport.
 type
     TPhaseVoltageReportValues = record
-        vbase: Double;
-        phs1: TMaxMinAvg;
-        phs2: TMaxMinAvg;
-        phs3: TMaxMinAvg;
+        Vbase: Double;
+        Phs1: TMaxMinAvg;
+        Phs2: TMaxMinAvg;
+        Phs3: TMaxMinAvg;
     end;
-
-// Upper bound needs to be >= NumEMVbase (aka MaxVBaseCount) from EnergyMeter.pas.
-type
-    TPhaseVoltageReportValuesArray = array [0..10] of TPhaseVoltageReportValues;
 
 // Record for streaming the records written to PHV_MHandle in WriteDemandIntervalData (bottom).
 type
     TPhaseVoltageReport = record
-        element: string;
-        hour: Double;
-        numValues: Integer;
-        // values should be here, but seems to cause issues, so pass it as a separate parameter.
-        // values: TPhaseVoltageReportValuesArray;
+        Element: string;
+        Hour: Double;
+        Values: array of TPhaseVoltageReportValues;
+        NumValues: Integer;
     end;
 
 // Record for streaming the records written to OV_MHandle in WriteOverloadReport.
 type
     TOverloadReport = record
-        hour: Double;
-        element: string;
-        normalAmps: Double;
-        emergAmps: Double;
-        percentNormal: Double;
-        percentEmerg: Double;
-        kvBase: Double;
-        phase1Amps: Double;
-        phase2Amps: Double;
-        phase3Amps: Double;
+        Hour: Double;
+        Element: string;
+        NormalAmps: Double;
+        EmergAmps: Double;
+        PercentNormal: Double;
+        PercentEmerg: Double;
+        KvBase: Double;
+        Phase1Amps: Double;
+        Phase2Amps: Double;
+        Phase3Amps: Double;
     end;
 
 // Repeated values for the VoltageReport.
@@ -157,133 +147,134 @@ type
 // to keep as a timestamp instead of performing string tranformations
 type 
     TSummaryReport = record
-        caseName: string;
-        solved: Boolean;
-        mode: string;
-        number: Integer;
-        loadMult: Double;
-        numDevices: Integer;
-        numBuses: Integer;
-        numNodes: Integer;
-        iterations: Integer;
-        controlMode: string;
-        controlIterations: Integer;
-        mostIterationsDone: Integer;
-        year: Integer;
-        hour: Integer;
-        maxPuVoltage: Double;
-        minPuVoltage: Double;
-        totalMW: Double;
-        totalMvar: Double;
-        mwLosses: Double;
-        pctLosses: Double;
-        mvarLosses: Double;
-        frequency: Double;
+        CaseName: string;
+        Solved: Boolean;
+        Mode: string;
+        Number: Integer;
+        LoadMult: Double;
+        NumDevices: Integer;
+        NumBuses: Integer;
+        NumNodes: Integer;
+        Iterations: Integer;
+        ControlMode: string;
+        ControlIterations: Integer;
+        MostIterationsDone: Integer;
+        Year: Integer;
+        Hour: Integer;
+        MaxPuVoltage: Double;
+        MinPuVoltage: Double;
+        TotalMW: Double;
+        TotalMvar: Double;
+        MwLosses: Double;
+        PctLosses: Double;
+        MvarLosses: Double;
+        Frequency: Double;
     end;
 
 // Record for streaming the Tap report from Common/ExportResults
 type 
-    TTapReport = record
-        name: string; 
-        tap: Double;
-        mintap: Double;
-        maxtap: Double;
-        step: Double;
-        position: Integer;
+    TTapsReport = record
+        Name: string; 
+        Tap: Double;
+        Mintap: Double;
+        Maxtap: Double;
+        Step: Double;
+        Position: Integer;
     end;
 
 // Record for streaming the Loops/Parallel lines in Energy Meter Zone
 type
     TLoopReport = record
-        meterName: string;
-        lineA: string;
-        lineB: string;
-        parallel: Boolean;
-        looped: Boolean;
+        MeterName: string;
+        LineA: string;
+        LineB: string;
+        Parallel: Boolean;
+        Looped: Boolean;
     end;
 
 // Records for streaming the Isolated elements
 // Repeated values for the isolatedAreas.
 type
     TIsolatedArea = record
-        level: Integer;
-        element: string;
-        numLoads: Integer;
-        loads: array of string;
+        Level: Integer;
+        Element: string;
+        NumLoads: Integer;
+        Loads: array of string;
     end;
 
 // Repeated values for the isolatedElements.
 type
     TIsolatedElement = record
-        name: string;
-        numBuses: Integer;
-        buses: array of string;
+        Name: string;
+        NumBuses: Integer;
+        Buses: array of string;
     end;
 
 // The complete record of the Isolated Buses report 
 type
     TIsolatedBusesReport = record
-        disconnectedBuses: array of string;
-        isolatedSubAreas: array of TIsolatedArea;
-        isolatedElements: array of TIsolatedElement;
-        numBuses, numAreas, numElements: Integer;
+        DisconnectedBuses: array of string;
+        NumBuses: Integer;
+        IsolatedSubAreas: array of TIsolatedArea;
+        NumAreas: Integer;
+        IsolatedElements: array of TIsolatedElement;
+        NumElements: Integer;
     end;
 
 // Repeated record for a single losses entry
 type
     TLossesEntry = record
-        element: string;
-        kwLosses: Double;
-        pctPower: Double;
-        kvarLosses: Double;
+        Element: string;
+        KwLosses: Double;
+        PctPower: Double;
+        KvarLosses: Double;
     end;
 
 // Record for streaming the total losses report
 type
     TLossesTotals = record
-        lineLosses: Double;
-        transformerLosses: Double;
-        totalLosses: Double;
-        totalLoadPower: Double;
-        totalPctLosses: Double;
+        LineLosses: Double;
+        TransformerLosses: Double;
+        TotalLosses: Double;
+        TotalLoadPower: Double;
+        TotalPctLosses: Double;
     end;
 
 // Record for a node mismatch report
 type
     TNodeMismatch = record
-        bus: string;
-        node: Integer;
-        currentSum: Double;
-        pctError: Double;
-        maxCurrent: Double;
+        Bus: string;
+        Node: Integer;
+        CurrentSum: Double;
+        PctError: Double;
+        MaxCurrent: Double;
     end;
 
 // Record for a kvbase settings mismatch report
 type
     TKVBaseMismatch = record
-        load: string;
-        kv: double;
-        bus: string;
-        kvBase: Double;
+        Load: string;
+        Kv: double;
+        Bus: string;
+        KvBase: Double;
     end;
 
-// diVoltBases should be in the di record, but seems to cause issues, so pass it as a separate parameter.
-procedure send_demand_interval_report(di: TDemandIntervalReport; diVoltBases: TVoltBaseRegistersArray); RMQPUSH_CALL;
-// phvValues should be in the phv record, but seems to cause issues, so pass it as a separate parameter.
-procedure send_phase_voltage_report(phv: TPhaseVoltageReport; phvValues: TPhaseVoltageReportValuesArray); RMQPUSH_CALL;
-procedure send_overload_report(ov: TOverloadReport); RMQPUSH_CALL;
-procedure send_voltage_report(vr: TVoltageReport); RMQPUSH_CALL;
+// Energy meter reports
+procedure send_demand_interval_report(data: TDemandIntervalReport); RMQPUSH_CALL;
+procedure send_phase_voltage_report(data: TPhaseVoltageReport); RMQPUSH_CALL;
+procedure send_overload_report(data: TOverloadReport); RMQPUSH_CALL;
+procedure send_voltage_report(data: TVoltageReport); RMQPUSH_CALL;
 
-// Diagnotics 
-procedure send_summary_report(sr: TSummaryReport); RMQPUSH_CALL;
-procedure send_taps_report(tp: TTapReport); RMQPUSH_CALL;
-procedure send_eventlog(el: array of TEventLog; numEvents: Integer); RMQPUSH_CALL;
-procedure send_loop_report(lr: TLoopReport); RMQPUSH_CALL;
-procedure send_isolated_elements_report(ib: TIsolatedBusesReport); RMQPUSH_CALL;
-procedure send_losses_entry(le: TLossesEntry); RMQPUSH_CALL;
-procedure send_losses_totals(lt: TLossesTotals); RMQPUSH_CALL;
-procedure send_node_mismatch_report(nm: TNodeMismatch); RMQPUSH_CALL;
-procedure send_kvbase_mismatch_report(kvm: TKVBaseMismatch); RMQPUSH_CALL;
+// Diagnotic reports 
+procedure send_summary_report(data: TSummaryReport); RMQPUSH_CALL;
+procedure send_taps_report(data: TTapsReport); RMQPUSH_CALL;
+procedure send_eventlog(data: array of TEventLog; num_events: Integer); RMQPUSH_CALL;
+procedure send_loop_report(data: TLoopReport); RMQPUSH_CALL;
+procedure send_isolated_elements_report(data: TIsolatedBusesReport); RMQPUSH_CALL;
+procedure send_losses_entry(data: TLossesEntry); RMQPUSH_CALL;
+procedure send_losses_totals(data: TLossesTotals); RMQPUSH_CALL;
+procedure send_node_mismatch_report(data: TNodeMismatch); RMQPUSH_CALL;
+procedure send_kvbase_mismatch_report(data: TKVBaseMismatch); RMQPUSH_CALL;
 
 implementation
 

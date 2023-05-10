@@ -2687,21 +2687,21 @@ begin
                 if (CLASSMASK and PDElem.DSSObjType) = LINE_ELEMENT then
                     LineLosses += kLosses;
 
-                LossesEntry.element := PDElem.FullName;
-                LossesEntry.kwLosses := kLosses.re;
+                LossesEntry.Element := PDElem.FullName;
+                LossesEntry.KwLosses := kLosses.re;
                 if (TermPower.re <> 0.0) and (kLosses.re > 0.0009) then
-                    LossesEntry.pctPower := (kLosses.re / Abs(TermPower.re) * 100.0)
+                    LossesEntry.PctPower := (kLosses.re / Abs(TermPower.re) * 100.0)
                 else
-                    LossesEntry.pctPower := CZERO.RE;
-                LossesEntry.kvarLosses := kLosses.im;
+                    LossesEntry.PctPower := CZERO.RE;
+                LossesEntry.KvarLosses := kLosses.im;
                 send_losses_entry(LossesEntry);
             end;
             PDelem := DSS.ActiveCircuit.PDElements.Next;
         end;      {While}
 
-        LossesTotals.totalLosses := TotalLosses.re;
-        LossesTotals.lineLosses := LineLosses.re;
-        LossesTotals.transformerLosses := TransLosses.re;
+        LossesTotals.TotalLosses := TotalLosses.re;
+        LossesTotals.LineLosses := LineLosses.re;
+        LossesTotals.TransformerLosses := TransLosses.re;
         
 
         LoadPower := CZERO;
@@ -2717,12 +2717,12 @@ begin
         end;
         LoadPower := LoadPower * 0.001;
 
-        LossesTotals.totalLoadPower := Abs(LoadPower.re);
+        LossesTotals.TotalLoadPower := Abs(LoadPower.re);
         
         if LoadPower.re <> 0.0 then
-            LossesTotals.totalPctLosses := Abs(TotalLosses.re / LoadPower.re) * 100.0
+            LossesTotals.TotalPctLosses := Abs(TotalLosses.re / LoadPower.re) * 100.0
         else
-            LossesTotals.totalPctLosses := CZERO.re;
+            LossesTotals.TotalPctLosses := CZERO.re;
 
         send_losses_totals(LossesTotals);
 
@@ -2787,7 +2787,7 @@ var
     i, j: Integer;
     sout: String;
 
-    isolatedBusesReport: TIsolatedBusesReport;
+    IsolatedBusesReport: TIsolatedBusesReport;
     isolatedArea: TIsolatedArea;
     isolatedElement: TIsolatedElement;
 
@@ -2829,9 +2829,9 @@ begin
             for j := 1 to NumBuses do
                 if not Buses^[j].BusChecked then
                 begin
-                    i := Length(isolatedBusesReport.disconnectedBuses);
-                    SetLength(isolatedBusesReport.disconnectedBuses, i + 1);
-                    isolatedBusesReport.disconnectedBuses[i] := BusList.NameOfIndex(j);
+                    i := Length(IsolatedBusesReport.DisconnectedBuses);
+                    SetLength(IsolatedBusesReport.DisconnectedBuses, i + 1);
+                    IsolatedBusesReport.DisconnectedBuses[i] := BusList.NameOfIndex(j);
                 end;
         end;
 
@@ -2863,9 +2863,9 @@ begin
 
                                 isolatedArea.numLoads := Length(isolatedArea.loads);
 
-                                i := Length(isolatedBusesReport.isolatedSubAreas);
-                                SetLength(isolatedBusesReport.isolatedSubAreas, i + 1); 
-                                isolatedBusesReport.isolatedSubAreas[i] := isolatedArea;
+                                i := Length(IsolatedBusesReport.IsolatedSubAreas);
+                                SetLength(IsolatedBusesReport.IsolatedSubAreas, i + 1);
+                                IsolatedBusesReport.IsolatedSubAreas[i] := isolatedArea;
 
 
                                 TestBranch := SubArea.GoForward;
@@ -2899,18 +2899,18 @@ begin
 
                         isolatedElement.numBuses := Length(isolatedElement.buses);
 
-                        i := Length(isolatedBusesReport.isolatedElements);
-                        SetLength(isolatedBusesReport.isolatedElements, i + 1); 
-                        isolatedBusesReport.isolatedElements[i] := isolatedElement;
+                        i := Length(IsolatedBusesReport.IsolatedElements);
+                        SetLength(IsolatedBusesReport.IsolatedElements, i + 1);
+                        IsolatedBusesReport.IsolatedElements[i] := isolatedElement;
                     end;
                 TestElement := CktElements.Next;
             end;
         end;
 
-        isolatedBusesReport.numBuses := Length(isolatedBusesReport.disconnectedBuses);
-        isolatedBusesReport.numAreas := Length(isolatedBusesReport.isolatedSubAreas);
-        isolatedBusesReport.numElements := Length(isolatedBusesReport.isolatedElements);
-        send_isolated_elements_report(isolatedBusesReport);
+        IsolatedBusesReport.NumBuses := Length(IsolatedBusesReport.DisconnectedBuses);
+        IsolatedBusesReport.NumAreas := Length(IsolatedBusesReport.IsolatedSubAreas);
+        IsolatedBusesReport.NumElements := Length(IsolatedBusesReport.IsolatedElements);
+        send_isolated_elements_report(IsolatedBusesReport);
 
     finally
         Branch_List.Free;
@@ -2954,7 +2954,7 @@ var
     pdElem: TPDElement;
     hMeter: Integer;
     pMtr: TEnergyMeterObj;
-    loop: TLoopReport;
+    Loop: TLoopReport;
     lineObj: TDSSCktElement;
 begin
     try
@@ -2976,12 +2976,12 @@ begin
                         if lineObj <> NIL then
                             if IsParallel OR IsLoopedHere then
                             begin
-                                loop.meterName := pMtr.Name;
-                                loop.lineA := PDElem.ParentClass.Name + '.' + PDelem.Name;
-                                loop.lineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
-                                loop.parallel := IsParallel;
-                                loop.looped := IsLoopedHere;
-                                send_loop_report(loop);
+                                Loop.MeterName := pMtr.Name;
+                                Loop.LineA := PDElem.ParentClass.Name + '.' + PDelem.Name;
+                                Loop.LineB := lineObj.Parentclass.Name + '.' + lineObj.Name;
+                                Loop.Parallel := IsParallel;
+                                Loop.Looped := IsLoopedHere;
+                                send_loop_report(Loop);
                             end;
                     end;
                     PDElem := pMtr.BranchList.GoForward;
@@ -3577,15 +3577,15 @@ begin
             nref := 0;
             dTemp := Cabs(Currents^[nref]);
             if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-                NodeMismatch.pctError := 0.0
+                NodeMismatch.PctError := 0.0
             else
-                NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
+                NodeMismatch.PctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
 
             // send the report
-            NodeMismatch.bus := 'System Ground';
-            NodeMismatch.node := nref;
-            NodeMismatch.currentSum := dTemp;
-            NodeMismatch.maxCurrent := MaxNodeCurrent^[nRef];
+            NodeMismatch.Bus := 'System Ground';
+            NodeMismatch.Node := nref;
+            NodeMismatch.CurrentSum := dTemp;
+            NodeMismatch.MaxCurrent := MaxNodeCurrent^[nRef];
             send_node_mismatch_report(NodeMismatch);
 
 
@@ -3596,15 +3596,15 @@ begin
                     nref := Buses^[i].GetRef(j);
                     dTemp := Cabs(Currents^[nref]);
                     if (MaxNodeCurrent^[nRef] = 0.0) or (MaxNodeCurrent^[nRef] = dTemp) then
-                        NodeMismatch.pctError := 0.0
+                        NodeMismatch.PctError := 0.0
                     else
-                        NodeMismatch.pctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
+                        NodeMismatch.PctError := dTemp / MaxNodeCurrent^[nRef] * 100.0;
 
                     // send the report
-                    NodeMismatch.bus := BusList.NameOfIndex(i);
-                    NodeMismatch.node := nref;
-                    NodeMismatch.currentSum := dTemp;
-                    NodeMismatch.maxCurrent := MaxNodeCurrent^[nRef];
+                    NodeMismatch.Bus := BusList.NameOfIndex(i);
+                    NodeMismatch.Node := nref;
+                    NodeMismatch.CurrentSum := dTemp;
+                    NodeMismatch.MaxCurrent := MaxNodeCurrent^[nRef];
                     send_node_mismatch_report(NodeMismatch);
                 end;
             end;
@@ -3642,10 +3642,10 @@ begin
                 begin
                     if abs(pLoad.kVLoadBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        KvBaseMismatchReport.load := pLoad.FullName;
-                        KvBaseMismatchReport.kv := pLoad.kVLoadBase;
-                        KvBaseMismatchReport.bus := pLoad.GetBus(1);
-                        KvBaseMismatchReport.kvBase := pBus.kVBase;
+                        KvBaseMismatchReport.Load := pLoad.FullName;
+                        KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
+                        KvBaseMismatchReport.Bus := pLoad.GetBus(1);
+                        KvBaseMismatchReport.KvBase := pBus.kVBase;
                         send_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end
@@ -3654,10 +3654,10 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pLoad.kVLoadBase - BuskV) > 0.10 * BuskV then
                     begin
-                        KvBaseMismatchReport.load := pLoad.FullName;
-                        KvBaseMismatchReport.kv := pLoad.kVLoadBase;
-                        KvBaseMismatchReport.bus := pLoad.GetBus(1);
-                        KvBaseMismatchReport.kvBase := pBus.kVBase;
+                        KvBaseMismatchReport.Load := pLoad.FullName;
+                        KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
+                        KvBaseMismatchReport.Bus := pLoad.GetBus(1);
+                        KvBaseMismatchReport.KvBase := pBus.kVBase;
                         send_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end;
@@ -3677,10 +3677,10 @@ begin
                 begin
                     if abs(pGen.Genvars.kVGeneratorBase - pBus.kVBase) > 0.10 * pBus.kVBase then
                     begin
-                        KvBaseMismatchReport.load := pLoad.FullName;
-                        KvBaseMismatchReport.kv := pLoad.kVLoadBase;
-                        KvBaseMismatchReport.bus := pLoad.GetBus(1);
-                        KvBaseMismatchReport.kvBase := pBus.kVBase;
+                        KvBaseMismatchReport.Load := pLoad.FullName;
+                        KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
+                        KvBaseMismatchReport.Bus := pLoad.GetBus(1);
+                        KvBaseMismatchReport.KvBase := pBus.kVBase;
                         send_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end
@@ -3689,10 +3689,10 @@ begin
                     BuskV := pBus.kVBase * SQRT3;
                     if abs(pGen.Genvars.kVGeneratorBase - BuskV) > 0.10 * BuskV then
                     begin
-                        KvBaseMismatchReport.load := pLoad.FullName;
-                        KvBaseMismatchReport.kv := pLoad.kVLoadBase;
-                        KvBaseMismatchReport.bus := pLoad.GetBus(1);
-                        KvBaseMismatchReport.kvBase := pBus.kVBase;
+                        KvBaseMismatchReport.Load := pLoad.FullName;
+                        KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
+                        KvBaseMismatchReport.Bus := pLoad.GetBus(1);
+                        KvBaseMismatchReport.KvBase := pBus.kVBase;
                         send_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end;

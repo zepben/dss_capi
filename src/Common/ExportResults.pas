@@ -3325,28 +3325,28 @@ end;
 procedure ExportSummary(DSS: TDSSContext; FileNm: String);
 var
     SummaryReport: TSummaryReport = (
-        caseName : '';
-        solved : False;
-        mode : '';
-        number : 0;
-        loadMult : 0.0;
-        numDevices : 0;
-        numBuses : 0;
-        numNodes : 0;
-        iterations : 0;
-        controlMode : '';
-        controlIterations : 0;
-        mostIterationsDone : 0;
-        year : 0;
-        hour : 0;
-        maxpuvoltage : 0.0;
-        minpuvoltage : 0.0;
-        totalMW : 0.0;
-        totalMvar : 0.0;
-        mWLosses : 99999999.99;
-        pctLosses : 0.0;
-        mvarLosses : 0.0;
-        frequency : 0.0;
+        CaseName : '';
+        Solved : False;
+        Mode : '';
+        Number : 0;
+        LoadMult : 0.0;
+        NumDevices : 0;
+        NumBuses : 0;
+        NumNodes : 0;
+        Iterations : 0;
+        ControlMode : '';
+        ControlIterations : 0;
+        MostIterationsDone : 0;
+        Year : 0;
+        Hour : 0;
+        Maxpuvoltage : 0.0;
+        Minpuvoltage : 0.0;
+        TotalMW : 0.0;
+        TotalMvar : 0.0;
+        MwLosses : 99999999.99;
+        PctLosses : 0.0;
+        MvarLosses : 0.0;
+        Frequency : 0.0;
     );
     cPower, cLosses: Complex;
 
@@ -3358,39 +3358,39 @@ begin
 
             if DSS.ActiveCircuit <> NIL then
             begin
-                caseName := DSS.ActiveCircuit.CaseName;
-                solved := DSS.ActiveCircuit.Issolved;
-                mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
-                number := DSS.ActiveCircuit.Solution.NumberofTimes;
-                loadMult := DSS.ActiveCircuit.LoadMultiplier;
-                numDevices := DSS.ActiveCircuit.NumDevices;
-                numBuses := DSS.ActiveCircuit.NumBuses;
-                numNodes := DSS.ActiveCircuit.NumNodes;
-                iterations := DSS.ActiveCircuit.Solution.Iteration;
-                controlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
-                controlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
-                mostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
+                CaseName := DSS.ActiveCircuit.CaseName;
+                Solved := DSS.ActiveCircuit.Issolved;
+                Mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
+                Number := DSS.ActiveCircuit.Solution.NumberofTimes;
+                LoadMult := DSS.ActiveCircuit.LoadMultiplier;
+                NumDevices := DSS.ActiveCircuit.NumDevices;
+                NumBuses := DSS.ActiveCircuit.NumBuses;
+                NumNodes := DSS.ActiveCircuit.NumNodes;
+                Iterations := DSS.ActiveCircuit.Solution.Iteration;
+                ControlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
+                ControlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
+                MostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
 
                 if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
                 begin
 
-                    year := DSS.ActiveCircuit.Solution.Year;
-                    hour := DSS.ActiveCircuit.Solution.DynaVars.intHour;
-                    maxPuVoltage := GetMaxPUVoltage(DSS);
-                    minPuVoltage := GetMinPUVoltage(DSS, TRUE);
+                    Year := DSS.ActiveCircuit.Solution.Year;
+                    Hour := DSS.ActiveCircuit.Solution.DynaVars.intHour;
+                    MaxPuVoltage := GetMaxPUVoltage(DSS);
+                    MinPuVoltage := GetMinPUVoltage(DSS, TRUE);
 
-                    cPower := GetTotalPowerFromSources(DSS) * 0.000001;  // MVA
-                    totalMW := cPower.re;
-                    totalMvar := cPower.im;
-                    cLosses := DSS.ActiveCircuit.Losses * 0.000001;
+                    CPower := GetTotalPowerFromSources(DSS) * 0.000001;  // MVA
+                    TotalMW := cPower.re;
+                    TotalMvar := cPower.im;
+                    CLosses := DSS.ActiveCircuit.Losses * 0.000001;
                     if cPower.re <> 0.0 then
                     begin
-                        mWLosses := cLosses.re;
-                        pctLosses := Closses.re / cPower.re * 100.0;
+                        MwLosses := cLosses.re;
+                        PctLosses := Closses.re / cPower.re * 100.0;
                     end;
 
-                    mvarLosses := cLosses.im;
-                    frequency := DSS.ActiveCircuit.Solution.Frequency;
+                    MvarLosses := cLosses.im;
+                    Frequency := DSS.ActiveCircuit.Solution.Frequency;
                 end;
 
                 // Only send report if ActiveCircuit
@@ -4079,7 +4079,7 @@ procedure ExportTaps(DSS: TDSSContext; FileNm: String);
 var
     iWind: Integer;
     pReg: TRegControlObj;
-    TapReport: TTapReport;
+    TapsReport: TTapsReport;
 begin
     try
         with DSS.ActiveCircuit do
@@ -4090,14 +4090,14 @@ begin
                 with pReg.Transformer do
                 begin
                     iWind := pReg.TrWinding;
-                    TapReport.name := Name;
-                    TapReport.tap := PresentTap[iWind];
-                    TapReport.mintap := MinTap[iWind];
-                    TapReport.maxtap := MaxTap[iWind];
-                    TapReport.step := TapIncrement[iWind];
-                    TapReport.position := TapPosition(pREg.Transformer, iWind);
+                    TapsReport.Name := Name;
+                    TapsReport.Tap := PresentTap[iWind];
+                    TapsReport.Mintap := MinTap[iWind];
+                    TapsReport.Maxtap := MaxTap[iWind];
+                    TapsReport.Step := TapIncrement[iWind];
+                    TapsReport.Position := TapPosition(pREg.Transformer, iWind);
 
-                    send_taps_report(TapReport);
+                    send_taps_report(TapsReport);
                 end;
                 pReg := RegControls.Next;
             end;

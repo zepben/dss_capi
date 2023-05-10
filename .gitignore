@@ -76,3 +76,4 @@ docs/doxygen
 docs/build
 
 .idea
+*.iml
