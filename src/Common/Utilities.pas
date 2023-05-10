@@ -1,4 +1,5 @@
 
+
 unit Utilities;
 
 {
@@ -18,6 +19,7 @@ uses
     UcMatrix,
     DSSClass,
     Classes,
+    ZepbenHC,
     Dynamics;
 
 type
@@ -1432,6 +1434,7 @@ procedure ClearEventLog;
 begin
     try
         DSS.EventStrings.Clear;
+        SetLength(DSS.EventLog, 0);
     except
         On E: Exception do
             DoSimpleMsg(DSS, 'Exception clearing event log: %s, @EventStrings=%p', [E.Message, @DSS.EventStrings], 7151);
@@ -1449,20 +1452,45 @@ begin
 end;
 
 procedure LogThisEvent(DSS: TDSSContext; const EventName: String);
+var
+    EventLog: TEventLog;
+    i: Integer;
 begin
     with DSS.ActiveCircuit.Solution do
-        DSS.EventStrings.Add(Format('Hour=%d, Sec=%-.8g, Iteration=%d, ControlIter=%d, Event=%s',
-            [DynaVars.intHour, Dynavars.t, iteration, ControlIteration, EventName]));
+    begin
+        EventLog.Hour := DynaVars.intHour;
+        EventLog.Sec := DynaVars.t;
+        EventLog.Iteration := iteration;
+        EventLog.ControlIter := ControlIteration;
+        EventLog.Event := EventName;
+        EventLog.Element := '';
+        EventLog.Action := '';
+
+        i := Length(DSS.EventLog);
+        SetLength(DSS.EventLog, i + 1);
+        DSS.EventLog[i] := EventLog;
+    end;
 end;
 
 procedure AppendToEventLog(DSS: TDSSContext; const opdev: String; const action: String);
 var
-    S: String;
+    EventLog: TEventLog;
+    i: Integer;
 begin
-    with DSS.ActiveCircuit.Solution do
-        S := Format('Hour=%d, Sec=%-.5g, ControlIter=%d, Element=%s, Action=%s',
-            [DynaVars.intHour, Dynavars.t, ControlIteration, OpDev, AnsiUpperCase(action)]);
-    DSS.EventStrings.Add(S);
+    with  DSS.ActiveCircuit.Solution do
+    begin
+        EventLog.Hour := DynaVars.intHour;
+        EventLog.Sec := DynaVars.t;
+        EventLog.ControlIter := ControlIteration;
+        EventLog.Element := OpDev;
+        EventLog.Action := AnsiUpperCase(action);
+        EventLog.Event := '';
+        EventLog.Iteration := -1;
+
+        i := Length(DSS.EventLog);
+        SetLength(DSS.EventLog, i + 1);
+        DSS.EventLog[i] := EventLog;
+    end;
 end;
 
 

@@ -23,7 +23,6 @@ typedef struct _PhaseVoltageReport PhaseVoltageReport;
 typedef struct _OverloadReport OverloadReport;
 typedef struct _VoltageReportValues VoltageReportValues;
 typedef struct _VoltageReport VoltageReport;
-typedef struct _EnergyMeterReport EnergyMeterReport;
 
 
 /* --- enums --- */
@@ -211,35 +210,6 @@ struct  _VoltageReport
     , 0, NULL, NULL }
 
 
-typedef enum {
-  ENERGY_METER_REPORT__REPORT__NOT_SET = 0,
-  ENERGY_METER_REPORT__REPORT_DI = 1,
-  ENERGY_METER_REPORT__REPORT_PHV = 2,
-  ENERGY_METER_REPORT__REPORT_OV = 3,
-  ENERGY_METER_REPORT__REPORT_VR = 4
-    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(ENERGY_METER_REPORT__REPORT)
-} EnergyMeterReport__ReportCase;
-
-/*
- **
- * The message type we actually stream, which contains one of the above reports.
- */
-struct  _EnergyMeterReport
-{
-  ProtobufCMessage base;
-  EnergyMeterReport__ReportCase report_case;
-  union {
-    DemandIntervalReport *di;
-    PhaseVoltageReport *phv;
-    OverloadReport *ov;
-    VoltageReport *vr;
-  };
-};
-#define ENERGY_METER_REPORT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&energy_meter_report__descriptor) \
-    , ENERGY_METER_REPORT__REPORT__NOT_SET, {0} }
-
-
 /* VoltBaseRegisters methods */
 void   volt_base_registers__init
                      (VoltBaseRegisters         *message);
@@ -392,25 +362,6 @@ VoltageReport *
 void   voltage_report__free_unpacked
                      (VoltageReport *message,
                       ProtobufCAllocator *allocator);
-/* EnergyMeterReport methods */
-void   energy_meter_report__init
-                     (EnergyMeterReport         *message);
-size_t energy_meter_report__get_packed_size
-                     (const EnergyMeterReport   *message);
-size_t energy_meter_report__pack
-                     (const EnergyMeterReport   *message,
-                      uint8_t             *out);
-size_t energy_meter_report__pack_to_buffer
-                     (const EnergyMeterReport   *message,
-                      ProtobufCBuffer     *buffer);
-EnergyMeterReport *
-       energy_meter_report__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   energy_meter_report__free_unpacked
-                     (EnergyMeterReport *message,
-                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*VoltBaseRegisters_Closure)
@@ -437,9 +388,6 @@ typedef void (*VoltageReportValues_Closure)
 typedef void (*VoltageReport_Closure)
                  (const VoltageReport *message,
                   void *closure_data);
-typedef void (*EnergyMeterReport_Closure)
-                 (const EnergyMeterReport *message,
-                  void *closure_data);
 
 /* --- services --- */
 
@@ -454,7 +402,6 @@ extern const ProtobufCMessageDescriptor phase_voltage_report__descriptor;
 extern const ProtobufCMessageDescriptor overload_report__descriptor;
 extern const ProtobufCMessageDescriptor voltage_report_values__descriptor;
 extern const ProtobufCMessageDescriptor voltage_report__descriptor;
-extern const ProtobufCMessageDescriptor energy_meter_report__descriptor;
 
 PROTOBUF_C__END_DECLS
 

@@ -16,6 +16,7 @@ USES
     DSSPointerList, 
     NamedObject, 
     ParserDel, 
+    ZepbenHC,
 {$IFDEF DSS_CAPI_PM}
     SyncObjs, 
 {$ENDIF}    
@@ -574,6 +575,7 @@ type
         DefaultBaseFreq  :Double;
         DaisySize        :Double;
         
+        EventLog:  array of TEventLog;
         EventStrings: TStringList;
         SavedFileList:TStringList;
         ErrorStrings: TStringList;
@@ -933,6 +935,8 @@ begin
     QueryLogFileName := '';   
     QueryLogFile := nil;
 
+
+    EventLog         := NIL;
     EventStrings     := TStringList.Create;
     SavedFileList    := TStringList.Create;
     ErrorStrings     := TStringList.Create;

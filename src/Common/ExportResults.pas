@@ -12,6 +12,7 @@ interface
 uses
     EnergyMeter,
     XYCurve,
+    ZepbenHC,
     DSSClass;
 
 procedure ExportVoltages(DSS: TDSSContext; FileNm: String);
@@ -2977,80 +2978,82 @@ end;
 
 procedure ExportSummary(DSS: TDSSContext; FileNm: String);
 var
-    F: TFileStream = nil;
+    SummaryReport: TSummaryReport = (
+        CaseName : '';
+        Solved : False;
+        Mode : '';
+        Number : 0;
+        LoadMult : 0.0;
+        NumDevices : 0;
+        NumBuses : 0;
+        NumNodes : 0;
+        Iterations : 0;
+        ControlMode : '';
+        ControlIterations : 0;
+        MostIterationsDone : 0;
+        Year : 0;
+        Hour : 0;
+        Maxpuvoltage : 0.0;
+        Minpuvoltage : 0.0;
+        TotalMW : 0.0;
+        TotalMvar : 0.0;
+        MwLosses : 99999999.99;
+        PctLosses : 0.0;
+        MvarLosses : 0.0;
+        Frequency : 0.0;
+    );
     cPower, cLosses: Complex;
 
 begin
     try
-
-        if FileExists(FileNm) then
+    
+        with SummaryReport do
         begin
-            F := TBufferedFileStream.Create(FileNm, fmOpenReadWrite); 
-            F.Seek(0, soEnd);
-        end
-        else
-        begin    // Create and write the header
-            F := TBufferedFileStream.Create(FileNm, fmCreate); 
-            FSWrite(F, 'DateTime, CaseName, ');
-            FSWrite(F, 'Status, Mode, Number, LoadMult, NumDevices, NumBuses, NumNodes');
-            FSWrite(F, ', Iterations, ControlMode, ControlIterations');
-            FSWrite(F, ', MostIterationsDone');
+
             if DSS.ActiveCircuit <> NIL then
+            begin
+                CaseName := DSS.ActiveCircuit.CaseName;
+                Solved := DSS.ActiveCircuit.Issolved;
+                Mode := DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode));
+                Number := DSS.ActiveCircuit.Solution.NumberofTimes;
+                LoadMult := DSS.ActiveCircuit.LoadMultiplier;
+                NumDevices := DSS.ActiveCircuit.NumDevices;
+                NumBuses := DSS.ActiveCircuit.NumBuses;
+                NumNodes := DSS.ActiveCircuit.NumNodes;
+                Iterations := DSS.ActiveCircuit.Solution.Iteration;
+                ControlMode := DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode);
+                ControlIterations := DSS.ActiveCircuit.Solution.ControlIteration;
+                MostIterationsDone := DSS.ActiveCircuit.Solution.MostIterationsDone;
+
                 if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
                 begin
-                    FSWrite(F, ', Year, Hour, MaxPuVoltage, MinPuVoltage, TotalMW, TotalMvar');
-                    FSWrite(F, ', MWLosses, pctLosses, MvarLosses, Frequency');
+
+                    Year := DSS.ActiveCircuit.Solution.Year;
+                    Hour := DSS.ActiveCircuit.Solution.DynaVars.intHour;
+                    MaxPuVoltage := GetMaxPUVoltage(DSS);
+                    MinPuVoltage := GetMinPUVoltage(DSS, TRUE);
+
+                    CPower := GetTotalPowerFromSources(DSS) * 0.000001;  // MVA
+                    TotalMW := cPower.re;
+                    TotalMvar := cPower.im;
+                    CLosses := DSS.ActiveCircuit.Losses * 0.000001;
+                    if cPower.re <> 0.0 then
+                    begin
+                        MwLosses := cLosses.re;
+                        PctLosses := Closses.re / cPower.re * 100.0;
+                    end;
+
+                    MvarLosses := cLosses.im;
+                    Frequency := DSS.ActiveCircuit.Solution.Frequency;
                 end;
 
-            FSWriteln(F);
-        end;
-
-        FSWrite(F, Format('"%s", ', [DateTimeToStr(Now)]));
-        if DSS.ActiveCircuit <> NIL then
-            FSWrite(F, Format('%s, ', [DSS.ActiveCircuit.CaseName]))
-        else
-            FSWrite(F, 'NONE, ');
-
-        if DSS.ActiveCircuit.Issolved then
-            FSWrite(F, 'SOLVED')
-        else
-            FSWrite(F, 'UnSolved');
-
-        FSWrite(F, Format(', %s', [DSS.SolveModeEnum.OrdinalToString(ord(DSS.ActiveCircuit.Solution.mode))]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.NumberofTimes]));
-        FSWrite(F, Format(', %8.3f', [DSS.ActiveCircuit.LoadMultiplier]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumDevices]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumBuses]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.NumNodes]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.Iteration]));
-        FSWrite(F, Format(', %s', [DSS.ControlModeEnum.OrdinalToString(DSS.ActiveCircuit.Solution.Controlmode)]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.ControlIteration]));
-        FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.MostIterationsDone]));
-        if DSS.ActiveCircuit <> NIL then
-            if DSS.ActiveCircuit.Issolved and not DSS.ActiveCircuit.BusNameRedefined then
-            begin
-                FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.Year]));
-                FSWrite(F, Format(', %d', [DSS.ActiveCircuit.Solution.DynaVars.intHour]));
-                FSWrite(F, Format(', %-.5g', [GetMaxPUVoltage(DSS)]));
-                FSWrite(F, Format(', %-.5g', [GetMinPUVoltage(DSS, TRUE)]));
-                cPower := GetTotalPowerFromSources(DSS) * 0.000001;  // MVA
-                FSWrite(F, Format(', %-.6g', [cPower.re]));
-                FSWrite(F, Format(', %-.6g', [cPower.im]));
-                cLosses := DSS.ActiveCircuit.Losses * 0.000001;
-                if cPower.re <> 0.0 then
-                    FSWrite(F, Format(', %-.6g, %-.4g', [cLosses.re, (Closses.re / cPower.re * 100.0)]))
-                else
-                    FSWrite(F, 'Total Active Losses:   ****** MW, (**** %%)');
-                FSWrite(F, Format(', %-.6g', [cLosses.im]));
-                FSWrite(F, Format(', %-g', [DSS.ActiveCircuit.Solution.Frequency]));
+                // Only send report if ActiveCircuit
+                send_summary_report(SummaryReport);
             end;
 
-        FSWriteln(F);
-
-        DSS.GlobalResult := FileNm;
-
+            DSS.GlobalResult := FileNm;
+        end;
     finally
-        FreeAndNil(F);
     end;
 end;
 
@@ -3728,14 +3731,11 @@ end;
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 procedure ExportTaps(DSS: TDSSContext; FileNm: String);
 var
-    F: TFileStream = nil;
     iWind: Integer;
     pReg: TRegControlObj;
+    TapsReport: TTapsReport;
 begin
     try
-        F := TBufferedFileStream.Create(FileNm, fmCreate);
-        FSWriteln(F, 'Name, RegControl, Tap, Min, Max, Step, Position, Winding, Direction, CogenMode');
-
         with DSS.ActiveCircuit do
         begin
             pReg := RegControls.First;
@@ -3744,18 +3744,14 @@ begin
                 with pReg.Transformer do
                 begin
                     iWind := pReg.TrWinding;
-                    FSWrite(F, Name);
-                    FSWriteln(F, Format(', %s , %8.5f, %8.5f, %8.5f, %8.5f, %d, %d, %s, %s', [
-                        pReg.Name,
-                        PresentTap[iWind], 
-                        MinTap[iWind], 
-                        MaxTap[iWind], 
-                        TapIncrement[iWind], 
-                        TapPosition(pReg.Transformer, iWind),
-                        iWind,
-                        StrUtils.IfThen(pReg.InReverseMode, 'Reverse', 'Forward'),
-                        BoolToStr(pReg.InCogenMode, TRUE)
-                    ]));
+                    TapsReport.Name := Name;
+                    TapsReport.Tap := PresentTap[iWind];
+                    TapsReport.Mintap := MinTap[iWind];
+                    TapsReport.Maxtap := MaxTap[iWind];
+                    TapsReport.Step := TapIncrement[iWind];
+                    TapsReport.Position := TapPosition(pReg.Transformer, iWind);
+
+                    send_taps_report(TapsReport);
                 end;
                 pReg := RegControls.Next;
             end;
@@ -3763,7 +3759,6 @@ begin
 
         DSS.GlobalResult := FileNm;
     finally
-        FreeAndNil(F);
     end;
 end;
 
