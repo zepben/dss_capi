@@ -5,9 +5,7 @@ unit ZepbenHC;
 
 interface
 uses
-    Dynamics,
-    SysUtils,
-    Classes;
+    SysUtils;
 
 
 function getBooleanEnv(name: String; default: boolean): Boolean; inline; 
