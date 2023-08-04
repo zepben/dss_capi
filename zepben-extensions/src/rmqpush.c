@@ -36,18 +36,29 @@ typedef enum ERabbitMQStatus {
 static amqp_connection_state_t conn;
 static amqp_basic_properties_t props;
 
-static const char *exchange = NULL;
-static const char *routing_key = NULL;
+static char *host = NULL;
+static char *user = NULL;
+static char *pass = NULL;
+static char *exchange = NULL;
+static char *routing_key = NULL;
+static int lport = 0;
+static int heartbeat = 60;
 
 static bool connect_called = false;
 
-const char *copy_str(const char *str) {
+char *copy_str(const char *str) {
     char *copy = malloc(strlen(str) + 1);
     strcpy(copy, str);
     return copy;
 }
 
-int connect_rabbitmq(char *hostname, int port, char *username, char *password, char *_routing_key, char *_exchange) {
+static int msg_counter = 0;
+static int retry_counter = 0;
+static time_t global_timer;
+static time_t rate_timer;
+
+
+int connect_rabbitmq(char *hostname, int port, char *username, char *password, char *_routing_key, char *_exchange, int _heartbeat) {
     if (connect_called)
         return ALREADY_CALLED;
     
@@ -55,8 +66,14 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
     
     printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", username, hostname, port);
 
+    // Store the params
+    host = copy_str(hostname);
+    user = copy_str(username);
+    pass = copy_str(password);
     exchange = copy_str(_exchange);
     routing_key = copy_str(_routing_key);
+    lport = port;
+    heartbeat = _heartbeat;
 
     printf("connection...");
 
@@ -76,7 +93,7 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
     printf("login...");
     
     // Login
-    if (has_amqp_error(amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, username, password), "login"))
+    if (has_amqp_error(amqp_login(conn, "/", 0, 131072, heartbeat, AMQP_SASL_METHOD_PLAIN, username, password), "login"))
         return LOGIN_FAILED;
 
     printf("channel...");
@@ -91,9 +108,33 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
         props.content_type = amqp_cstring_bytes("binary/proto");
         props.delivery_mode = AMQP_DELIVERY_PERSISTENT; /* persistent delivery mode */
     }
+
+    // start the global timer
+    time(&global_timer);
+    time(&rate_timer);
   
     printf("done.\n");
+    printf("Connection is created with heartbeat=%d\n", amqp_get_heartbeat(conn));
     return OK;
+}
+
+int reset_connection() {
+    if (!connect_called)
+        return OK;
+    
+    // Cleanup the connection if there is one.
+    if (conn != NULL) {
+        // This will implicitly clean up the channels and sockets.
+        // And we don't really care if all cleaned properly as we try this 3 times max.
+        // Worst case it's leaking 3 conn pointers + related data,
+        // however, container exits at some point, so shouldn't accumulate too much of an issue.
+        amqp_destroy_connection(conn);
+        conn = NULL;
+        connect_called = false;
+    }
+    
+    return connect_rabbitmq(host, lport, user, pass, routing_key, exchange, heartbeat);
+
 }
 
 int disconnect_rabbitmq() {
@@ -127,8 +168,34 @@ void send_opendss_message(OpenDssReport *message) {
     body.len = len;
     body.bytes = buf;
 
-    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, body), "publishing voltage report"))
-      exit(1);
+    time_t local1;
+    time(&local1);
+
+    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, body), "publishing opendss report")) {
+      time(&local1);
+      printf("Socket error happened after %f sec\n", difftime(local1, global_timer));
+       if (retry_counter < 3) {
+          retry_counter++;
+          printf("Reconnect %d and resend\n", retry_counter);
+          fflush(stdout);
+          reset_connection();
+          send_opendss_message(message);
+      } else {
+         printf("Tried 3 times, getting too many errors, bailing\n");
+         exit(1);
+      }
+    }
+
+
+    msg_counter++;
+    time(&local1);
+
+    if (difftime(local1, rate_timer) > 10) {
+      printf("Pushing %f msg/sec\n", (double)(msg_counter/10));
+      fflush(stdout);
+      msg_counter = 0;
+      time(&rate_timer);
+    }
 
     free(buf);
 }
