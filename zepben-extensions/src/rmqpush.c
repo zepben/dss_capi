@@ -36,15 +36,27 @@ typedef enum ERabbitMQStatus {
 static amqp_connection_state_t conn;
 static amqp_basic_properties_t props;
 
-static char *host = NULL;
-static char *user = NULL;
-static char *pass = NULL;
-static char *exchange = NULL;
-static char *routing_key = NULL;
-static int lport = 0;
-static int heartbeat = 60;
+// Connection parameters
+static const char *host;
+static const char *user;
+static const char *pass;
+static const char *exchange;
+static const char *routing_key;
+static int lport;
+static int heartbeat;
 
+static bool conn_conf_set = false;
 static bool connect_called = false;
+
+static int msg_counter = 0;
+static int retry_counter = 0;
+static time_t global_timer;
+
+// rate interval 3 sec
+static const int rate_interval = 3;
+static time_t rate_timer;
+
+
 
 char *copy_str(const char *str) {
     char *copy = malloc(strlen(str) + 1);
@@ -52,13 +64,25 @@ char *copy_str(const char *str) {
     return copy;
 }
 
-static int msg_counter = 0;
-static int retry_counter = 0;
-static time_t global_timer;
-static time_t rate_timer;
+void clear_mem() {
+    free((void*)exchange);
+    exchange = NULL;
+    
+    free((void*)routing_key);
+    routing_key = NULL;
+
+    free((void*)host);
+    host = NULL;
+
+    free((void*)user);
+    user = NULL;
+
+    free((void*)pass);
+    pass = NULL;
+}
 
 
-int connect_rabbitmq(char *hostname, int port, char *username, char *password, char *_routing_key, char *_exchange, int _heartbeat) {
+int connect_rabbitmq(char const *hostname, int const port, char const *username, char const *password, char const *_routing_key, char const *_exchange, int const _heartbeat) {
     if (connect_called)
         return ALREADY_CALLED;
     
@@ -67,13 +91,16 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
     printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", username, hostname, port);
 
     // Store the params
-    host = copy_str(hostname);
-    user = copy_str(username);
-    pass = copy_str(password);
-    exchange = copy_str(_exchange);
-    routing_key = copy_str(_routing_key);
-    lport = port;
-    heartbeat = _heartbeat;
+    if (!conn_conf_set) {
+        host = copy_str(hostname);
+        user = copy_str(username);
+        pass = copy_str(password);
+        exchange = copy_str(_exchange);
+        routing_key = copy_str(_routing_key);
+        lport = port;
+        heartbeat = _heartbeat;
+        conn_conf_set = true;
+    }
 
     printf("connection...");
 
@@ -87,13 +114,13 @@ int connect_rabbitmq(char *hostname, int port, char *username, char *password, c
     if (socket == NULL)
         return SOCKET_CREATION_FAILED;
 
-    if (amqp_socket_open(socket, hostname, port) != AMQP_STATUS_OK)
+    if (amqp_socket_open(socket, host, lport) != AMQP_STATUS_OK)
         return SOCKET_OPEN_FAILED;
 
     printf("login...");
     
     // Login
-    if (has_amqp_error(amqp_login(conn, "/", 0, 131072, heartbeat, AMQP_SASL_METHOD_PLAIN, username, password), "login"))
+    if (has_amqp_error(amqp_login(conn, "/", 0, 131072, heartbeat, AMQP_SASL_METHOD_PLAIN, user, pass), "login"))
         return LOGIN_FAILED;
 
     printf("channel...");
@@ -141,12 +168,8 @@ int disconnect_rabbitmq() {
     if (!connect_called)
         return OK;
 
-    free((void*)exchange);
-    exchange = NULL;
-    
-    free((void*)routing_key);
-    routing_key = NULL;
-    
+    clear_mem(); 
+
     // Cleanup the connection if there is one.
     if (conn != NULL) {
         // This will implicitly clean up the channels and sockets.
@@ -159,6 +182,41 @@ int disconnect_rabbitmq() {
     return OK;
 }
 
+void publish_rmq_message(amqp_bytes_t msg) {
+    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report")) {
+      if (retry_counter < 3) {
+          retry_counter++;
+          printf("Attempt #%d: reconnect and resend\n", retry_counter);
+          fflush(stdout);
+          int conn_state = reset_connection();
+          if (conn_state == OK || conn_state == ALREADY_CALLED) 
+              publish_rmq_message(msg);
+          else {
+              printf("Error %d while reconnecting to RMQ, exit\n", conn_state);
+              exit(1);
+          }
+      } else {
+         printf("Tried 3 times, getting too many errors, bailing\n");
+         exit(1);
+      }
+    }
+
+    // Print rate of RMQ publish
+    time_t local1;
+    time(&local1);
+
+    msg_counter++;
+    // Print rate every 3 sec or so
+    if (difftime(local1, rate_timer) > rate_interval) {
+      printf("Pushing %f msg/sec\n", (double)msg_counter/rate_interval);
+      fflush(stdout);
+      msg_counter = 0;
+      time(&rate_timer);
+    }
+
+
+}
+
 void send_opendss_message(OpenDssReport *message) {
     int len = open_dss_report__get_packed_size(message);
     void *buf = malloc(len);
@@ -168,34 +226,7 @@ void send_opendss_message(OpenDssReport *message) {
     body.len = len;
     body.bytes = buf;
 
-    time_t local1;
-    time(&local1);
-
-    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, body), "publishing opendss report")) {
-      time(&local1);
-      printf("Socket error happened after %f sec\n", difftime(local1, global_timer));
-       if (retry_counter < 3) {
-          retry_counter++;
-          printf("Reconnect %d and resend\n", retry_counter);
-          fflush(stdout);
-          reset_connection();
-          send_opendss_message(message);
-      } else {
-         printf("Tried 3 times, getting too many errors, bailing\n");
-         exit(1);
-      }
-    }
-
-
-    msg_counter++;
-    time(&local1);
-
-    if (difftime(local1, rate_timer) > 10) {
-      printf("Pushing %f msg/sec\n", (double)(msg_counter/10));
-      fflush(stdout);
-      msg_counter = 0;
-      time(&rate_timer);
-    }
+    publish_rmq_message(body);
 
     free(buf);
 }
