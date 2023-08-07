@@ -42,7 +42,7 @@ static const char *user;
 static const char *pass;
 static const char *exchange;
 static const char *routing_key;
-static int lport;
+static int port;
 static int heartbeat;
 
 static bool conn_conf_set = false;
@@ -50,7 +50,6 @@ static bool connect_called = false;
 
 static int msg_counter = 0;
 static int retry_counter = 0;
-static time_t global_timer;
 
 // rate interval 3 sec
 static const int rate_interval = 3;
@@ -82,14 +81,12 @@ void clear_mem() {
 }
 
 
-int connect_rabbitmq(char const *hostname, int const port, char const *username, char const *password, char const *_routing_key, char const *_exchange, int const _heartbeat) {
+int connect_rabbitmq(char const *hostname, int const _port, char const *username, char const *password, char const *_routing_key, char const *_exchange, int const _heartbeat) {
     if (connect_called)
         return ALREADY_CALLED;
     
     connect_called = true;
     
-    printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", username, hostname, port);
-
     // Store the params
     if (!conn_conf_set) {
         host = copy_str(hostname);
@@ -97,11 +94,12 @@ int connect_rabbitmq(char const *hostname, int const port, char const *username,
         pass = copy_str(password);
         exchange = copy_str(_exchange);
         routing_key = copy_str(_routing_key);
-        lport = port;
+        port = _port;
         heartbeat = _heartbeat;
         conn_conf_set = true;
     }
 
+    printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", user, host, port);
     printf("connection...");
 
     conn = amqp_new_connection();
@@ -114,7 +112,7 @@ int connect_rabbitmq(char const *hostname, int const port, char const *username,
     if (socket == NULL)
         return SOCKET_CREATION_FAILED;
 
-    if (amqp_socket_open(socket, host, lport) != AMQP_STATUS_OK)
+    if (amqp_socket_open(socket, host, port) != AMQP_STATUS_OK)
         return SOCKET_OPEN_FAILED;
 
     printf("login...");
@@ -136,8 +134,7 @@ int connect_rabbitmq(char const *hostname, int const port, char const *username,
         props.delivery_mode = AMQP_DELIVERY_PERSISTENT; /* persistent delivery mode */
     }
 
-    // start the global timer
-    time(&global_timer);
+    // start the rate timer
     time(&rate_timer);
   
     printf("done.\n");
@@ -160,7 +157,7 @@ int reset_connection() {
         connect_called = false;
     }
     
-    return connect_rabbitmq(host, lport, user, pass, routing_key, exchange, heartbeat);
+    return connect_rabbitmq(host, port, user, pass, routing_key, exchange, heartbeat);
 
 }
 
