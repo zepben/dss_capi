@@ -37,11 +37,11 @@ static amqp_connection_state_t conn;
 static amqp_basic_properties_t props;
 
 // Connection parameters
-static const char *host;
-static const char *user;
-static const char *pass;
-static const char *exchange;
-static const char *routing_key;
+static const char* host = NULL;
+static const char* user = NULL;
+static const char* pass = NULL;
+static const char* exchange = NULL;
+static const char* routing_key = NULL;
 static int port;
 static int heartbeat;
 
@@ -55,10 +55,11 @@ static int retry_counter = 0;
 static const int rate_interval = 3;
 static time_t rate_timer;
 
+void retry_rmq_message(amqp_bytes_t msg);
+bool waitForAck();
 
-
-char *copy_str(const char *str) {
-    char *copy = malloc(strlen(str) + 1);
+char* copy_str(const char* str) {
+    char* copy = malloc(strlen(str) + 1);
     strcpy(copy, str);
     return copy;
 }
@@ -66,7 +67,7 @@ char *copy_str(const char *str) {
 void clear_mem() {
     free((void*)exchange);
     exchange = NULL;
-    
+
     free((void*)routing_key);
     routing_key = NULL;
 
@@ -81,12 +82,12 @@ void clear_mem() {
 }
 
 
-int connect_rabbitmq(char const *hostname, int const _port, char const *username, char const *password, char const *_routing_key, char const *_exchange, int const _heartbeat) {
+int connect_rabbitmq(char const* hostname, int const _port, char const* username, char const* password, char const* _routing_key, char const* _exchange, int const _heartbeat) {
     if (connect_called)
         return ALREADY_CALLED;
-    
+
     connect_called = true;
-    
+
     // Store the params
     if (!conn_conf_set) {
         host = copy_str(hostname);
@@ -99,16 +100,18 @@ int connect_rabbitmq(char const *hostname, int const _port, char const *username
         conn_conf_set = true;
     }
 
-    printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d'...", user, host, port);
+    printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d' [heartbeat=%d]...", user, host, port, heartbeat);
     printf("connection...");
+    fflush(stdout);
 
     conn = amqp_new_connection();
     if (conn == NULL)
         return CONNECTION_FAILED;
 
     printf("socket...");
+    fflush(stdout);
 
-    amqp_socket_t *socket = amqp_tcp_socket_new(conn);
+    amqp_socket_t* socket = amqp_tcp_socket_new(conn);
     if (socket == NULL)
         return SOCKET_CREATION_FAILED;
 
@@ -116,16 +119,26 @@ int connect_rabbitmq(char const *hostname, int const _port, char const *username
         return SOCKET_OPEN_FAILED;
 
     printf("login...");
-    
+    fflush(stdout);
+
     // Login
     if (has_amqp_error(amqp_login(conn, "/", 0, 131072, heartbeat, AMQP_SASL_METHOD_PLAIN, user, pass), "login"))
         return LOGIN_FAILED;
 
     printf("channel...");
+    fflush(stdout);
 
     // Open channel
     amqp_channel_open(conn, 1);
     if (has_amqp_error(amqp_get_rpc_reply(conn), "channel"))
+        return CHANNEL_FAILED;
+
+    printf("confirms...");
+    fflush(stdout);
+
+    // Enable confirms on channel
+    amqp_confirm_select(conn, 1);
+    if (has_amqp_error(amqp_get_rpc_reply(conn), "channel confirms"))
         return CHANNEL_FAILED;
 
     if (props.delivery_mode != AMQP_DELIVERY_PERSISTENT) {
@@ -136,16 +149,17 @@ int connect_rabbitmq(char const *hostname, int const _port, char const *username
 
     // start the rate timer
     time(&rate_timer);
-  
-    printf("done.\n");
-    printf("Connection is created with heartbeat=%d\n", amqp_get_heartbeat(conn));
+
+    printf("connected with heartbeat=%d\n", amqp_get_heartbeat(conn));
+    fflush(stdout);
+
     return OK;
 }
 
 int reset_connection() {
     if (!connect_called)
         return OK;
-    
+
     // Cleanup the connection if there is one.
     if (conn != NULL) {
         // This will implicitly clean up the channels and sockets.
@@ -156,7 +170,7 @@ int reset_connection() {
         conn = NULL;
         connect_called = false;
     }
-    
+
     return connect_rabbitmq(host, port, user, pass, routing_key, exchange, heartbeat);
 
 }
@@ -165,58 +179,104 @@ int disconnect_rabbitmq() {
     if (!connect_called)
         return OK;
 
-    clear_mem(); 
+    clear_mem();
 
     // Cleanup the connection if there is one.
     if (conn != NULL) {
         // This will implicitly clean up the channels and sockets.
         if (has_error(amqp_destroy_connection(conn), "cleanup"))
             return CLEANUP_FAILED;
-        
+
         conn = NULL;
     }
-    
+
     return OK;
 }
 
 void publish_rmq_message(amqp_bytes_t msg) {
     if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report")) {
-      if (retry_counter < 3) {
-          retry_counter++;
-          printf("Attempt #%d: reconnect and resend\n", retry_counter);
-          fflush(stdout);
-          int conn_state = reset_connection();
-          if (conn_state == OK || conn_state == ALREADY_CALLED) 
-              publish_rmq_message(msg);
-          else {
-              printf("Error %d while reconnecting to RMQ, exit\n", conn_state);
-              exit(1);
-          }
-      } else {
-         printf("Tried 3 times, getting too many errors, bailing\n");
-         exit(1);
-      }
+        retry_rmq_message(msg);
+        return;
     }
+    else {
+        if (!waitForAck()) {
+            retry_rmq_message(msg);
+            return;
+        }
 
-    // Print rate of RMQ publish
-    time_t local1;
-    time(&local1);
+        // Print rate of RMQ publish
+        time_t local1;
+        time(&local1);
 
-    msg_counter++;
-    // Print rate every 3 sec or so
-    if (difftime(local1, rate_timer) > rate_interval) {
-      printf("Pushing %f msg/sec\n", (double)msg_counter/rate_interval);
-      fflush(stdout);
-      msg_counter = 0;
-      time(&rate_timer);
+        msg_counter++;
+        // Print rate every 3 sec or so
+        if (difftime(local1, rate_timer) > rate_interval) {
+            printf("Pushing %f msg/sec\n", (double)msg_counter / rate_interval);
+            fflush(stdout);
+            msg_counter = 0;
+            time(&rate_timer);
+        }
+
+
     }
-
-
 }
 
-void send_opendss_message(OpenDssReport *message) {
+void retry_rmq_message(amqp_bytes_t msg) {
+    if (retry_counter < 3) {
+        retry_counter++;
+        printf("Attempt #%d: reconnect and resend\n", retry_counter);
+        fflush(stdout);
+
+        int conn_state = reset_connection();
+        if (conn_state == OK || conn_state == ALREADY_CALLED) {
+            publish_rmq_message(msg);
+            return;
+        }
+        else {
+            printf("Error %d while reconnecting to RMQ, exit\n", conn_state);
+            fflush(stdout);
+            exit(1);
+        }
+    }
+    else {
+        printf("Tried 3 times, getting too many errors, bailing\n");
+        fflush(stdout);
+        exit(1);
+    }
+}
+
+bool waitForAck() {
+    amqp_frame_t frame;
+    if (has_error(amqp_simple_wait_frame(conn, &frame), "wait for ACK")) {
+        printf("failed to read ACK frame, retrying...");
+        fflush(stdout);
+        return false;
+    }
+
+    if ((frame.frame_type != AMQP_FRAME_METHOD) || (frame.channel != 1)) {
+        printf("got a frame while looking for an ACK, but it's not for you. Got %s [%d] for channel %d...", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
+        fflush(stdout);
+        exit(1);
+    }
+
+    // We should check the delivery tag if we ever start using batch sends. For now the ACK will be for a single message, so just return.
+    //amqp_basic_ack_t* a = (amqp_basic_ack_t*)frame.payload.method.decoded;
+    if (frame.payload.method.id == AMQP_BASIC_ACK_METHOD)
+        return true;
+
+    // Log any errors before returning false for a retry.
+    if (frame.payload.method.id == AMQP_BASIC_RETURN_METHOD)
+        printf("failed to send message, retrying...");
+    else
+        printf("got unknown frame while waiting for an ACK. Got %s [%d], retrying...", amqp_method_name(frame.payload.method.id), frame.payload.method.id);
+
+    fflush(stdout);
+    return false;
+}
+
+void send_opendss_message(OpenDssReport* message) {
     int len = open_dss_report__get_packed_size(message);
-    void *buf = malloc(len);
+    void* buf = malloc(len);
     open_dss_report__pack(message, buf);
 
     amqp_bytes_t body;
@@ -279,7 +339,7 @@ void send_demand_interval_report(struct TDemandIntervalReport data) {
         volt_base.kvnoloadloss = data.volt_bases[i].kv_no_load_loss;
         volt_base.kvloadenergy = data.volt_bases[i].kv_load_energy;
 
-        VoltBaseRegisters *volt_base_ptr = (VoltBaseRegisters*)malloc(sizeof(VoltBaseRegisters));
+        VoltBaseRegisters* volt_base_ptr = (VoltBaseRegisters*)malloc(sizeof(VoltBaseRegisters));
         *volt_base_ptr = volt_base;
 
         di.voltbases[i] = volt_base_ptr;
@@ -296,9 +356,9 @@ void send_demand_interval_report(struct TDemandIntervalReport data) {
     free(di.voltbases);
 }
 
-MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg *source) {
+MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg* source) {
     MaxMinAvg phs = MAX_MIN_AVG__INIT;
-    MaxMinAvg *phs_ptr = (MaxMinAvg*)malloc(sizeof(MaxMinAvg));
+    MaxMinAvg* phs_ptr = (MaxMinAvg*)malloc(sizeof(MaxMinAvg));
 
     phs.max = source->max;
     phs.min = source->min;
@@ -325,7 +385,7 @@ void send_phase_voltage_report(struct TPhaseVoltageReport data) {
         values.phs2 = copyMaxMinAvg(&data.values[i].phs2);
         values.phs3 = copyMaxMinAvg(&data.values[i].phs3);
 
-        PhaseVoltageReportValues *values_ptr = (PhaseVoltageReportValues*)malloc(sizeof(PhaseVoltageReportValues));
+        PhaseVoltageReportValues* values_ptr = (PhaseVoltageReportValues*)malloc(sizeof(PhaseVoltageReportValues));
         *values_ptr = values;
 
         phv.values[i] = values_ptr;
@@ -375,7 +435,7 @@ void send_voltage_report(struct TVoltageReport data) {
     vr.hour = data.hour;
     vr.hv = &hv;
     vr.lv = &lv;
-    
+
     hv.undervoltages = data.hv.under_voltages;
     hv.minvoltage = data.hv.min_voltage;
     hv.overvoltage = data.hv.over_voltage;
@@ -447,7 +507,7 @@ void send_taps_report(struct TTapsReport data) {
     send_opendss_message(&report);
 }
 
-void send_eventlog(struct TEventLog *data, int num_events) {
+void send_eventlog(struct TEventLog* data, int num_events) {
     EventLog el = EVENT_LOG__INIT;
 
     el.logentry = (EventLogEntry**)malloc(num_events * sizeof(EventLogEntry*));
@@ -463,7 +523,7 @@ void send_eventlog(struct TEventLog *data, int num_events) {
         log_entry.event = data[i].event;
         log_entry.action = data[i].action;
 
-        EventLogEntry *entry = (EventLogEntry*)malloc(sizeof(EventLogEntry));
+        EventLogEntry* entry = (EventLogEntry*)malloc(sizeof(EventLogEntry));
         *entry = log_entry;
         el.logentry[i] = entry;
     }
@@ -580,7 +640,7 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
             area.loads[j] = ia.loads[j];
         }
 
-        IsolatedArea *a = (IsolatedArea *)malloc(sizeof(IsolatedArea));
+        IsolatedArea* a = (IsolatedArea*)malloc(sizeof(IsolatedArea));
         *a = area;
         ibr.isolatedsubareas[i] = a;
     }
@@ -597,7 +657,7 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
             element.buses[j] = ie.buses[j];
         }
 
-        IsolatedElement *el = (IsolatedElement*)malloc(sizeof(IsolatedElement));
+        IsolatedElement* el = (IsolatedElement*)malloc(sizeof(IsolatedElement));
         *el = element;
 
         ibr.isolatedelements[i] = el;
