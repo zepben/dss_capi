@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <rabbitmq-c/amqp.h>
 #include <rabbitmq-c/tcp_socket.h>
@@ -170,6 +171,9 @@ int reset_connection() {
         conn = NULL;
         connect_called = false;
     }
+
+    // breathe for 3 seconds, then continue
+    sleep(3);
 
     return connect_rabbitmq(host, port, user, pass, routing_key, exchange, heartbeat);
 
