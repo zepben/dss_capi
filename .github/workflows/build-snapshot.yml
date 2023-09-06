@@ -62,7 +62,6 @@ jobs:
           name: dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2 
           path: package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2 
 
-
       - name: Create Release and upload assets
         if: success()
         id: create_release
