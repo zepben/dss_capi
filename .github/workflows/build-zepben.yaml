@@ -56,6 +56,11 @@ jobs:
           mv package/dss-libs.bz2 package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
         shell: bash
 
+      - name: Create artefact
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ steps.build.outputs.artifactId }}-${{ steps.build.outputs.version }}
+          path: ${{ steps.build.outputs.artifact-path }}
 
 
       - name: Create Release and upload assets
@@ -69,5 +74,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-           package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
+            package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
         continue-on-error: false
