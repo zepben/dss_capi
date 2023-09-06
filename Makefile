@@ -10,12 +10,9 @@ klu:
 	make -C ../klusolve 
 	cp ../klusolve/lib/linux_x64/libklusolvex.so ${current_dir}/lib/linux_x64/
 
-rust:
-	cd ../learnRust/fun1 && cargo build --release
-	cp ../learnRust/fun1/target/release/libdss_queue.so ${current_dir}/lib/linux_x64/
-
 rmqpush:
 	make -C ./zepben-extensions/ $@
+	cp ./zepben-extensions/src/include/rmqpush.h include/rmqpush.h
 	cp ./zepben-extensions/lib/librmqpush.so lib/linux_x64/
 
 debian: debian-builder rmqpush
