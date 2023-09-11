@@ -1,0 +1,102 @@
+name: Zepben Release Build
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  find-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      commitID: ${{ steps.find-commit.outputs.commit }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Work around git permission issue
+        run: |
+          dname=$(echo ${{github.repository}} | cut -d'/' -f2)
+          git config --global --add safe.directory /__w/$dname/$dname
+        shell: sh
+
+      - name: Find commit
+        id: find-commit
+        run: |
+          commit=$(git rev-parse --short ${{ github.event.inputs.commitID }})
+          echo "::set-output name=commit::$(echo $commit)"
+
+
+  build_linux_x64:
+    needs: [find-commit]
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/zepben/dss-capi-builder:latest
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.find-commit.outputs.commitID }}
+
+      - name: Udate version for release
+        id: check
+        run: |
+          build/update-changelog.sh
+        shell: bash
+
+      - name: Checkout release branch
+        run: |
+          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+          git fetch --all
+          git checkout release
+        shell: bash
+
+      - name: Build the libraries
+        run: |
+          make ci
+        shell: bash
+
+      - name: Package the libraries
+        run: |
+          make package
+          mv package/dss-libs.bz2 package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
+        shell: bash
+
+      - name: Merge and Tag
+        id: merge
+        run: |
+          version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | grep -v UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
+          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+          git fetch --all
+          git branch -a
+          git merge origin/release
+          git push origin ${GITHUB_REF/refs\/heads\//}
+          git tag "v$version"
+          git push --tags
+          echo "::set-output name=tag::$(echo v$version)"
+        shell: bash
+        continue-on-error: true
+
+      - name: Create Release and upload assets
+        if: success()
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.merge.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: |
+            package/dss-libs-${{ needs.merge.outputs.tag }}.bz2
+        continue-on-error: false
+
+      - name: Delete release branch if deploy failed and fail
+        if: steps.build.outcome == 'failure' || steps.upload.outcome == 'failure'
+        run: |
+          git push origin -d release
+          echo "There was an error in the mvn deploy command above."
+          exit 1
+        shell: bash
+

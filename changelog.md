@@ -1,0 +1,34 @@
+# Zepben DSS-CAPI changelog
+## [0.12.1.2-zepben] - UNRELEASED
+### Breaking Changes
+* None.
+
+### New Features
+* Added GH build actions
+
+### Enhancements
+* None.
+
+### Fixes
+* None.
+
+### Notes
+* None.
+
+## [0.12.1.1-zepben] 
+### Breaking Changes
+
+* Initial Release of the Zepben extended libs
+
+### New Features
+* Sending all reports to RabbitMQ
+
+### Enhancements
+* None.
+
+### Fixes
+* None.
+
+### Notes
+* None.
+
