@@ -4,18 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to use for lib release'
-        required: true
+        description: 'The branch to use for the release'     
+        required: false
         type: string
 
 jobs:
-  find-commit:
+  build_linux_x64:
     runs-on: ubuntu-latest
-    outputs:
-      commitID: ${{ steps.find-commit.outputs.commit }}
+    container: 
+      image: ghcr.io/zepben/dss-capi-builder:latest
+
+    env:
+      GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v3
+
+      - name: Find commit
+        id: find-commit
+        run: |
+          if [ -z ${{ github.event.inputs.branch }} ]
+          then
+            branch="main"
+          else
+            branch=${{ github.event.inputs.branch }}
+          fi
+          echo "BRANCH=$(echo $branch)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
 
       - name: Work around git permission issue
         run: |
@@ -23,41 +38,18 @@ jobs:
           git config --global --add safe.directory /__w/$dname/$dname
         shell: sh
 
-      - name: Find commit
-        id: find-commit
-        run: |
-          commit=$(git rev-parse --short ${{ github.event.inputs.branch }})
-          echo "::set-output name=commit::$(echo $commit)"
-
-
-  build_linux_x64:
-    needs: [find-commit]
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/zepben/dss-capi-builder:latest
-
-    env:
-      GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ needs.find-commit.outputs.commitID }}
-
-      - name: Udate version for release
-        id: check
-        run: |
-          build/update-changelog.sh
-        shell: bash
-
-      - name: Checkout release branch
+      - name: Checkout the correct branch
         run: |
           git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
           git fetch --all
-          git checkout release
-        shell: bash
+          git checkout $BRANCH
 
-      - name: Build the libraries
+      - name: Define the commit the version
+        run: |
+          version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | grep UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
+          echo "VERSION=$(echo $version)" >> $GITHUB_ENV
+
+      - name: Build the dss libraries
         run: |
           make ci
         shell: bash
@@ -65,23 +57,19 @@ jobs:
       - name: Package the libraries
         run: |
           make package
-          mv package/dss-libs.bz2 package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
+          mv package/dss-libs.bz2 package/dss-libs-$VERSION.bz2
         shell: bash
+        continue-on-error: false
 
-      - name: Merge and Tag
-        id: merge
+      - name: Get latest changelog
+        id: changelog
         run: |
-          version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | grep -v UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
-          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-          git fetch --all
-          git branch -a
-          git merge origin/release
-          git push origin ${GITHUB_REF/refs\/heads\//}
-          git tag "v$version"
-          git push --tags
-          echo "::set-output name=tag::$(echo v$version)"
+          lines=$(egrep -n "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | head -2 | cut -f1 -d:)
+          line1=$(echo "$lines" | head -1)
+          line2=$(echo "$lines" | tail -1)
+          cat changelog.md | tail -n +$((line1+1)) | head -n $((line2-line1-1)) > latest_changelog.txt
         shell: bash
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Create Release and upload assets
         if: success()
@@ -90,19 +78,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.merge.outputs.tag }}
+          tag_name: ${{ env.VERSION }}
+          body_path: latest_changelog.txt
           draft: false
           prerelease: false
           files: |
-            package/dss-libs-${{ needs.merge.outputs.tag }}.bz2
+            package/dss-libs-${{ env.VERSION }}.bz2
         continue-on-error: false
 
-      - name: Delete release branch if deploy failed and fail
-        if: steps.build.outcome == 'failure' || steps.upload.outcome == 'failure'
+      - name: Update version for release
+        id: check
+        run: |
+          build/update-changelog.sh $VERSION
+        shell: bash
+        continue-on-error: false
+
+      - name: Merge and Tag
+        id: merge
+        run: |
+          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+          git fetch --all
+          git branch -a
+          git merge origin/release
+          git push origin ${GITHUB_REF/refs\/heads\//}
+          git tag "v$VERSION"
+          git push --tags
+        shell: bash
+        continue-on-error: true
+
+      - name: Fail if any previous step failed
+        if: steps.merge.outcome == 'failure'
         run: |
           git push origin -d release
-          echo "There was an error in the mvn deploy command above."
+          echo "There was an error in merging the branch. Release branch was deleted." >> $GITHUB_STEP_SUMMARY
           exit 1
         shell: bash
-
->>>>>>> cd043eb2 (Add release build)
