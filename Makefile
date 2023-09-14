@@ -1,4 +1,5 @@
 current_dir:=${CURDIR}
+package_dir:=${CURDIR}/package
 
 targets = alpine debian
 libs = libklusolvex.so libdss_capi.so librmqpush.so
@@ -9,12 +10,9 @@ klu:
 	make -C ../klusolve 
 	cp ../klusolve/lib/linux_x64/libklusolvex.so ${current_dir}/lib/linux_x64/
 
-rust:
-	cd ../learnRust/fun1 && cargo build --release
-	cp ../learnRust/fun1/target/release/libdss_queue.so ${current_dir}/lib/linux_x64/
-
 rmqpush:
 	make -C ./zepben-extensions/ $@
+	cp ./zepben-extensions/src/include/rmqpush.h include/rmqpush.h
 	cp ./zepben-extensions/lib/librmqpush.so lib/linux_x64/
 
 debian: debian-builder rmqpush
@@ -30,10 +28,11 @@ ci: rmqpush
 	build/build_linux_x64.sh
 
 package: lib/linux_x64/libdss_capi.so 
-	if [ -d package ];  then rm -rf package; fi
+	if [ -d ${package_dir} ];  then rm -rf ${package_dir}; fi
 	mkdir package
-	cd lib/linux_x64/ && cp ${libs} ${current_dir}/package
-	cd ${current_dir}/package && tar cjvf dss-libs.bz2 *
+	cd ${current_dir}/lib/linux_x64/ && cp ${libs} ${package_dir} 
+	cp ${current_dir}/include/rmqpush.h ${package_dir}
+	cd ${package_dir} && tar cjvf dss-libs.bz2 *
 
 runner: dss-runner.c
 	cp zepben-extensions/src/include/rmqpush.h include/rmqpush.h

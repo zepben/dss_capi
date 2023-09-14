@@ -1,10 +1,10 @@
-name: Build Zepben Linux libraries
+name: Zepben Snapshot Build
 
 on: 
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Tag to use for lib release'
+      commitID:
+        description: 'Commit or branch to use for lib release'
         required: true
         type: string
 
@@ -26,7 +26,7 @@ jobs:
       - name: Find commit
         id: find-commit
         run: |
-          commit=$(git rev-parse --short ${{ github.event.inputs.tag }})
+          commit=$(git rev-parse --short ${{ github.event.inputs.commitID }})
           echo "::set-output name=commit::$(echo $commit)"
 
   build_linux_x64:
@@ -56,6 +56,11 @@ jobs:
           mv package/dss-libs.bz2 package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
         shell: bash
 
+      - name: Create artefact
+        uses: actions/upload-artifact@master
+        with:
+          name: dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2 
+          path: package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2 
 
 
       - name: Create Release and upload assets
@@ -69,5 +74,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-           package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
+            package/dss-libs-${{ needs.find-commit.outputs.commitID }}.bz2
         continue-on-error: false
