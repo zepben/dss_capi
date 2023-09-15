@@ -35,6 +35,9 @@ jobs:
           fi
           echo "BRANCH=$(echo $branch)" >> $GITHUB_ENV
 
+      - name: Debug
+        run: echo "BRANCH is $BRANCH"
+
 
   build_linux_x64:
     needs: [find-commit]
