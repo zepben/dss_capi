@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 changelog=./changelog.md
-version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" $changelog | grep UNRELE | cut -f2 -d' ')
  
 check_tag_exists() {
   version=${1:? 'Version variable is missing.'}
@@ -26,14 +25,20 @@ stage_file() {
   fi
 }
 
-# Check that this version doesn't exist yet
-check_tag_exists $version
+# Check that the provided tag doesn't exist yet
+check_tag_exists $1
 
-# Checkout the release branch
-git checkout -b release
-if [ $? != 0 ]; then
-    echo "Couldn't checkout the release branch, please check if it exists and remove if needed"
+# Check out the release branch for changes
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+git fetch --all
+if [[ ! -z $(git branch -a | grep remotes/origin/release) ]]; then
+    echo "Branch 'release' already exists, remove and try again"
+    exit 1
 fi
+git checkout -b release
+
+new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
+new_version=$(echo $version | sed -e "s/[[:digit:]]-zepben/$new_minor/g")
 
 release_notes_template="### Breaking Changes\n* None.\n\n### New Features\n* None.\n\n### Enhancements\n* None.\n\n### Fixes\n* None.\n\n### Notes\n* None.\n\n"
 if [[ ! -z $changelog ]]; then
@@ -41,12 +46,10 @@ if [[ ! -z $changelog ]]; then
     sed -i'' -E "s/UNRELEASED/$(date +'%Y-%m-%d')/g" $changelog
 
     echo "Inserting template into changelog..."
-    sed -i'' "s/\(^# Zepben.*\)/\1\n## \[NEW VERSION HERE-zepben] - UNRELEASED\n$(echo $release_notes_template)/g" $changelog
+    sed -i'' "s/\(^# Zepben.*\)/\1\n## \[${new_version}-zepben] - UNRELEASED\n$(echo $release_notes_template)/g" $changelog
 fi
 
 # commit to release branch and push
-git add $changelog
+stage_file $changelog
 git commit -m "Update versions for release [skip ci]"
 git push -u origin release
-
-# 
