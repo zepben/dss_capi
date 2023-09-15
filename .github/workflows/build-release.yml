@@ -1,0 +1,30 @@
+name: Build Zepben Linux libraries
+
+on: 
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to use for lib release'
+        required: true
+        type: string
+
+jobs:
+  find-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      commitID: ${{ steps.find-commit.outputs.commit }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Work around git permission issue
+        run: |
+          dname=$(echo ${{github.repository}} | cut -d'/' -f2)
+          git config --global --add safe.directory /__w/$dname/$dname
+        shell: sh
+
+      - name: Find commit
+        id: find-commit
+        run: |
+          commit=$(git rev-parse --short ${{ github.event.inputs.branch }})
+          echo "::set-output name=commit::$(echo $commit)"
