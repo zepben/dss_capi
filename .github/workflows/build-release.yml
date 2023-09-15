@@ -46,7 +46,6 @@ jobs:
         run: |
           version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | grep -v UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
           echo "VERSION=$(echo $version)" >> $GITHUB_ENV
-          echo "ARTEFACT=package/dss-libs-$(echo $version).bz2" >> $GITHUB_ENV
 
       - name: Build the dss libraries
         run: |
@@ -56,7 +55,7 @@ jobs:
       - name: Package the libraries
         run: |
           make package
-          mv package/dss-libs.bz2 $ARTEFACT 
+          mv package/dss-libs.bz2 package/dss-libs-$VERSION.bz2
         shell: bash
         continue-on-error: false
 
@@ -77,11 +76,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${VERSION}
+          tag_name: ${{ env.VERSION }}
           body_path: latest_changelog.txt
           draft: false
           prerelease: false
-          files: ${ARTEFACT}
+          files: |
+            package/dss-libs-*.bz2
         continue-on-error: false
 
       - name: Update version for release
