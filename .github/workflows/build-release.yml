@@ -40,7 +40,11 @@ jobs:
         shell: sh
 
       - name: Checkout the correct branch
-        run: git checkout $BRANCH
+        run: | 
+          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+          git fetch --all
+          git branch -a
+          git checkout $BRANCH
 
       - name: Define the commit the version
         run: |
