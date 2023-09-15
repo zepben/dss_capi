@@ -40,6 +40,7 @@ git checkout -b release
 new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
 new_version=$(echo $version | sed -e "s/[[:digit:]]-zepben/$new_minor/g")
 
+echo "Updating changelog to $new_version..."
 release_notes_template="### Breaking Changes\n* None.\n\n### New Features\n* None.\n\n### Enhancements\n* None.\n\n### Fixes\n* None.\n\n### Notes\n* None.\n\n"
 if [[ ! -z $changelog ]]; then
     echo "Timestamping version in changelog..."
@@ -48,6 +49,9 @@ if [[ ! -z $changelog ]]; then
     echo "Inserting template into changelog..."
     sed -i'' "s/\(^# Zepben.*\)/\1\n## \[${new_version}-zepben] - UNRELEASED\n$(echo $release_notes_template)/g" $changelog
 fi
+
+git config --global user.email "ci@zepben.com"
+git config --global user.name "Zepben CI"
 
 # commit to release branch and push
 stage_file $changelog
