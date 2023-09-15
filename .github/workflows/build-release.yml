@@ -52,7 +52,7 @@ jobs:
           version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben\]" changelog.md | grep -v UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
           echo "TESTING multistep env: '$BRANCH'"
           echo "VERSION=$(echo v$version)" >> $GITHUB_ENV
-          echo "BRANCH=${{ find-commit.outputs.branch }}" >> $GITHUB_ENV
+          echo "BRANCH=${{ needs.find-commit.outputs.branch }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v3
         with:
