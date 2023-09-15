@@ -38,9 +38,9 @@ fi
 git checkout -b release
 
 new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
-new_version=$(echo $version | sed -e "s/[[:digit:]]-zepben/$new_minor/g")
+new_version=$(echo $version | sed -e "s/[[:digit:]]-zepben/$(($new_minor+1))/g")
 
-echo "Updating changelog to $new_version..."
+echo "Updating changelog to [$new_version-zepben]..."
 release_notes_template="### Breaking Changes\n* None.\n\n### New Features\n* None.\n\n### Enhancements\n* None.\n\n### Fixes\n* None.\n\n### Notes\n* None.\n\n"
 if [[ ! -z $changelog ]]; then
     echo "Timestamping version in changelog..."
