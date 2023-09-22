@@ -49,15 +49,18 @@ static int heartbeat;
 static bool conn_conf_set = false;
 static bool connect_called = false;
 
+// Number of messages sent in total
+static int sent_counter = 0;
+
+// The delivery tag of the last message acked. Should match sent_counter if all messages have been acked.
+static int last_ack_tag = 0;
+
+// Number of messages sent in the current interval.
 static int msg_counter = 0;
-static int retry_counter = 0;
 
 // rate interval 3 sec
 static const int rate_interval = 3;
 static time_t rate_timer;
-
-void retry_rmq_message(amqp_bytes_t msg);
-bool waitForAck();
 
 char* copy_str(const char* str) {
     char* copy = malloc(strlen(str) + 1);
@@ -157,26 +160,36 @@ int connect_rabbitmq(char const* hostname, int const _port, char const* username
     return OK;
 }
 
-int reset_connection() {
-    if (!connect_called)
-        return OK;
+int wait_for_outstanding_messages(int max_outstanding) {
+    do {
+        amqp_frame_t frame;
+        if (has_error(amqp_simple_wait_frame(conn, &frame), "wait for ACK")) {
+            printf("failed to read ACK frame.");
+            fflush(stdout);
+            exit(1);
+        }
 
-    // Cleanup the connection if there is one.
-    if (conn != NULL) {
-        // This will implicitly clean up the channels and sockets.
-        // And we don't really care if all cleaned properly as we try this 3 times max.
-        // Worst case it's leaking 3 conn pointers + related data,
-        // however, container exits at some point, so shouldn't accumulate too much of an issue.
-        amqp_destroy_connection(conn);
-        conn = NULL;
-        connect_called = false;
-    }
+        if ((frame.frame_type != AMQP_FRAME_METHOD) || (frame.channel != 1)) {
+            printf("got a frame while looking for an ACK, but it's not for you. Got %s [%d] for channel %d...", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
+            fflush(stdout);
+            exit(1);
+        }
 
-    // breathe for 3 seconds, then continue
-    sleep(3);
+        if (frame.payload.method.id != AMQP_BASIC_ACK_METHOD) {
+            if (frame.payload.method.id == AMQP_BASIC_RETURN_METHOD)
+                printf("failed to send message and the RabbitMQ client returned it...");
+            else
+                printf("got unknown frame while waiting for an ACK. Got %s [%d]...", amqp_method_name(frame.payload.method.id), frame.payload.method.id);
 
-    return connect_rabbitmq(host, port, user, pass, routing_key, exchange, heartbeat);
+            fflush(stdout);
+            exit(1);
+        }
 
+        amqp_basic_ack_t* a = (amqp_basic_ack_t*)frame.payload.method.decoded;
+        last_ack_tag = a->delivery_tag;
+    } while (sent_counter - max_outstanding > last_ack_tag);
+    
+    return OK;
 }
 
 int disconnect_rabbitmq() {
@@ -198,84 +211,25 @@ int disconnect_rabbitmq() {
 }
 
 void publish_rmq_message(amqp_bytes_t msg) {
-    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report")) {
-        retry_rmq_message(msg);
-        return;
-    }
-    else {
-        if (!waitForAck()) {
-            retry_rmq_message(msg);
-            return;
-        }
-
-        // Print rate of RMQ publish
-        time_t local1;
-        time(&local1);
-
-        msg_counter++;
-        // Print rate every 3 sec or so
-        if (difftime(local1, rate_timer) > rate_interval) {
-            printf("Pushing %f msg/sec\n", (double)msg_counter / rate_interval);
-            fflush(stdout);
-            msg_counter = 0;
-            time(&rate_timer);
-        }
-
-
-    }
-}
-
-void retry_rmq_message(amqp_bytes_t msg) {
-    if (retry_counter < 3) {
-        retry_counter++;
-        printf("Attempt #%d: reconnect and resend\n", retry_counter);
-        fflush(stdout);
-
-        int conn_state = reset_connection();
-        if (conn_state == OK || conn_state == ALREADY_CALLED) {
-            publish_rmq_message(msg);
-            return;
-        }
-        else {
-            printf("Error %d while reconnecting to RMQ, exit\n", conn_state);
-            fflush(stdout);
-            exit(1);
-        }
-    }
-    else {
-        printf("Tried 3 times, getting too many errors, bailing\n");
-        fflush(stdout);
+    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report"))
         exit(1);
-    }
-}
 
-bool waitForAck() {
-    amqp_frame_t frame;
-    if (has_error(amqp_simple_wait_frame(conn, &frame), "wait for ACK")) {
-        printf("failed to read ACK frame, retrying...");
+    msg_counter++;
+    sent_counter++;
+
+    // Get publish acks for a batch of messages to limit how many we allow to be outstanding.
+    if (sent_counter % 10000 == 0)
+        wait_for_outstanding_messages(500);
+    
+    // Print rate of RMQ publish every 3 sec or so
+    time_t local1;
+    time(&local1);
+    if (difftime(local1, rate_timer) > rate_interval) {
+        printf("%d messages confirmed - pushing %f msg/sec\n", last_ack_tag, (double)msg_counter / rate_interval);
         fflush(stdout);
-        return false;
+        msg_counter = 0;
+        time(&rate_timer);
     }
-
-    if ((frame.frame_type != AMQP_FRAME_METHOD) || (frame.channel != 1)) {
-        printf("got a frame while looking for an ACK, but it's not for you. Got %s [%d] for channel %d...", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
-        fflush(stdout);
-        exit(1);
-    }
-
-    // We should check the delivery tag if we ever start using batch sends. For now the ACK will be for a single message, so just return.
-    //amqp_basic_ack_t* a = (amqp_basic_ack_t*)frame.payload.method.decoded;
-    if (frame.payload.method.id == AMQP_BASIC_ACK_METHOD)
-        return true;
-
-    // Log any errors before returning false for a retry.
-    if (frame.payload.method.id == AMQP_BASIC_RETURN_METHOD)
-        printf("failed to send message, retrying...");
-    else
-        printf("got unknown frame while waiting for an ACK. Got %s [%d], retrying...", amqp_method_name(frame.payload.method.id), frame.payload.method.id);
-
-    fflush(stdout);
-    return false;
 }
 
 void send_opendss_message(OpenDssReport* message) {
