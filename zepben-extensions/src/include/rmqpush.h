@@ -6,6 +6,7 @@
 #define rmq_push_h
 
 int connect_rabbitmq(char const *hostname, int const port, char const *username, char const *password, char const *routingkey, char const *exchange, int const heartbeat);
+int wait_for_outstanding_messages();
 int disconnect_rabbitmq();
 
 // Repeated values for the DemandIntervalReport.

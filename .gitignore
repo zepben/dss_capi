@@ -77,3 +77,6 @@ docs/build
 
 .idea
 *.iml
+
+// Exclude the deployment copy of the rmqpush header
+include/rmqpush.h
