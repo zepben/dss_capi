@@ -7,7 +7,7 @@
 * Added GH build actions
 
 ### Enhancements
-* None.
+* Improved the way we read publish confirms
 
 ### Fixes
 * None.
