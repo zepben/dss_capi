@@ -26,7 +26,6 @@ jobs:
       - name: Find commit
         id: find-commit
         run: |
-          commit=
           echo "commit=$(git rev-parse --short ${{ github.event.inputs.commitID }})" >> $GITHUB_ENV
 
   build_linux_x64:
