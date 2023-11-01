@@ -1,5 +1,22 @@
 # Zepben DSS-CAPI changelog
-## [0.12.1.2-zepben1] - UNRELEASED
+## [0.12.1.2-zepben2] - UNRELEASED
+### Breaking Changes
+* None.
+
+### New Features
+* None.
+
+### Enhancements
+* None.
+
+### Fixes
+* None.
+
+### Notes
+* None.
+
+
+## [0.12.1.2-zepben1] - 2023-11-01
 ### Breaking Changes
 * None.
 
