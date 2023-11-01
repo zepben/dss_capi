@@ -37,17 +37,26 @@ if [[ ! -z $(git branch -a | grep remotes/origin/release) ]]; then
 fi
 git checkout -b release
 
-new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
-new_version=$(echo $version | sed -e "s/[[:digit:]]-zepben/$(($new_minor+1))/g")
+if [ "$2" = "snapshot" ]; then
+    echo "SNAPSHOT"
+    new_snapshot=$(echo "$version" | sed -e "s/.*-zepben//g")
+    new_version=$(echo "$version" | sed -e "s/zepben.*/zepben$(($new_snapshot+1))/g")
+elif [ "$2" = "release" ]; then
+    echo "RELEASE"
+    new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
+    new_version=$(echo $version | sed -E "s/[[:digit:]]+-zepben/$(($new_minor+1))-zepben/")
+else 
+    echo "Unsupported mode: '$2'"
+fi
 
-echo "Updating changelog to [$new_version-zepben]..."
+echo "Updating changelog to [$new_version]..."
 release_notes_template="### Breaking Changes\n* None.\n\n### New Features\n* None.\n\n### Enhancements\n* None.\n\n### Fixes\n* None.\n\n### Notes\n* None.\n\n"
 if [[ ! -z $changelog ]]; then
     echo "Timestamping version in changelog..."
     sed -i'' -E "s/UNRELEASED/$(date +'%Y-%m-%d')/g" $changelog
 
     echo "Inserting template into changelog..."
-    sed -i'' "s/\(^# Zepben.*\)/\1\n## \[${new_version}-zepben] - UNRELEASED\n$(echo $release_notes_template)/g" $changelog
+    sed -i'' "s/\(^# Zepben.*\)/\1\n## \[${new_version}] - UNRELEASED\n$(echo $release_notes_template)/g" $changelog
 fi
 
 git config --global user.email "ci@zepben.com"
