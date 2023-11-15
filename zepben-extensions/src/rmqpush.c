@@ -224,8 +224,9 @@ void publish_rmq_message(amqp_bytes_t msg) {
     // Print rate of RMQ publish every 3 sec or so
     time_t local1;
     time(&local1);
-    if (difftime(local1, rate_timer) > rate_interval) {
-        printf("%d messages confirmed - pushing %f msg/sec\n", last_ack_tag, (double)msg_counter / rate_interval);
+	time_t elapsed = difftime(local1, rate_timer);
+    if (elapsed > rate_interval) {
+        printf("%d messages confirmed - pushing %f msg/sec\n", last_ack_tag, (double)msg_counter / elapsed);
         fflush(stdout);
         msg_counter = 0;
         time(&rate_timer);
