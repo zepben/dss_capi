@@ -10,7 +10,7 @@
 * Improved the way we read publish confirms
 
 ### Fixes
-* None.
+* Fixed cosmetic bug where the msg/sec reported in stdout is inaccurate
 
 ### Notes
 * None.
