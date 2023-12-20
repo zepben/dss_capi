@@ -258,21 +258,21 @@ type
     end;
 
 // Energy meter reports
-procedure send_demand_interval_report(data: TDemandIntervalReport); RMQPUSH_CALL;
-procedure send_phase_voltage_report(data: TPhaseVoltageReport); RMQPUSH_CALL;
-procedure send_overload_report(data: TOverloadReport); RMQPUSH_CALL;
-procedure send_voltage_report(data: TVoltageReport); RMQPUSH_CALL;
+procedure batch_push_demand_interval_report(data: TDemandIntervalReport); RMQPUSH_CALL;
+procedure batch_push_phase_voltage_report(data: TPhaseVoltageReport); RMQPUSH_CALL;
+procedure batch_push_overload_report(data: TOverloadReport); RMQPUSH_CALL;
+procedure batch_push_voltage_report(data: TVoltageReport); RMQPUSH_CALL;
 
 // Diagnotic reports 
-procedure send_summary_report(data: TSummaryReport); RMQPUSH_CALL;
-procedure send_taps_report(data: TTapsReport); RMQPUSH_CALL;
-procedure send_eventlog(data: array of TEventLog; num_events: Integer); RMQPUSH_CALL;
-procedure send_loop_report(data: TLoopReport); RMQPUSH_CALL;
-procedure send_isolated_elements_report(data: TIsolatedBusesReport); RMQPUSH_CALL;
-procedure send_losses_entry(data: TLossesEntry); RMQPUSH_CALL;
-procedure send_losses_totals(data: TLossesTotals); RMQPUSH_CALL;
-procedure send_node_mismatch_report(data: TNodeMismatch); RMQPUSH_CALL;
-procedure send_kvbase_mismatch_report(data: TKVBaseMismatch); RMQPUSH_CALL;
+procedure batch_push_summary_report(data: TSummaryReport); RMQPUSH_CALL;
+procedure batch_push_taps_report(data: TTapsReport); RMQPUSH_CALL;
+procedure batch_push_eventlog(data: array of TEventLog; num_events: Integer); RMQPUSH_CALL;
+procedure batch_push_loop_report(data: TLoopReport); RMQPUSH_CALL;
+procedure batch_push_isolated_elements_report(data: TIsolatedBusesReport); RMQPUSH_CALL;
+procedure batch_push_losses_entry(data: TLossesEntry); RMQPUSH_CALL;
+procedure batch_push_losses_totals(data: TLossesTotals); RMQPUSH_CALL;
+procedure batch_push_node_mismatch_report(data: TNodeMismatch); RMQPUSH_CALL;
+procedure batch_push_kvbase_mismatch_report(data: TKVBaseMismatch); RMQPUSH_CALL;
 
 implementation
 

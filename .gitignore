@@ -23,11 +23,11 @@
 *.a
 *.la
 *.lo
-lib/
 
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
+!**/libklusolvex.so
 *.so.*
 *.dylib
 
@@ -80,3 +80,6 @@ docs/build
 
 // Exclude the deployment copy of the rmqpush header
 include/rmqpush.h
+
+// Exclude freepascal tar
+fpc.tar

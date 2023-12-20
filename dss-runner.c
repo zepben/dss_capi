@@ -32,16 +32,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    connect_rabbitmq("localhost", 5672, "hc", "password", "opendss", "amq.direct", 100);
+    connect_to_stream("localhost", 5552, "hc", "password", "opendss", 100);
     if (file_path == NULL) {
         printf("Running with 'high/Master.dss' as nothing legit was provided\n");
         Text_Set_Command("compile high/Master.dss");
-        disconnect_rabbitmq();
     } else {
         sprintf(cmd, "compile %s", file_path);
         Text_Set_Command(cmd);
-        disconnect_rabbitmq();
     }
+    disconnect_from_stream();
 
     printf("All done\n");
     return 0;
