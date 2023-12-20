@@ -210,6 +210,7 @@ int disconnect_rabbitmq() {
     return OK;
 }
 
+// TODO: Replace with streaming
 void publish_rmq_message(amqp_bytes_t msg) {
     if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report"))
         exit(1);
