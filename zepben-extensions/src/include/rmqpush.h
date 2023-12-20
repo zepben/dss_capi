@@ -5,9 +5,10 @@
 #ifndef rmq_push_h
 #define rmq_push_h
 
-int connect_rabbitmq(char const *hostname, int const port, char const *username, char const *password, char const *routingkey, char const *exchange, int const heartbeat);
-int wait_for_outstanding_messages();
-int disconnect_rabbitmq();
+// Use functions from rmqstream
+extern void connect_to_stream(char const *hostname, int const port, char const *username, char const *password, char const *stream, int const heartbeat);
+extern void disconnect_from_stream();
+extern void stream_out_message(void const *msg_ptr, size_t msg_size);
 
 // Repeated values for the DemandIntervalReport.
 struct TVoltBaseRegisters {
@@ -236,20 +237,26 @@ struct TIsolatedBusesReport {
 };
 
 // Energy meter reports
-void send_demand_interval_report(struct TDemandIntervalReport data);
-void send_phase_voltage_report(struct TPhaseVoltageReport data);
-void send_overload_report(struct TOverloadReport data);
-void send_voltage_report(struct TVoltageReport data);
+void batch_push_demand_interval_report(struct TDemandIntervalReport data);
+void batch_push_phase_voltage_report(struct TPhaseVoltageReport data);
+void batch_push_overload_report(struct TOverloadReport data);
+void batch_push_voltage_report(struct TVoltageReport data);
 
 // Diagnostic reports
-void send_summary_report(struct TSummaryReport data);
-void send_taps_report(struct TTapsReport data);
-void send_eventlog(struct TEventLog *data, int num_events);
-void send_loop_report(struct TLoopReport data);
-void send_isolated_elements_report(struct TIsolatedBusesReport data);
-void send_losses_entry(struct TLossesEntry data);
-void send_losses_totals(struct TLossesTotals data);
-void send_node_mismatch_report(struct TNodeMismatch data);
-void send_kvbase_mismatch_report(struct TKVBaseMismatch data);
+void batch_push_summary_report(struct TSummaryReport data);
+void batch_push_taps_report(struct TTapsReport data);
+void batch_push_eventlog(struct TEventLog *data, int num_events);
+void batch_push_loop_report(struct TLoopReport data);
+void batch_push_isolated_elements_report(struct TIsolatedBusesReport data);
+void batch_push_losses_entry(struct TLossesEntry data);
+void batch_push_losses_totals(struct TLossesTotals data);
+void batch_push_node_mismatch_report(struct TNodeMismatch data);
+void batch_push_kvbase_mismatch_report(struct TKVBaseMismatch data);
+
+// Send batched reports.
+void send_opendss_report_batch();
+
+// Final report (empty). This also sends any other reports in the current batch.
+void send_final_opendss_report();
 
 #endif

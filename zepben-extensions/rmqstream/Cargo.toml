@@ -1,0 +1,20 @@
+[package]
+name = "rmqstream"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# Create statically-linked library for C interop
+name = "rmqstream"
+crate-type = ["staticlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2"
+rabbitmq-stream-client = "0.4.1"
+tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
+futures = "0.3.29"
+tracing = { version = "0.1.40", features = [] }
+lazy_static = { version = "1.4.0", features = [] }
+tracing-subscriber = "0.3.18"
