@@ -1,15 +1,24 @@
 use std::ffi::CStr;
 use std::slice;
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, Level, trace};
 use lazy_static::lazy_static;
 use rabbitmq_stream_client::types::Message;
 use tokio::runtime::Runtime;
+use tracing_subscriber::FmtSubscriber;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Runtime::new().unwrap();
 }
 static mut PRODUCER: Option<Box<Producer<NoDedup>>> = None;
+
+#[no_mangle]
+pub unsafe extern "C" fn init_tracing() {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::DEBUG)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn connect_to_stream(
@@ -52,8 +61,8 @@ pub unsafe extern "C" fn connect_to_stream(
 
     PRODUCER = Some(Box::new(producer));
     info!(
-        "Connected to RabbitMQ stream {} at {}:{}.",
-        &stream, &host, port
+        "Connected to RabbitMQ {}@{}:{}, for stream '{}'.",
+        &user, &host, port, &stream
     );
 }
 
