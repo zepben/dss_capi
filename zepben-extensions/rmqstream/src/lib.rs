@@ -41,7 +41,7 @@ pub unsafe extern "C" fn connect_to_stream(
     let pass = CStr::from_ptr(_pass).to_string_lossy().to_string();
     let stream = CStr::from_ptr(_stream).to_string_lossy().to_string();
     let heartbeat = _heartbeat as u32;
-    debug!("C params read. Connecting to RabbitMQ...");
+    debug!("C params read. Connecting to RabbitMQ stream ({user}@{host}:{port}, stream {stream})...");
     let producer = RUNTIME.block_on(async {
         let environment = Environment::builder()
             .host(&host)
