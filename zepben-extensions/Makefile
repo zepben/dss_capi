@@ -7,7 +7,7 @@ CFLAGS = -std=c99 -W -g -fpic -shared
 INCLUDE = -Isrc/include -Isrc/proto
 RUSTSTREAMLIB = rmqstream
 LDLIBS = -lrabbitmq -lprotobuf-c -l$(RUSTSTREAMLIB)
-LDFLAGS = -Llib -L$(RUSTSTREAMLIB)/target/debug
+LDFLAGS = -L$(LIBDIR)
 PROTODIR = src/proto/hc/opendss
 SRCDIR = src
 OBJDIR = obj
@@ -18,22 +18,23 @@ default: $(NAME)
 
 # TARGETS
 
-$(RUSTSTREAMLIB)/target/debug/lib$(RUSTSTREAMLIB).so: $(RUSTSTREAMLIB)/src/lib.rs
+$(LIBDIR)/lib$(RUSTSTREAMLIB).a: $(RUSTSTREAMLIB)/Cargo.toml
 	cargo build --manifest-path=$(RUSTSTREAMLIB)/Cargo.toml
+	@mkdir -p $(LIBDIR)
+	cp $(RUSTSTREAMLIB)/target/debug/*.a $(LIBDIR)/
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	@mkdir -p obj
+	@mkdir -p $(OBJDIR)
 	$(CC) $(INCLUDE) $(CFLAGS) $< -c -o $@
 
 $(OBJDIR)/%.o: $(PROTODIR)/%.c
-	@mkdir -p obj
+	@mkdir -p $(OBJDIR)
 	$(CC) $(INCLUDE) $(CFLAGS) $< -c -o $@
 
-$(NAME): $(OBJS) $(RUSTSTREAMLIB)/target/debug/lib$(RUSTSTREAMLIB).so
-	@mkdir -p lib
+$(NAME): $(OBJS) $(LIBDIR)/lib$(RUSTSTREAMLIB).a
+	@mkdir -p $(LIBDIR)
 	$(CC) $(INCLUDE) $(CFLAGS) $(LDFLAGS) $(LDLIBS) -o $(LIBDIR)/lib$(NAME).so $? 
 
 clean:
 	rm -rf $(OBJDIR) 
 	rm -rf $(LIBDIR)
-	rm -rf $(RUSTSTREAMLIB)/target

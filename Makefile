@@ -13,7 +13,7 @@ klu:
 rmqpush:
 	make -C ./zepben-extensions/ $@
 	cp ./zepben-extensions/src/include/rmqpush.h include/rmqpush.h
-	cp ./zepben-extensions/lib/librmqpush.so lib/linux_x64/
+	cp ./zepben-extensions/lib/*.so lib/linux_x64/
 
 debian: debian-builder rmqpush
 alpine: alpine-builder
