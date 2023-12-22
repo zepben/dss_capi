@@ -18,6 +18,7 @@ pub unsafe extern "C" fn init_tracing() {
         .with_max_level(Level::DEBUG)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    info!("Rust tracing enabled at DEBUG level.");
 }
 
 #[no_mangle]
