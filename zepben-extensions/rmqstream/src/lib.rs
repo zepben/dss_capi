@@ -55,6 +55,7 @@ pub unsafe extern "C" fn connect_to_stream(
         debug!("Connected. Making producer...");
         environment
             .producer()
+            .batch_size(10000)
             .build(&stream)
             .await
             .expect("Could not make producer. Does the stream exist?")
