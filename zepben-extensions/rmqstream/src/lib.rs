@@ -1,5 +1,6 @@
 use std::ffi::CStr;
 use std::slice;
+use std::time::Duration;
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
 use tracing::{debug, error, info, Level, trace};
 use lazy_static::lazy_static;
@@ -56,6 +57,7 @@ pub unsafe extern "C" fn connect_to_stream(
         environment
             .producer()
             .batch_size(10000)
+            .batch_delay(Duration::from_millis(250))
             .build(&stream)
             .await
             .expect("Could not make producer. Does the stream exist?")
