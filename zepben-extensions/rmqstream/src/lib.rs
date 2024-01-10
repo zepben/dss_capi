@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 use std::slice;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
 use tracing::{debug, error, info, Level, trace};
 use lazy_static::lazy_static;
@@ -12,6 +12,9 @@ lazy_static! {
     static ref RUNTIME: Runtime = Runtime::new().unwrap();
 }
 static mut PRODUCER: Option<Box<Producer<NoDedup>>> = None;
+static mut BUSY_TIME: Duration = Duration::ZERO;
+static mut START_TIME: Instant = Instant::now();
+static mut TOTAL_MESSAGES: u32 = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn init_tracing() {
@@ -64,6 +67,8 @@ pub unsafe extern "C" fn connect_to_stream(
     });
 
     PRODUCER = Some(Box::new(producer));
+    TOTAL_MESSAGES = 0;
+    START_TIME = Instant::now();
     info!(
         "Connected to RabbitMQ {}@{}:{}, for stream '{}'.",
         &user, &host, port, &stream
@@ -81,7 +86,9 @@ pub unsafe extern "C" fn disconnect_from_stream() {
                 .expect("Could not close producer.");
         });
         PRODUCER = None;
-        info!("Disconnected from RabbitMQ.")
+        let busy_percent = (BUSY_TIME.as_secs_f64() / START_TIME.elapsed().as_secs_f64()) * 100;
+        let msg_per_sec = TOTAL_MESSAGES / START_TIME.elapsed().as_secs_f64();
+        info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec", TOTAL_MESSAGES, busy_percent, msg_per_sec)
     } else {
         info!("Already disconnected.");
     }
@@ -90,6 +97,7 @@ pub unsafe extern "C" fn disconnect_from_stream() {
 #[no_mangle]
 pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_len: libc::size_t) {
     if let Some(producer) = &mut PRODUCER {
+        let busy_start = Instant::now();
         let msg_u8_ptr = msg_ptr as *const u8;
         let msg_bytes = slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec();
         RUNTIME.block_on(async move {
@@ -110,6 +118,8 @@ pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_le
                 .await
                 .expect("Could not send message!");
         });
+        BUSY_TIME += busy_start.elapsed();
+        TOTAL_MESSAGES += 1;
     } else {
         error!("Not connected to a RabbitMQ stream!");
     }
