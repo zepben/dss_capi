@@ -87,7 +87,7 @@ pub unsafe extern "C" fn disconnect_from_stream() {
         });
         PRODUCER = None;
         let busy_percent = (BUSY_TIME.as_secs_f64() / START_TIME.elapsed().as_secs_f64()) * 100;
-        let msg_per_sec = TOTAL_MESSAGES / START_TIME.elapsed().as_secs_f64();
+        let msg_per_sec = TOTAL_MESSAGES as f64 / START_TIME.elapsed().as_secs_f64();
         info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec", TOTAL_MESSAGES, busy_percent, msg_per_sec)
     } else {
         info!("Already disconnected.");
