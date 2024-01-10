@@ -13,7 +13,7 @@ lazy_static! {
 }
 static mut PRODUCER: Option<Box<Producer<NoDedup>>> = None;
 static mut BUSY_TIME: Duration = Duration::ZERO;
-static mut START_TIME: Instant = Instant::now();
+static mut START_TIME: Option<Instant> = None;
 static mut TOTAL_MESSAGES: u32 = 0;
 
 #[no_mangle]
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn connect_to_stream(
 
     PRODUCER = Some(Box::new(producer));
     TOTAL_MESSAGES = 0;
-    START_TIME = Instant::now();
+    START_TIME = Some(Instant::now());
     info!(
         "Connected to RabbitMQ {}@{}:{}, for stream '{}'.",
         &user, &host, port, &stream
@@ -86,8 +86,8 @@ pub unsafe extern "C" fn disconnect_from_stream() {
                 .expect("Could not close producer.");
         });
         PRODUCER = None;
-        let busy_percent = (BUSY_TIME.as_secs_f64() / START_TIME.elapsed().as_secs_f64()) * 100;
-        let msg_per_sec = TOTAL_MESSAGES as f64 / START_TIME.elapsed().as_secs_f64();
+        let busy_percent = (BUSY_TIME.as_secs_f64() / START_TIME.unwrap().elapsed().as_secs_f64()) * 100f64;
+        let msg_per_sec = TOTAL_MESSAGES as f64 / START_TIME.unwrap().elapsed().as_secs_f64();
         info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec", TOTAL_MESSAGES, busy_percent, msg_per_sec)
     } else {
         info!("Already disconnected.");
