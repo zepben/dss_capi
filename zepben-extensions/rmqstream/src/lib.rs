@@ -60,7 +60,8 @@ pub unsafe extern "C" fn connect_to_stream(
         debug!("Connected. Making producer...");
         environment
             .producer()
-            .batch_size(10000)
+            .batch_size(100000)
+            .batch_delay(Duration::from_millis(250))
             .build(&stream)
             .await
             .expect("Could not make producer. Does the stream exist?")
