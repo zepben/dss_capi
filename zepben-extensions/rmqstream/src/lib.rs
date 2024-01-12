@@ -11,10 +11,11 @@ use tracing_subscriber::FmtSubscriber;
 lazy_static! {
     static ref RUNTIME: Runtime = Runtime::new().unwrap();
 }
-static mut PRODUCER: Option<Box<Producer<NoDedup>>> = None;
+static mut PRODUCER: Option<Producer<NoDedup>> = None;
 static mut BUSY_TIME: Duration = Duration::ZERO;
 static mut START_TIME: Option<Instant> = None;
 static mut TOTAL_MESSAGES: u32 = 0;
+static mut TOTAL_BYTES: usize = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn init_tracing() {
@@ -60,14 +61,14 @@ pub unsafe extern "C" fn connect_to_stream(
         environment
             .producer()
             .batch_size(10000)
-            .batch_delay(Duration::from_millis(250))
             .build(&stream)
             .await
             .expect("Could not make producer. Does the stream exist?")
     });
 
-    PRODUCER = Some(Box::new(producer));
+    PRODUCER = Some(producer);
     TOTAL_MESSAGES = 0;
+    TOTAL_BYTES = 0;
     START_TIME = Some(Instant::now());
     info!(
         "Connected to RabbitMQ {}@{}:{}, for stream '{}'.",
@@ -77,7 +78,7 @@ pub unsafe extern "C" fn connect_to_stream(
 
 #[no_mangle]
 pub unsafe extern "C" fn disconnect_from_stream() {
-    if let Some(producer) = &mut PRODUCER {
+    if let Some(producer) = &PRODUCER {
         RUNTIME.block_on(async {
             producer
                 .clone()
@@ -86,9 +87,12 @@ pub unsafe extern "C" fn disconnect_from_stream() {
                 .expect("Could not close producer.");
         });
         PRODUCER = None;
-        let busy_percent = (BUSY_TIME.as_secs_f64() / START_TIME.unwrap().elapsed().as_secs_f64()) * 100f64;
-        let msg_per_sec = TOTAL_MESSAGES as f64 / START_TIME.unwrap().elapsed().as_secs_f64();
-        info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec", TOTAL_MESSAGES, busy_percent, msg_per_sec)
+        let seconds_elapsed = START_TIME.unwrap().elapsed().as_secs_f64();
+        let busy_percent = (BUSY_TIME.as_secs_f64() / seconds_elapsed) * 100.0;
+        let msg_per_sec = TOTAL_MESSAGES as f64 / seconds_elapsed;
+        let bits_per_sec = 8.0 * TOTAL_BYTES as f64 / seconds_elapsed;
+        info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec, {} bits/sec", 
+            TOTAL_MESSAGES, busy_percent, msg_per_sec, bits_per_sec);
     } else {
         info!("Already disconnected.");
     }
@@ -120,6 +124,7 @@ pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_le
         });
         BUSY_TIME += busy_start.elapsed();
         TOTAL_MESSAGES += 1;
+        TOTAL_BYTES += msg_len;
     } else {
         error!("Not connected to a RabbitMQ stream!");
     }
