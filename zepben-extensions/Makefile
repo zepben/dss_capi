@@ -19,9 +19,9 @@ default: $(NAME)
 # TARGETS
 
 $(LIBDIR)/lib$(RUSTSTREAMLIB).a: $(RUSTSTREAMLIB)/Cargo.toml
-	cargo build --manifest-path=$(RUSTSTREAMLIB)/Cargo.toml
+	cargo build --release --manifest-path=$(RUSTSTREAMLIB)/Cargo.toml
 	@mkdir -p $(LIBDIR)
-	cp $(RUSTSTREAMLIB)/target/debug/*.a $(LIBDIR)/
+	cp $(RUSTSTREAMLIB)/target/release/*.a $(LIBDIR)/
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(OBJDIR)

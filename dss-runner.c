@@ -32,7 +32,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    init_tracing();
     connect_to_stream("localhost", 5552, "hc", "password", "opendss", 100);
     if (file_path == NULL) {
         printf("Running with 'high/Master.dss' as nothing legit was provided\n");
