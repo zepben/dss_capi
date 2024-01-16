@@ -19,7 +19,7 @@ ENV FPC_VERSION="3.2.2" \
 WORKDIR /tmp/
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN wget "ftp://ftp.hu.freepascal.org/pub/fpc/dist/${FPC_VERSION}/${FPC_ARCH}/fpc-${FPC_VERSION}.${FPC_ARCH}.tar" -O fpc.tar
+RUN wget "https://ixpeering.dl.sourceforge.net/project/freepascal/Linux/${FPC_VERSION}/fpc-${FPC_VERSION}.${FPC_ARCH}.tar" -O fpc.tar
 RUN tar vxf "fpc.tar"
 WORKDIR /tmp/"fpc-${FPC_VERSION}.${FPC_ARCH}"
 RUN echo -e '/usr\nN\nN\nN\n' | bash ./install.sh 
