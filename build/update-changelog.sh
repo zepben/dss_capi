@@ -10,7 +10,8 @@ check_tag_exists() {
   old_tag=$(git tag -l | grep "^$version$" || true)
   tag=$(git tag -l | grep "^v$version$" || true)
   if [[ ! -z $tag || ! -z $old_tag ]]; then
-      fail "Tag for this version already exists"
+      echo "Tag for this version already exists"
+      exit 1
   fi
 }
 
