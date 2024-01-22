@@ -1,5 +1,5 @@
 # Zepben DSS-CAPI changelog
-## [0.12.1.2-zepben1] - UNRELEASED
+## [0.12.1.2-zepben2] - UNRELEASED
 ### Breaking Changes
 * None.
 
