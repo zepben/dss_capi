@@ -3394,7 +3394,7 @@ begin
                 end;
 
                 // Only send report if ActiveCircuit
-                send_summary_report(SummaryReport);
+                batch_push_summary_report(SummaryReport);
             end;
 
             DSS.GlobalResult := FileNm;
@@ -4097,7 +4097,7 @@ begin
                     TapsReport.Step := TapIncrement[iWind];
                     TapsReport.Position := TapPosition(pREg.Transformer, iWind);
 
-                    send_taps_report(TapsReport);
+                    batch_push_taps_report(TapsReport);
                 end;
                 pReg := RegControls.Next;
             end;
