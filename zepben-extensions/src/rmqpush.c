@@ -82,10 +82,47 @@ void clear_mem() {
     pass = NULL;
 }
 
-void send_opendss_message(OpenDssReport* message) {
-    reports[open_dss_report_batch.n_reports] = malloc(sizeof(OpenDssReport));
-    *(reports[open_dss_report_batch.n_reports]) = *message;
-    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_message_batch();
+void free_opendss_report(OpenDssReport* report) {
+    switch (report->report_case) {
+    OPEN_DSS_REPORT__REPORT_DI:
+        for (size_t i = 0; i < report->di->n_voltbases; ++i) free(report->di->voltbases[i]);
+        free(report->di->voltbases);
+        break;
+    OPEN_DSS_REPORT__REPORT_PHV:
+        for (size_t i = 0; i < report->phv->n_values; ++i) {
+            free(report->phv->values[i]->phs1);
+            free(report->phv->values[i]->phs2);
+            free(report->phv->values[i]->phs3);
+            free(report->phv->values[i]);
+        }
+        free(report->phv->values);
+        break;
+    OPEN_DSS_REPORT__REPORT_EL:
+        for (size_t i = 0; i < report->el->n_logentry; ++i) {
+            free(report->el->logentry[i]);
+        }
+        free(report->el->logentry);
+        break;
+    OPEN_DSS_REPORT__REPORT_IBR:
+        free(report->ibr->disconnectedbuses);
+
+        for (size_t i = 0; i < report->ibr->n_isolatedsubareas; i++) {
+            free(report->ibr->isolatedsubareas[i]->loads);
+            free(report->ibr->isolatedsubareas[i]);
+        }
+        free(report->ibr->isolatedsubareas);
+
+        for (size_t i = 0; i < report->ibr->n_isolatedelements; i++) {
+            free(report->ibr->isolatedelements[i]->buses);
+            free(report->ibr->isolatedelements[i]);
+        }
+        free(report->ibr->isolatedelements);
+        break;
+    default:
+        break;
+    }
+
+    free(report);
 }
 
 void send_opendss_message_batch() {
@@ -99,51 +136,14 @@ void send_opendss_message_batch() {
 
     free(buf);
 
-    for (int i = 0; i < open_dss_report_batch.n_reports; ++i) free_opendss_report(reports[i]);
+    for (size_t i = 0; i < open_dss_report_batch.n_reports; ++i) free_opendss_report(reports[i]);
     open_dss_report_batch.n_reports = 0;
 }
 
-void free_opendss_report(OpenDssReport* report) {
-    switch (report->report_case) {
-    OPEN_DSS_REPORT__REPORT_DI:
-        for (int i = 0; i < report->di->n_voltbases; ++i) free(report->di->voltbases[i]);
-        free(report->di->voltbases);
-        break;
-    OPEN_DSS_REPORT__REPORT_PHV:
-        for (int i = 0; i < report->phv->n_values; ++i) {
-            free(report->phv->values[i]->phs1);
-            free(report->phv->values[i]->phs2);
-            free(report->phv->values[i]->phs3);
-            free(report->phv->values[i]);
-        }
-        free(report->phv->values);
-        break;
-    OPEN_DSS_REPORT__REPORT_EL:
-        for (int i = 0; i < report->el->n_logentry; ++i) {
-            free(report->el->logentry[i]);
-        }
-        free(report->el->logentry);
-        break;
-    OPEN_DSS_REPORT__REPORT_IBR:
-        free(report->ibr->disconnectedbuses);
-
-        for (int i = 0; i < report->ibr->n_isolatedsubareas; i++) {
-            free(report->ibr->isolatedsubareas[i]->loads);
-            free(report->ibr->isolatedsubareas[i]);
-        }
-        free(report->ibr->isolatedsubareas);
-
-        for (int i = 0; i < report->ibr->n_isolatedelements; i++) {
-            free(report->ibr->isolatedelements[i]->buses);
-            free(report->ibr->isolatedelements[i]);
-        }
-        free(report->ibr->isolatedelements);
-        break;
-    default:
-        break;
-    }
-
-    free(report);
+void send_opendss_message(OpenDssReport* message) {
+    reports[open_dss_report_batch.n_reports] = malloc(sizeof(OpenDssReport));
+    *(reports[open_dss_report_batch.n_reports]) = *message;
+    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_message_batch();
 }
 
 void send_demand_interval_report(struct TDemandIntervalReport data) {
