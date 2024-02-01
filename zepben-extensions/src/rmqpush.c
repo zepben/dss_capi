@@ -82,7 +82,7 @@ void free_opendss_report(OpenDssReport* report) {
     free(report);
 }
 
-void send_opendss_message_batch() {
+void send_opendss_report_batch() {
     if (open_dss_report_batch.n_reports == 0) return;
 
     int len = open_dss_report_batch__get_packed_size(&open_dss_report_batch);
@@ -97,10 +97,10 @@ void send_opendss_message_batch() {
     open_dss_report_batch.n_reports = 0;
 }
 
-void send_opendss_message(OpenDssReport* message) {
+void send_opendss_report(OpenDssReport* report) {
     reports[open_dss_report_batch.n_reports] = malloc(sizeof(OpenDssReport));
-    *(reports[open_dss_report_batch.n_reports]) = *message;
-    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_message_batch();
+    *(reports[open_dss_report_batch.n_reports]) = *report;
+    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_report_batch();
 }
 
 void send_demand_interval_report(struct TDemandIntervalReport data) {
@@ -164,7 +164,7 @@ void send_demand_interval_report(struct TDemandIntervalReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_DI;
     report.di = &di;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg* source) {
@@ -206,7 +206,7 @@ void send_phase_voltage_report(struct TPhaseVoltageReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_PHV;
     report.phv = &phv;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_overload_report(struct TOverloadReport data) {
@@ -227,7 +227,7 @@ void send_overload_report(struct TOverloadReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_OV;
     report.ov = &ov;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_voltage_report(struct TVoltageReport data) {
@@ -257,7 +257,7 @@ void send_voltage_report(struct TVoltageReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_VR;
     report.vr = &vr;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_summary_report(struct TSummaryReport data) {
@@ -290,7 +290,7 @@ void send_summary_report(struct TSummaryReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_SR;
     report.sr = &sr;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_taps_report(struct TTapsReport data) {
@@ -307,7 +307,7 @@ void send_taps_report(struct TTapsReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_TR;
     report.tr = &tr;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_eventlog(struct TEventLog* data, int num_events) {
@@ -337,7 +337,7 @@ void send_eventlog(struct TEventLog* data, int num_events) {
     report.report_case = OPEN_DSS_REPORT__REPORT_EL;
     report.el = &el;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_loop_report(struct TLoopReport data) {
@@ -353,7 +353,7 @@ void send_loop_report(struct TLoopReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_LR;
     report.lr = &lr;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_losses_entry(struct TLossesEntry data) {
@@ -368,7 +368,7 @@ void send_losses_entry(struct TLossesEntry data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_LE;
     report.le = &le;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_losses_totals(struct TLossesTotals data) {
@@ -384,7 +384,7 @@ void send_losses_totals(struct TLossesTotals data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_LOSSES;
     report.losses = &losses;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_node_mismatch_report(struct TNodeMismatch data) {
@@ -400,7 +400,7 @@ void send_node_mismatch_report(struct TNodeMismatch data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_NM;
     report.nm = &nm;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_kvbase_mismatch_report(struct TKVBaseMismatch data) {
@@ -415,7 +415,7 @@ void send_kvbase_mismatch_report(struct TKVBaseMismatch data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_KVM;
     report.kvm = &kvm;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
 }
 
 void send_isolated_elements_report(struct TIsolatedBusesReport data) {
@@ -469,7 +469,12 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
     report.report_case = OPEN_DSS_REPORT__REPORT_IBR;
     report.ibr = &ibr;
 
-    send_opendss_message(&report);
+    send_opendss_report(&report);
+}
+
+void send_empty_opendss_report() {
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    send_opendss_report(&report);
 }
 
 void send_final_opendss_report() {
