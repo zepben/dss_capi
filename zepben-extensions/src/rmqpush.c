@@ -25,32 +25,6 @@
 
 #define REPORT_BATCH_SIZE 50
 
-typedef enum ERabbitMQStatus {
-    OK,
-    ALREADY_CALLED,
-    CONNECTION_FAILED,
-    SOCKET_CREATION_FAILED,
-    SOCKET_OPEN_FAILED,
-    LOGIN_FAILED,
-    CHANNEL_FAILED,
-    CLEANUP_FAILED
-} RabbitMQStatus;
-
-static amqp_connection_state_t conn;
-static amqp_basic_properties_t props;
-
-// Connection parameters
-static const char* host = NULL;
-static const char* user = NULL;
-static const char* pass = NULL;
-static const char* exchange = NULL;
-static const char* routing_key = NULL;
-static int port;
-static int heartbeat;
-
-static bool conn_conf_set = false;
-static bool connect_called = false;
-
 // message batching
 static OpenDssReport* reports[REPORT_BATCH_SIZE];
 static OpenDssReportBatch open_dss_report_batch = {
@@ -63,23 +37,6 @@ char* copy_str(const char* str) {
     char* copy = malloc(strlen(str) + 1);
     strcpy(copy, str);
     return copy;
-}
-
-void clear_mem() {
-    free((void*)exchange);
-    exchange = NULL;
-
-    free((void*)routing_key);
-    routing_key = NULL;
-
-    free((void*)host);
-    host = NULL;
-
-    free((void*)user);
-    user = NULL;
-
-    free((void*)pass);
-    pass = NULL;
 }
 
 void free_opendss_report(OpenDssReport* report) {
