@@ -19,9 +19,45 @@
 
 #include "include/rmqpush.h"
 #include "include/utils.h"
-#include "proto/hc/opendss/Diagnostics.pb-c.h"
-#include "proto/hc/opendss/EnergyMeter.pb-c.h"
-#include "proto/hc/opendss/OpenDssReport.pb-c.h"
+#include "proto/zepben/protobuf/hc/opendss/Diagnostics.pb-c.h"
+#include "proto/zepben/protobuf/hc/opendss/EnergyMeter.pb-c.h"
+#include "proto/zepben/protobuf/hc/opendss/OpenDssReport.pb-c.h"
+
+#define REPORT_BATCH_SIZE 50
+
+typedef enum ERabbitMQStatus {
+    OK,
+    ALREADY_CALLED,
+    CONNECTION_FAILED,
+    SOCKET_CREATION_FAILED,
+    SOCKET_OPEN_FAILED,
+    LOGIN_FAILED,
+    CHANNEL_FAILED,
+    CLEANUP_FAILED
+} RabbitMQStatus;
+
+static amqp_connection_state_t conn;
+static amqp_basic_properties_t props;
+
+// Connection parameters
+static const char* host = NULL;
+static const char* user = NULL;
+static const char* pass = NULL;
+static const char* exchange = NULL;
+static const char* routing_key = NULL;
+static int port;
+static int heartbeat;
+
+static bool conn_conf_set = false;
+static bool connect_called = false;
+
+// message batching
+static OpenDssReport* reports[REPORT_BATCH_SIZE];
+static OpenDssReportBatch open_dss_report_batch = {
+    PROTOBUF_C_MESSAGE_INIT (&open_dss_report_batch__descriptor),
+    0,
+    reports
+};
 
 char* copy_str(const char* str) {
     char* copy = malloc(strlen(str) + 1);
@@ -29,14 +65,85 @@ char* copy_str(const char* str) {
     return copy;
 }
 
+void clear_mem() {
+    free((void*)exchange);
+    exchange = NULL;
+
+    free((void*)routing_key);
+    routing_key = NULL;
+
+    free((void*)host);
+    host = NULL;
+
+    free((void*)user);
+    user = NULL;
+
+    free((void*)pass);
+    pass = NULL;
+}
+
 void send_opendss_message(OpenDssReport* message) {
-    int len = open_dss_report__get_packed_size(message);
+    reports[open_dss_report_batch.n_reports] = malloc(sizeof(OpenDssReport));
+    *(reports[open_dss_report_batch.n_reports]) = *message;
+    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_message_batch();
+}
+
+void send_opendss_message_batch() {
+    if (open_dss_report_batch.n_reports == 0) return;
+
+    int len = open_dss_report_batch__get_packed_size(&open_dss_report_batch);
     void* buf = malloc(len);
-    open_dss_report__pack(message, buf);
+    open_dss_report_batch__pack(&open_dss_report_batch, buf);
 
     stream_out_message(buf, len);
 
     free(buf);
+
+    for (int i = 0; i < open_dss_report_batch.n_reports; ++i) free_opendss_report(reports[i]);
+    open_dss_report_batch.n_reports = 0;
+}
+
+void free_opendss_report(OpenDssReport* report) {
+    switch (report->report_case) {
+    OPEN_DSS_REPORT__REPORT_DI:
+        for (int i = 0; i < report->di->n_voltbases; ++i) free(report->di->voltbases[i]);
+        free(report->di->voltbases);
+        break;
+    OPEN_DSS_REPORT__REPORT_PHV:
+        for (int i = 0; i < report->phv->n_values; ++i) {
+            free(report->phv->values[i]->phs1);
+            free(report->phv->values[i]->phs2);
+            free(report->phv->values[i]->phs3);
+            free(report->phv->values[i]);
+        }
+        free(report->phv->values);
+        break;
+    OPEN_DSS_REPORT__REPORT_EL:
+        for (int i = 0; i < report->el->n_logentry; ++i) {
+            free(report->el->logentry[i]);
+        }
+        free(report->el->logentry);
+        break;
+    OPEN_DSS_REPORT__REPORT_IBR:
+        free(report->ibr->disconnectedbuses);
+
+        for (int i = 0; i < report->ibr->n_isolatedsubareas; i++) {
+            free(report->ibr->isolatedsubareas[i]->loads);
+            free(report->ibr->isolatedsubareas[i]);
+        }
+        free(report->ibr->isolatedsubareas);
+
+        for (int i = 0; i < report->ibr->n_isolatedelements; i++) {
+            free(report->ibr->isolatedelements[i]->buses);
+            free(report->ibr->isolatedelements[i]);
+        }
+        free(report->ibr->isolatedelements);
+        break;
+    default:
+        break;
+    }
+
+    free(report);
 }
 
 void send_demand_interval_report(struct TDemandIntervalReport data) {
@@ -101,10 +208,6 @@ void send_demand_interval_report(struct TDemandIntervalReport data) {
     report.di = &di;
 
     send_opendss_message(&report);
-
-    for (int i = 0; i < data.num_volt_bases; ++i)
-        free(di.voltbases[i]);
-    free(di.voltbases);
 }
 
 MaxMinAvg* copyMaxMinAvg(struct TMaxMinAvg* source) {
@@ -147,14 +250,6 @@ void send_phase_voltage_report(struct TPhaseVoltageReport data) {
     report.phv = &phv;
 
     send_opendss_message(&report);
-
-    for (int i = 0; i < data.num_values; ++i) {
-        free(phv.values[i]->phs1);
-        free(phv.values[i]->phs2);
-        free(phv.values[i]->phs3);
-        free(phv.values[i]);
-    }
-    free(phv.values);
 }
 
 void send_overload_report(struct TOverloadReport data) {
@@ -194,12 +289,12 @@ void send_voltage_report(struct TVoltageReport data) {
     hv.minbus = (char*)data.hv.min_bus;
     hv.maxbus = (char*)data.hv.max_bus;
 
-    lv.undervoltages = data.lv.under_voltages;
-    lv.minvoltage = data.lv.min_voltage;
-    lv.overvoltage = data.lv.over_voltage;
-    lv.maxvoltage = data.lv.max_voltage;
-    lv.minbus = (char*)data.lv.min_bus;
-    lv.maxbus = (char*)data.lv.max_bus;
+    hv.undervoltages = data.lv.under_voltages;
+    hv.minvoltage = data.lv.min_voltage;
+    hv.overvoltage = data.lv.over_voltage;
+    hv.maxvoltage = data.lv.max_voltage;
+    hv.minbus = (char*)data.lv.min_bus;
+    hv.maxbus = (char*)data.lv.max_bus;
 
     OpenDssReport report = OPEN_DSS_REPORT__INIT;
     report.report_case = OPEN_DSS_REPORT__REPORT_VR;
@@ -262,9 +357,11 @@ void send_eventlog(struct TEventLog* data, int num_events) {
     EventLog el = EVENT_LOG__INIT;
 
     el.logentry = (EventLogEntry**)malloc(num_events * sizeof(EventLogEntry*));
+    el.n_logentry = num_events;
 
     for (int i = 0; i < num_events; i++) {
         EventLogEntry log_entry = EVENT_LOG_ENTRY__INIT;
+
 
         log_entry.hour = data[i].hour;
         log_entry.sec = data[i].sec;
@@ -284,11 +381,6 @@ void send_eventlog(struct TEventLog* data, int num_events) {
     report.el = &el;
 
     send_opendss_message(&report);
-
-    for (int i = 0; i < num_events; i++) {
-        free(el.logentry[i]);
-    }
-    free(el.logentry);
 }
 
 void send_loop_report(struct TLoopReport data) {
@@ -380,6 +472,7 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
 
     // IsolatedAreas
     ibr.isolatedsubareas = malloc(data.num_areas * sizeof(IsolatedArea));
+    ibr.n_isolatedsubareas = data.num_areas;
     for (int i = 0; i < data.num_areas; i++) {
         IsolatedArea area = ISOLATED_AREA__INIT;
         struct TIsolatedArea ia = data.isolated_area[i];
@@ -398,6 +491,7 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
 
     // IsolatedElements
     ibr.isolatedelements = malloc(data.num_elements * sizeof(IsolatedElement));
+    ibr.n_isolatedelements = data.num_elements;
     for (int i = 0; i < data.num_elements; i++) {
         IsolatedElement element = ISOLATED_ELEMENT__INIT;
         struct TIsolatedElement ie = data.isolated_element[i];
@@ -419,21 +513,6 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
     report.ibr = &ibr;
 
     send_opendss_message(&report);
-
-    // free stuff
-    free(ibr.disconnectedbuses);
-
-    for (int i = 0; i < data.num_areas; i++) {
-        free(ibr.isolatedsubareas[i]->loads);
-        free(ibr.isolatedsubareas[i]);
-    }
-    free(ibr.isolatedsubareas);
-
-    for (int i = 0; i < data.num_elements; i++) {
-        free(ibr.isolatedelements[i]->buses);
-        free(ibr.isolatedelements[i]);
-    }
-    free(ibr.isolatedelements);
 }
 
 void send_final_opendss_report() {
