@@ -23,66 +23,10 @@
 #include "proto/hc/opendss/EnergyMeter.pb-c.h"
 #include "proto/hc/opendss/OpenDssReport.pb-c.h"
 
-typedef enum ERabbitMQStatus {
-    OK,
-    ALREADY_CALLED,
-    CONNECTION_FAILED,
-    SOCKET_CREATION_FAILED,
-    SOCKET_OPEN_FAILED,
-    LOGIN_FAILED,
-    CHANNEL_FAILED,
-    CLEANUP_FAILED
-} RabbitMQStatus;
-
-static amqp_connection_state_t conn;
-static amqp_basic_properties_t props;
-
-// Connection parameters
-static const char* host = NULL;
-static const char* user = NULL;
-static const char* pass = NULL;
-static const char* exchange = NULL;
-static const char* routing_key = NULL;
-static int port;
-static int heartbeat;
-
-static bool conn_conf_set = false;
-static bool connect_called = false;
-
-// Number of messages sent in total
-static int sent_counter = 0;
-
-// The delivery tag of the last message acked. Should match sent_counter if all messages have been acked.
-static int last_ack_tag = 0;
-
-// Number of messages sent in the current interval.
-static int msg_counter = 0;
-
-// rate interval 3 sec
-static const int rate_interval = 3;
-static time_t rate_timer;
-
 char* copy_str(const char* str) {
     char* copy = malloc(strlen(str) + 1);
     strcpy(copy, str);
     return copy;
-}
-
-void clear_mem() {
-    free((void*)exchange);
-    exchange = NULL;
-
-    free((void*)routing_key);
-    routing_key = NULL;
-
-    free((void*)host);
-    host = NULL;
-
-    free((void*)user);
-    user = NULL;
-
-    free((void*)pass);
-    pass = NULL;
 }
 
 void send_opendss_message(OpenDssReport* message) {
