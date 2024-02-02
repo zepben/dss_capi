@@ -253,6 +253,9 @@ void batch_push_losses_totals(struct TLossesTotals data);
 void batch_push_node_mismatch_report(struct TNodeMismatch data);
 void batch_push_kvbase_mismatch_report(struct TKVBaseMismatch data);
 
+// Send batched reports.
+void send_opendss_report_batch();
+
 // Final report (empty). This also sends any other reports in the current batch.
 void send_final_opendss_report();
 
