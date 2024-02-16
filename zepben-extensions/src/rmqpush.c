@@ -74,6 +74,7 @@ void free_opendss_report(OpenDssReport* report) {
     OPEN_DSS_REPORT__REPORT_SR:
         free(report->sr->casename);
         free(report->sr->mode);
+        free(report->sr->control_mode)
         free(report->sr);
         break;
     OPEN_DSS_REPORT__REPORT_TR:
@@ -338,7 +339,7 @@ void batch_push_summary_report(struct TSummaryReport data) {
     sr->numbuses = data.num_buses;
     sr->numnodes = data.num_nodes;
     sr->iterations = data.iterations;
-    sr->controlmode = data.control_mode;
+    sr->controlmode = copy_str(data.control_mode);
     sr->controliterations = data.control_iterations;
     sr->mostiterationsdone = data.most_iterations_done;
     sr->year = data.year;
