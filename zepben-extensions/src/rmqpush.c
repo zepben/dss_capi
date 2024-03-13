@@ -435,3 +435,8 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
     }
     free(ibr.isolatedelements);
 }
+
+void send_final_report() {
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    send_opendss_message(&report);
+}

@@ -82,8 +82,6 @@ pub unsafe extern "C" fn connect_to_stream(
 pub unsafe extern "C" fn disconnect_from_stream() {
     if let Some(producer) = PRODUCER.take() {
         RUNTIME.block_on(async {
-            // Having problems ensuring all messages are sent before closing, so we just use sleep here
-            sleep(Duration::from_secs(1)).await;
             producer
                 .close()
                 .await
