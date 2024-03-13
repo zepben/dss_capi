@@ -259,7 +259,4 @@ void send_opendss_report_batch();
 // Final report (empty). This also sends any other reports in the current batch.
 void send_final_opendss_report();
 
-// Final (empty) report
-void send_final_opendss_report();
-
 #endif

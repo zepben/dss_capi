@@ -549,8 +549,3 @@ void send_final_opendss_report() {
     batch_push_opendss_report(&report);
     send_opendss_report_batch();
 }
-
-void send_final_opendss_report() {
-    OpenDssReport report = OPEN_DSS_REPORT__INIT;
-    send_opendss_message(&report);
-}
