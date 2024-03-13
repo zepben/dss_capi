@@ -6,6 +6,7 @@ use tracing::{debug, error, info, Level, trace};
 use lazy_static::lazy_static;
 use rabbitmq_stream_client::types::Message;
 use tokio::runtime::Runtime;
+use tokio::time::sleep;
 use tracing_subscriber::FmtSubscriber;
 
 lazy_static! {
@@ -79,15 +80,15 @@ pub unsafe extern "C" fn connect_to_stream(
 
 #[no_mangle]
 pub unsafe extern "C" fn disconnect_from_stream() {
-    if let Some(producer) = &PRODUCER {
+    if let Some(producer) = PRODUCER.take() {
         RUNTIME.block_on(async {
+            // Having problems ensuring all messages are sent before closing, so we just use sleep here
+            sleep(Duration::from_secs(1)).await;
             producer
-                .clone()
                 .close()
                 .await
                 .expect("Could not close producer.");
         });
-        PRODUCER = None;
         let seconds_elapsed = START_TIME.unwrap().elapsed().as_secs_f64();
         let busy_percent = (BUSY_TIME.as_secs_f64() / seconds_elapsed) * 100.0;
         let msg_per_sec = TOTAL_MESSAGES as f64 / seconds_elapsed;

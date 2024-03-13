@@ -194,12 +194,12 @@ void send_voltage_report(struct TVoltageReport data) {
     hv.minbus = (char*)data.hv.min_bus;
     hv.maxbus = (char*)data.hv.max_bus;
 
-    hv.undervoltages = data.lv.under_voltages;
-    hv.minvoltage = data.lv.min_voltage;
-    hv.overvoltage = data.lv.over_voltage;
-    hv.maxvoltage = data.lv.max_voltage;
-    hv.minbus = (char*)data.lv.min_bus;
-    hv.maxbus = (char*)data.lv.max_bus;
+    lv.undervoltages = data.lv.under_voltages;
+    lv.minvoltage = data.lv.min_voltage;
+    lv.overvoltage = data.lv.over_voltage;
+    lv.maxvoltage = data.lv.max_voltage;
+    lv.minbus = (char*)data.lv.min_bus;
+    lv.maxbus = (char*)data.lv.max_bus;
 
     OpenDssReport report = OPEN_DSS_REPORT__INIT;
     report.report_case = OPEN_DSS_REPORT__REPORT_VR;
