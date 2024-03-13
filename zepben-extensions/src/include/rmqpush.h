@@ -254,6 +254,6 @@ void send_node_mismatch_report(struct TNodeMismatch data);
 void send_kvbase_mismatch_report(struct TKVBaseMismatch data);
 
 // Final (empty) report
-void send_final_report();
+void send_final_opendss_report();
 
 #endif
