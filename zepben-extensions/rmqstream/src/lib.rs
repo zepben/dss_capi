@@ -82,6 +82,10 @@ pub unsafe extern "C" fn connect_to_stream(
 pub unsafe extern "C" fn disconnect_from_stream() {
     if let Some(producer) = PRODUCER.take() {
         RUNTIME.block_on(async {
+            // There seems to be a bug in the rust stream client lib: outgoing messages are not
+            // confirmed to have been sent before attempting to close the producer. We wait
+            // 2 seconds here to be safe.
+            sleep(Duration::from_secs(2)).await;
             producer
                 .close()
                 .await
