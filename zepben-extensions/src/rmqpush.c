@@ -74,7 +74,7 @@ void free_opendss_report(OpenDssReport* report) {
     OPEN_DSS_REPORT__REPORT_SR:
         free(report->sr->casename);
         free(report->sr->mode);
-        free(report->sr->control_mode)
+        free(report->sr->controlmode);
         free(report->sr);
         break;
     OPEN_DSS_REPORT__REPORT_TR:
