@@ -4,7 +4,8 @@ use std::time::{Duration, Instant};
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
 use tracing::{debug, error, info, Level, trace};
 use lazy_static::lazy_static;
-use rabbitmq_stream_client::types::Message;
+use rabbitmq_stream_client::error::ProducerCloseError;
+use rabbitmq_stream_client::types::{Message, ResponseCode};
 use tokio::runtime::Runtime;
 use tokio::time::sleep;
 use tracing_subscriber::FmtSubscriber;
@@ -89,7 +90,14 @@ pub unsafe extern "C" fn disconnect_from_stream() {
             producer
                 .close()
                 .await
-                .expect("Could not close producer.");
+                .map_err(|e| match e {
+                    ProducerCloseError::Close { stream: _, status: ResponseCode::PublisherDoesNotExist } => {
+                        // Results processor may have already deleted the stream (and consequently, the publisher)
+                        // so we handle it gracefully here.
+                        eprintln!("Publisher does not exist (has the stream been deleted?), but the producer has closed anyway.");
+                    }
+                    _ => panic!("Unexpected error when closing producer: {:?}", e)
+                }).unwrap_or_else(|_| ())
         });
         let seconds_elapsed = START_TIME.unwrap().elapsed().as_secs_f64();
         let busy_percent = (BUSY_TIME.as_secs_f64() / seconds_elapsed) * 100.0;
