@@ -3390,11 +3390,6 @@ begin
                         dVector[i] := dBuffer[i];
                 end;
 
-                with DSS.ActiveCircuit.Solution do
-                    WriteintoMem(OV_MHandle, DynaVars.dblHour);
-                WriteintoMemStr(OV_MHandle, ', ' + EncloseQuotes(PDelem.FullName));
-                WriteintoMem(OV_MHandle, PDElem.NormAmps);
-                WriteintoMem(OV_MHandle, pdelem.EmergAmps);
                 if PDElem.Normamps > 0.0 then
                     WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0)
                 else
@@ -3423,7 +3418,7 @@ begin
                 begin
                     WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0);
                     OverloadReport.PercentNormal := Cmax / PDElem.Normamps * 100.0;
-                end
+                end;
                 else
                     // Writing into memory will do nothing, so 
                     // not terrible for one off call
@@ -3439,7 +3434,7 @@ begin
                 begin
                     WriteintoMem(OV_MHandle, Cmax / PDElem.Emergamps * 100.0);
                     OverloadReport.PercentEmerg := Cmax / PDElem.Emergamps * 100.0;
-                end
+                end;
                 else
                     // Writing into memory will do nothing, so 
                     // not terrible for one off call
@@ -3467,13 +3462,12 @@ begin
                 with OverloadReport do
                 begin
                     Phase1Amps := dVector[1];
-                    Phase1Amps := dVector[2];
-                    Phase1Amps := dVector[3];
+                    Phase2Amps := dVector[2];
+                    Phase3Amps := dVector[3];
                 end;
 
                 WriteintoMemStr(OV_MHandle, Char(10));
                 send_overload_report(OverloadReport);
-                
             end;
         end;
     end;
