@@ -11,6 +11,7 @@
 
 ### Fixes
 * Fixed cosmetic bug where the msg/sec reported in stdout is inaccurate
+* Fixed bug where the overload report was not getting populated with correct phase amp values.
 
 ### Notes
 * None.

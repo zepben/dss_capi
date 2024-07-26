@@ -3446,8 +3446,8 @@ begin
                     with OverloadReport do
                     begin
                         Phase1Amps := dVector^[1];
-                        Phase1Amps := dVector^[2];
-                        Phase1Amps := dVector^[3];
+                        Phase2Amps := dVector^[2];
+                        Phase3Amps := dVector^[3];
                     end;
 
                     WriteintoMemStr(OV_MHandle, Char(10));
