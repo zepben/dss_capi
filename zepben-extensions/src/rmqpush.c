@@ -23,214 +23,10 @@
 #include "proto/hc/opendss/EnergyMeter.pb-c.h"
 #include "proto/hc/opendss/OpenDssReport.pb-c.h"
 
-typedef enum ERabbitMQStatus {
-    OK,
-    ALREADY_CALLED,
-    CONNECTION_FAILED,
-    SOCKET_CREATION_FAILED,
-    SOCKET_OPEN_FAILED,
-    LOGIN_FAILED,
-    CHANNEL_FAILED,
-    CLEANUP_FAILED
-} RabbitMQStatus;
-
-static amqp_connection_state_t conn;
-static amqp_basic_properties_t props;
-
-// Connection parameters
-static const char* host = NULL;
-static const char* user = NULL;
-static const char* pass = NULL;
-static const char* exchange = NULL;
-static const char* routing_key = NULL;
-static int port;
-static int heartbeat;
-
-static bool conn_conf_set = false;
-static bool connect_called = false;
-
-// Number of messages sent in total
-static int sent_counter = 0;
-
-// The delivery tag of the last message acked. Should match sent_counter if all messages have been acked.
-static int last_ack_tag = 0;
-
-// Number of messages sent in the current interval.
-static int msg_counter = 0;
-
-// rate interval 3 sec
-static const int rate_interval = 3;
-static time_t rate_timer;
-
 char* copy_str(const char* str) {
     char* copy = malloc(strlen(str) + 1);
     strcpy(copy, str);
     return copy;
-}
-
-void clear_mem() {
-    free((void*)exchange);
-    exchange = NULL;
-
-    free((void*)routing_key);
-    routing_key = NULL;
-
-    free((void*)host);
-    host = NULL;
-
-    free((void*)user);
-    user = NULL;
-
-    free((void*)pass);
-    pass = NULL;
-}
-
-
-int connect_rabbitmq(char const* hostname, int const _port, char const* username, char const* password, char const* _routing_key, char const* _exchange, int const _heartbeat) {
-    if (connect_called)
-        return ALREADY_CALLED;
-
-    connect_called = true;
-
-    // Store the params
-    if (!conn_conf_set) {
-        host = copy_str(hostname);
-        user = copy_str(username);
-        pass = copy_str(password);
-        exchange = copy_str(_exchange);
-        routing_key = copy_str(_routing_key);
-        port = _port;
-        heartbeat = _heartbeat;
-        conn_conf_set = true;
-    }
-
-    printf("connecting OpenDSS to RabbitMQ - '%s@%s:%d' [heartbeat=%d]...", user, host, port, heartbeat);
-    printf("connection...");
-    fflush(stdout);
-
-    conn = amqp_new_connection();
-    if (conn == NULL)
-        return CONNECTION_FAILED;
-
-    printf("socket...");
-    fflush(stdout);
-
-    amqp_socket_t* socket = amqp_tcp_socket_new(conn);
-    if (socket == NULL)
-        return SOCKET_CREATION_FAILED;
-
-    if (amqp_socket_open(socket, host, port) != AMQP_STATUS_OK)
-        return SOCKET_OPEN_FAILED;
-
-    printf("login...");
-    fflush(stdout);
-
-    // Login
-    if (has_amqp_error(amqp_login(conn, "/", 0, 131072, heartbeat, AMQP_SASL_METHOD_PLAIN, user, pass), "login"))
-        return LOGIN_FAILED;
-
-    printf("channel...");
-    fflush(stdout);
-
-    // Open channel
-    amqp_channel_open(conn, 1);
-    if (has_amqp_error(amqp_get_rpc_reply(conn), "channel"))
-        return CHANNEL_FAILED;
-
-    printf("confirms...");
-    fflush(stdout);
-
-    // Enable confirms on channel
-    amqp_confirm_select(conn, 1);
-    if (has_amqp_error(amqp_get_rpc_reply(conn), "channel confirms"))
-        return CHANNEL_FAILED;
-
-    if (props.delivery_mode != AMQP_DELIVERY_PERSISTENT) {
-        props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
-        props.content_type = amqp_cstring_bytes("binary/proto");
-        props.delivery_mode = AMQP_DELIVERY_PERSISTENT; /* persistent delivery mode */
-    }
-
-    // start the rate timer
-    time(&rate_timer);
-
-    printf("connected with heartbeat=%d\n", amqp_get_heartbeat(conn));
-    fflush(stdout);
-
-    return OK;
-}
-
-int wait_for_outstanding_messages(int max_outstanding) {
-    do {
-        amqp_frame_t frame;
-        if (has_error(amqp_simple_wait_frame(conn, &frame), "wait for ACK")) {
-            printf("failed to read ACK frame.");
-            fflush(stdout);
-            exit(1);
-        }
-
-        if ((frame.frame_type != AMQP_FRAME_METHOD) || (frame.channel != 1)) {
-            printf("got a frame while looking for an ACK, but it's not for you. Got %s [%d] for channel %d...", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
-            fflush(stdout);
-            exit(1);
-        }
-
-        if (frame.payload.method.id != AMQP_BASIC_ACK_METHOD) {
-            if (frame.payload.method.id == AMQP_BASIC_RETURN_METHOD)
-                printf("failed to send message and the RabbitMQ client returned it...");
-            else
-                printf("got unknown frame while waiting for an ACK. Got %s [%d]...", amqp_method_name(frame.payload.method.id), frame.payload.method.id);
-
-            fflush(stdout);
-            exit(1);
-        }
-
-        amqp_basic_ack_t* a = (amqp_basic_ack_t*)frame.payload.method.decoded;
-        last_ack_tag = a->delivery_tag;
-    } while (sent_counter - max_outstanding > last_ack_tag);
-    
-    return OK;
-}
-
-int disconnect_rabbitmq() {
-    if (!connect_called)
-        return OK;
-
-    clear_mem();
-
-    // Cleanup the connection if there is one.
-    if (conn != NULL) {
-        // This will implicitly clean up the channels and sockets.
-        if (has_error(amqp_destroy_connection(conn), "cleanup"))
-            return CLEANUP_FAILED;
-
-        conn = NULL;
-    }
-
-    return OK;
-}
-
-void publish_rmq_message(amqp_bytes_t msg) {
-    if (has_error(amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(routing_key), 1, 0, &props, msg), "publishing opendss report"))
-        exit(1);
-
-    msg_counter++;
-    sent_counter++;
-
-    // Get publish acks for a batch of messages to limit how many we allow to be outstanding.
-    if (sent_counter % 10000 == 0)
-        wait_for_outstanding_messages(500);
-    
-    // Print rate of RMQ publish every 3 sec or so
-    time_t local1;
-    time(&local1);
-	time_t elapsed = difftime(local1, rate_timer);
-    if (elapsed > rate_interval) {
-        printf("%d messages confirmed - pushing %f msg/sec\n", last_ack_tag, (double)msg_counter / elapsed);
-        fflush(stdout);
-        msg_counter = 0;
-        time(&rate_timer);
-    }
 }
 
 void send_opendss_message(OpenDssReport* message) {
@@ -238,11 +34,7 @@ void send_opendss_message(OpenDssReport* message) {
     void* buf = malloc(len);
     open_dss_report__pack(message, buf);
 
-    amqp_bytes_t body;
-    body.len = len;
-    body.bytes = buf;
-
-    publish_rmq_message(body);
+    stream_out_message(buf, len);
 
     free(buf);
 }
@@ -402,12 +194,12 @@ void send_voltage_report(struct TVoltageReport data) {
     hv.minbus = (char*)data.hv.min_bus;
     hv.maxbus = (char*)data.hv.max_bus;
 
-    hv.undervoltages = data.lv.under_voltages;
-    hv.minvoltage = data.lv.min_voltage;
-    hv.overvoltage = data.lv.over_voltage;
-    hv.maxvoltage = data.lv.max_voltage;
-    hv.minbus = (char*)data.lv.min_bus;
-    hv.maxbus = (char*)data.lv.max_bus;
+    lv.undervoltages = data.lv.under_voltages;
+    lv.minvoltage = data.lv.min_voltage;
+    lv.overvoltage = data.lv.over_voltage;
+    lv.maxvoltage = data.lv.max_voltage;
+    lv.minbus = (char*)data.lv.min_bus;
+    lv.maxbus = (char*)data.lv.max_bus;
 
     OpenDssReport report = OPEN_DSS_REPORT__INIT;
     report.report_case = OPEN_DSS_REPORT__REPORT_VR;
@@ -642,4 +434,9 @@ void send_isolated_elements_report(struct TIsolatedBusesReport data) {
         free(ibr.isolatedelements[i]);
     }
     free(ibr.isolatedelements);
+}
+
+void send_final_opendss_report() {
+    OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    send_opendss_message(&report);
 }

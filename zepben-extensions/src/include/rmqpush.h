@@ -5,9 +5,10 @@
 #ifndef rmq_push_h
 #define rmq_push_h
 
-int connect_rabbitmq(char const *hostname, int const port, char const *username, char const *password, char const *routingkey, char const *exchange, int const heartbeat);
-int wait_for_outstanding_messages();
-int disconnect_rabbitmq();
+// Use functions from rmqstream
+extern void connect_to_stream(char const *hostname, int const port, char const *username, char const *password, char const *stream, int const heartbeat);
+extern void disconnect_from_stream();
+extern void stream_out_message(void const *msg_ptr, size_t msg_size);
 
 // Repeated values for the DemandIntervalReport.
 struct TVoltBaseRegisters {
@@ -251,5 +252,8 @@ void send_losses_entry(struct TLossesEntry data);
 void send_losses_totals(struct TLossesTotals data);
 void send_node_mismatch_report(struct TNodeMismatch data);
 void send_kvbase_mismatch_report(struct TKVBaseMismatch data);
+
+// Final (empty) report
+void send_final_opendss_report();
 
 #endif
