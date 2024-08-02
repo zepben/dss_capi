@@ -2754,7 +2754,6 @@ begin
         send_losses_totals(LossesTotals);
 
     finally
-        FreeAndNil(F);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3021,8 +3020,6 @@ begin
         end;
 
     finally
-
-        FreeAndNil(F);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;
@@ -3641,7 +3638,6 @@ begin
         end;
 
     finally
-        FreeAndNil(F);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
         ReallocMem(MaxNodeCurrent, 0); // Dispose of temp memory
     end;
@@ -3733,7 +3729,6 @@ begin
         end;
 
     finally
-        FreeAndNil(F);
         DSS.ParserVars.Add('@lastshowfile', FileNm);
     end;
 end;

@@ -3077,46 +3077,6 @@ begin
             end;
         end;
 
-        for i := 1 to MaxVBaseCount do
-            if VBaseList[i] > 0.0 then
-            begin
-                if CreateDI_Files then
-                begin
-                    for j := 1 to 3 do
-                    begin
-                        WriteintoMem(PHV_MHandle, 0.001 * VPhaseMax^[jiIndex(j, i)]);
-                        WriteintoMem(PHV_MHandle, 0.001 * VPhaseMin^[jiIndex(j, i)]);
-                        WriteintoMem(PHV_MHandle, 0.001 * MyCount_Avg(VPhaseAccum^[jiIndex(j, i)], VPhaseAccumCount^[jiIndex(j, i)]));
-                    end;
-                end;
-
-                with PhvValues[PhaseVoltageReport.numValues] do
-                begin
-                    vbase := VBaseList[i] * SQRT3;
-                    index := jiIndex(1, i);
-
-                    phs1.max := 0.001 * VPhaseMax^[index];
-                    phs1.min := 0.001 * VPhaseMin^[index];
-                    phs1.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
-
-                    index := jiIndex(2, i);
-
-                    phs2.max := 0.001 * VPhaseMax^[index];
-                    phs2.min := 0.001 * VPhaseMin^[index];
-                    phs2.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
-
-                    index := jiIndex(3, i);
-
-                    phs3.max := 0.001 * VPhaseMax^[index];
-                    phs3.min := 0.001 * VPhaseMin^[index];
-                    phs3.avg := 0.001 * MyCount_Avg(VPhaseAccum^[index], VPhaseAccumCount^[index]);
-                end;
-                inc(PhaseVoltageReport.numValues, 1);
-            end;
-
-        if CreateDI_Files then
-            WriteintoMemStr(PHV_MHandle, Char(10));
-        
         send_phase_voltage_report(PhaseVoltageReport);
     end;
 end;
@@ -3418,7 +3378,7 @@ begin
                 begin
                     WriteintoMem(OV_MHandle, Cmax / PDElem.Normamps * 100.0);
                     OverloadReport.PercentNormal := Cmax / PDElem.Normamps * 100.0;
-                end;
+                end
                 else
                     // Writing into memory will do nothing, so 
                     // not terrible for one off call
@@ -3434,7 +3394,7 @@ begin
                 begin
                     WriteintoMem(OV_MHandle, Cmax / PDElem.Emergamps * 100.0);
                     OverloadReport.PercentEmerg := Cmax / PDElem.Emergamps * 100.0;
-                end;
+                end
                 else
                     // Writing into memory will do nothing, so 
                     // not terrible for one off call
