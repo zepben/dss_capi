@@ -74,7 +74,7 @@ jobs:
       - name: Update version for snapshot release
         id: check
         run: |
-          build/update-changelog.sh $VERSION snapshot
+          build/update-changelog.sh snapshot
         shell: bash
         continue-on-error: false
 
