@@ -10,7 +10,7 @@
 * None.
 
 ### Fixes
-* None.
+* Update-changelog.sh doesn't check the released tag anymore, all flows fixed accordingly.
 
 ### Notes
 * None.

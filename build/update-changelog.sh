@@ -2,19 +2,6 @@
 
 changelog=./changelog.md
  
-check_tag_exists() {
-  version=${1:? 'Version variable is missing.'}
-  echo "Checking remote tags if version exists..."
-  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-  git fetch --tags origin
-  old_tag=$(git tag -l | grep "^$version$" || true)
-  tag=$(git tag -l | grep "^v$version$" || true)
-  if [[ ! -z $tag || ! -z $old_tag ]]; then
-      echo "Tag for this version already exists"
-      exit 1
-  fi
-}
-
 stage_file() {
   file=$1
   if [[ ! -z $file ]]; then
@@ -26,9 +13,6 @@ stage_file() {
   fi
 }
 
-# Check that the provided tag doesn't exist yet
-check_tag_exists $1
-
 # Check out the release branch for changes
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 git fetch --all
@@ -38,16 +22,16 @@ if [[ ! -z $(git branch -a | grep remotes/origin/release) ]]; then
 fi
 git checkout -b release
 
-if [ "$2" = "snapshot" ]; then
+if [ "$1" = "snapshot" ]; then
     echo "SNAPSHOT"
     new_snapshot=$(echo "$version" | sed -e "s/.*-zepben//g")
     new_version=$(echo "$version" | sed -e "s/zepben.*/zepben$(($new_snapshot+1))/g")
-elif [ "$2" = "release" ]; then
+elif [ "$1" = "release" ]; then
     echo "RELEASE"
     new_minor=$(echo $version | sed -e "s/-.*//g" | cut -f4 -d.)
     new_version=$(echo $version | sed -E "s/[[:digit:]]+-zepben/$(($new_minor+1))-zepben/")
 else 
-    echo "Unsupported mode: '$2'"
+    echo "Unsupported mode: '$1'"
 fi
 
 echo "Updating changelog to [$new_version]..."

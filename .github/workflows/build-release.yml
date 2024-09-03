@@ -89,7 +89,7 @@ jobs:
       - name: Update version for release
         id: check
         run: |
-          build/update-changelog.sh $VERSION release
+          build/update-changelog.sh release
         shell: bash
         continue-on-error: false
 
