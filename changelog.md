@@ -1,5 +1,21 @@
 # Zepben DSS-CAPI changelog
-## [0.13.4.1-zepben1] - UNRELEASED
+## [0.13.4.1-zepben2] - UNRELEASED
+### Breaking Changes
+* None
+
+### New Features
+* None.
+
+### Enhancements
+* None.
+
+### Fixes
+* None.
+
+### Notes
+* None.
+
+## [0.13.4.1-zepben1] - 2024-09-03
 ### Breaking Changes
 * Update to support dss_capi 0.13.4. This likely changes a bunch of results in subtle ways.
 
