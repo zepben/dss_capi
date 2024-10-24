@@ -1,6 +1,6 @@
 name: Builds
 
-on: 
+on:
   # release:
   #   types: [created]
   push:
@@ -13,7 +13,7 @@ jobs:
       image: 'docker://pmeira/manylinux_wheel_fpc322_x86_64'
     env:
       KLUSOLVE_URL: 'https://github.com/dss-extensions/klusolve/releases/download/1.0.0a1/klusolvex_1.0.0a1_linux_x64.tar.gz'
-    steps: 
+    steps:
       - name: 'Checkout'
         run: |
           git clone $GITHUB_SERVER_URL/$GITHUB_REPOSITORY dss_capi
@@ -45,7 +45,7 @@ jobs:
     env:
       KLUSOLVE_URL: 'https://github.com/dss-extensions/klusolve/releases/download/1.0.0a1/klusolvex_1.0.0a1_linux_x86.tar.gz'
       DOCKER_IMAGE: 'pmeira/manylinux_wheel_fpc322_i686'
-    steps: 
+    steps:
       - name: 'Checkout'
         run: |
           git clone $GITHUB_SERVER_URL/$GITHUB_REPOSITORY dss_capi
@@ -78,7 +78,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
-        with: 
+        with:
           fetch-depth: 0
           path: 'dss_capi'
       - name: 'Install FreePascal'
@@ -119,7 +119,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v3
-        with: 
+        with:
           fetch-depth: 0
           path: 'dss_capi'
       - name: 'Install FreePascal'
@@ -159,7 +159,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v3
-        with: 
+        with:
           fetch-depth: 0
           path: 'dss_capi'
       - name: 'Install FreePascal'
@@ -191,3 +191,6 @@ jobs:
         with:
           name: 'development-build'
           path: '${{ github.workspace }}/dss_capi/release/*.zip'
+  image:
+    uses: zepben/.github/.github/workflows/build-sealed-docker-image.yml@main
+    secrets: inherit
