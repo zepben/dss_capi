@@ -9,7 +9,7 @@ on:
         type: string
 jobs:
   image:
-    uses: zepben/.github/.github/workflows/build-sealed-docker-image.yml@main
+    uses: zepben/.github/.github/workflows/build-sealed-docker-image-public.yml@main
     secrets: inherit
     with:
       push_image: true

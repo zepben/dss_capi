@@ -192,5 +192,5 @@ jobs:
           name: 'development-build'
           path: '${{ github.workspace }}/dss_capi/release/*.zip'
   image:
-    uses: zepben/.github/.github/workflows/build-sealed-docker-image-public.yml@make-secrets-optional
+    uses: zepben/.github/.github/workflows/build-sealed-docker-image-public.yml@main
     secrets: inherit
