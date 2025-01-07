@@ -1,6 +1,6 @@
 name: Build Zepben Linux Libraries Snapshot
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       commitID:
@@ -31,7 +31,9 @@ jobs:
   build_linux_x64:
     needs: [find-commit]
     runs-on: ubuntu-latest
-    container: 
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    container:
       image: ghcr.io/zepben/dss-capi-builder:latest
 
     env:
@@ -48,9 +50,11 @@ jobs:
         shell: bash
 
       - name: Define the commit version
+        id: version
         run: |
           version=$(grep -E "## \[[0-9]+\.[0-9]+\.[0-9]\.[0-9]+-zepben[[:digit:]]+\]" changelog.md | grep UNRELE | head -n 1 | cut -f2 -d' ' | sed -E 's/\[//g;s/\]//g')
           echo "VERSION=$(echo $version)" >> $GITHUB_ENV
+          echo "version=$(echo $version)" >> $GITHUB_OUTPUT
 
       - name: Package the libraries
         run: |
@@ -62,8 +66,8 @@ jobs:
       - name: Create artefact
         uses: actions/upload-artifact@master
         with:
-          name: dss-libs-${{ env.VERSION }}.bz2 
-          path: package/dss-libs-${{ env.VERSION }}.bz2 
+          name: dss-libs-${{ env.VERSION }}.bz2
+          path: package/dss-libs-${{ env.VERSION }}.bz2
 
       - name: Work around git permission issue
         run: |
@@ -99,3 +103,12 @@ jobs:
           echo "There was an error in merging the branch. Release branch was deleted." >> $GITHUB_STEP_SUMMARY
           exit 1
         shell: bash
+  image:
+    uses: zepben/.github/.github/workflows/build-sealed-docker-image-public.yml@main
+    secrets: inherit
+    needs: build_linux_x64
+    with:
+      version_tag: ${{ needs.build_linux_x64.outputs.version }}
+      edge_tag: true
+      push_image: true
+

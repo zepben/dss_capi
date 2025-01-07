@@ -1,0 +1,16 @@
+name: Build Commit Container
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: The commit/ref to checkout when building the container
+        required: true
+        type: string
+jobs:
+  image:
+    uses: zepben/.github/.github/workflows/build-sealed-docker-image-public.yml@main
+    secrets: inherit
+    with:
+      push_image: true
+      commit: ${{ inputs.commit }}
