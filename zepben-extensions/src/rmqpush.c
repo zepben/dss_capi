@@ -544,8 +544,11 @@ void batch_push_kvbase_mismatch_report(struct TKVBaseMismatch data) {
     batch_push_opendss_report(&report);
 }
 
-void send_final_opendss_report() {
+void send_final_opendss_report(bool failure) {
     OpenDssReport report = OPEN_DSS_REPORT__INIT;
+    report.report_case = OPEN_DSS_REPORT__REPORT_FAILURE;
+    report.failure = failure;
+    
     batch_push_opendss_report(&report);
     send_opendss_report_batch();
 }
