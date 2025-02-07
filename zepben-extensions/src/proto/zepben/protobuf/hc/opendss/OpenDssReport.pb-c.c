@@ -97,7 +97,7 @@ void   open_dss_report_batch__free_unpacked
   assert(message->base.descriptor == &open_dss_report_batch__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
+static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[14] =
 {
   {
     "di",
@@ -108,7 +108,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, di),
     &demand_interval_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -120,7 +120,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, phv),
     &phase_voltage_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -132,7 +132,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, ov),
     &overload_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -144,7 +144,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, vr),
     &voltage_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -156,7 +156,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, sr),
     &summary_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -168,7 +168,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, el),
     &event_log__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -180,7 +180,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, tr),
     &taps_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -192,7 +192,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, lr),
     &loop_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -204,7 +204,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, ibr),
     &isolated_buses_report__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -216,7 +216,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, le),
     &losses_entry__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -228,7 +228,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, losses),
     &losses_totals__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -240,7 +240,7 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, nm),
     &node_mismatch__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -252,13 +252,26 @@ static const ProtobufCFieldDescriptor open_dss_report__field_descriptors[13] =
     offsetof(OpenDssReport, kvm),
     &kvbase_mismatch__descriptor,
     NULL,
-    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "failure",
+    14,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(OpenDssReport, report_case),
+    offsetof(OpenDssReport, failure),
+    NULL,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
 static const unsigned open_dss_report__field_indices_by_name[] = {
   0,   /* field[0] = di */
   5,   /* field[5] = el */
+  13,   /* field[13] = failure */
   8,   /* field[8] = ibr */
   12,   /* field[12] = kvm */
   9,   /* field[9] = le */
@@ -274,17 +287,17 @@ static const unsigned open_dss_report__field_indices_by_name[] = {
 static const ProtobufCIntRange open_dss_report__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 13 }
+  { 0, 14 }
 };
 const ProtobufCMessageDescriptor open_dss_report__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.OpenDssReport",
   "OpenDssReport",
   "OpenDssReport",
-  "OpenDssReport",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(OpenDssReport),
-  13,
+  14,
   open_dss_report__field_descriptors,
   open_dss_report__field_indices_by_name,
   1,  open_dss_report__number_ranges,
@@ -317,10 +330,10 @@ static const ProtobufCIntRange open_dss_report_batch__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor open_dss_report_batch__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.OpenDssReportBatch",
   "OpenDssReportBatch",
   "OpenDssReportBatch",
-  "OpenDssReportBatch",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(OpenDssReportBatch),
   1,
   open_dss_report_batch__field_descriptors,

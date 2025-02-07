@@ -846,10 +846,10 @@ static const ProtobufCIntRange summary_report__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor summary_report__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.SummaryReport",
   "SummaryReport",
   "SummaryReport",
-  "SummaryReport",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(SummaryReport),
   22,
   summary_report__field_descriptors,
@@ -962,10 +962,10 @@ static const ProtobufCIntRange event_log_entry__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor event_log_entry__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.EventLogEntry",
   "EventLogEntry",
   "EventLogEntry",
-  "EventLogEntry",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(EventLogEntry),
   7,
   event_log_entry__field_descriptors,
@@ -1000,10 +1000,10 @@ static const ProtobufCIntRange event_log__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor event_log__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.EventLog",
   "EventLog",
   "EventLog",
-  "EventLog",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(EventLog),
   1,
   event_log__field_descriptors,
@@ -1103,10 +1103,10 @@ static const ProtobufCIntRange taps_report__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor taps_report__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.TapsReport",
   "TapsReport",
   "TapsReport",
-  "TapsReport",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(TapsReport),
   6,
   taps_report__field_descriptors,
@@ -1193,10 +1193,10 @@ static const ProtobufCIntRange loop_report__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor loop_report__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.LoopReport",
   "LoopReport",
   "LoopReport",
-  "LoopReport",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(LoopReport),
   5,
   loop_report__field_descriptors,
@@ -1257,10 +1257,10 @@ static const ProtobufCIntRange isolated_area__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor isolated_area__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.IsolatedArea",
   "IsolatedArea",
   "IsolatedArea",
-  "IsolatedArea",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(IsolatedArea),
   3,
   isolated_area__field_descriptors,
@@ -1308,10 +1308,10 @@ static const ProtobufCIntRange isolated_element__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor isolated_element__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.IsolatedElement",
   "IsolatedElement",
   "IsolatedElement",
-  "IsolatedElement",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(IsolatedElement),
   2,
   isolated_element__field_descriptors,
@@ -1372,10 +1372,10 @@ static const ProtobufCIntRange isolated_buses_report__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor isolated_buses_report__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.IsolatedBusesReport",
   "IsolatedBusesReport",
   "IsolatedBusesReport",
-  "IsolatedBusesReport",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(IsolatedBusesReport),
   3,
   isolated_buses_report__field_descriptors,
@@ -1449,10 +1449,10 @@ static const ProtobufCIntRange losses_entry__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor losses_entry__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.LossesEntry",
   "LossesEntry",
   "LossesEntry",
-  "LossesEntry",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(LossesEntry),
   4,
   losses_entry__field_descriptors,
@@ -1539,10 +1539,10 @@ static const ProtobufCIntRange losses_totals__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor losses_totals__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.LossesTotals",
   "LossesTotals",
   "LossesTotals",
-  "LossesTotals",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(LossesTotals),
   5,
   losses_totals__field_descriptors,
@@ -1629,10 +1629,10 @@ static const ProtobufCIntRange node_mismatch__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor node_mismatch__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.NodeMismatch",
   "NodeMismatch",
   "NodeMismatch",
-  "NodeMismatch",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(NodeMismatch),
   5,
   node_mismatch__field_descriptors,
@@ -1706,10 +1706,10 @@ static const ProtobufCIntRange kvbase_mismatch__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor kvbase_mismatch__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "zepben.protobuf.hc.opendss.KVBaseMismatch",
   "KVBaseMismatch",
   "KVBaseMismatch",
-  "KVBaseMismatch",
-  "",
+  "zepben.protobuf.hc.opendss",
   sizeof(KVBaseMismatch),
   4,
   kvbase_mismatch__field_descriptors,
