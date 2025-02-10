@@ -1,4 +1,4 @@
-FROM ghcr.io/zepben/dss-capi-builder:latest
+FROM ghcr.io/zepben/dss-capi-builder:latest-rust
 
 RUN mkdir -p /app /outputs/lib /outputs/include
 WORKDIR /app
