@@ -169,6 +169,12 @@ int wait_for_outstanding_messages(int max_outstanding) {
             exit(1);
         }
 
+        if ((frame.frame_type == AMQP_FRAME_HEARTBEAT) && (frame.channel == 0)) {
+            printf("got a heartbeat frame while looking for an ACK. Got %s [%d] for channel %d...\n", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
+            fflush(stdout);
+            continue;
+        }
+
         if ((frame.frame_type != AMQP_FRAME_METHOD) || (frame.channel != 1)) {
             printf("got a frame while looking for an ACK, but it's not for you. Got %s [%d] for channel %d...", amqp_method_name(frame.payload.method.id), frame.payload.method.id, frame.channel);
             fflush(stdout);
