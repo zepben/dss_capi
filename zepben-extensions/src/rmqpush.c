@@ -34,8 +34,9 @@ static OpenDssReportBatch open_dss_report_batch = {
 };
 
 char* copy_str(const char* str) {
+    if (!str) return NULL;
     char* copy = malloc(strlen(str) + 1);
-    strcpy(copy, str);
+    if (copy) strcpy(copy, str);
     return copy;
 }
 
