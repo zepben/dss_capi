@@ -436,7 +436,7 @@ void batch_push_isolated_elements_report(struct TIsolatedBusesReport data) {
     }
 
     // IsolatedAreas
-    ibr->isolatedsubareas = malloc(data.num_areas * sizeof(IsolatedArea));
+    ibr->isolatedsubareas = malloc(data.num_areas * sizeof(IsolatedArea*));
     ibr->n_isolatedsubareas = data.num_areas;
     for (int i = 0; i < data.num_areas; i++) {
         IsolatedArea* area = malloc(sizeof(IsolatedArea));
@@ -455,7 +455,7 @@ void batch_push_isolated_elements_report(struct TIsolatedBusesReport data) {
     }
 
     // IsolatedElements
-    ibr->isolatedelements = malloc(data.num_elements * sizeof(IsolatedElement));
+    ibr->isolatedelements = malloc(data.num_elements * sizeof(IsolatedElement*));
     ibr->n_isolatedelements = data.num_elements;
     for (int i = 0; i < data.num_elements; i++) {
         IsolatedElement* element = malloc(sizeof(IsolatedElement));
