@@ -23,7 +23,6 @@
 *.a
 *.la
 *.lo
-lib/
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -78,5 +77,5 @@ docs/build
 .idea
 *.iml
 
-// Exclude the deployment copy of the rmqpush header
+# Exclude the deployment copy of the rmqpush header
 include/rmqpush.h
