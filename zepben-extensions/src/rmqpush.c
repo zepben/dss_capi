@@ -19,9 +19,9 @@
 
 #include "include/rmqpush.h"
 #include "include/utils.h"
-#include "proto/zepben/protobuf/hc/opendss/Diagnostics.pb-c.h"
-#include "proto/zepben/protobuf/hc/opendss/EnergyMeter.pb-c.h"
-#include "proto/zepben/protobuf/hc/opendss/OpenDssReport.pb-c.h"
+#include "proto/hc/opendss/Diagnostics.pb-c.h"
+#include "proto/hc/opendss/EnergyMeter.pb-c.h"
+#include "proto/hc/opendss/OpenDssReport.pb-c.h"
 
 #define REPORT_BATCH_SIZE 10
 
