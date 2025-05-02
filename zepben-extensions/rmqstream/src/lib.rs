@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::slice;
 use std::time::{Duration, Instant};
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
-use tracing::{debug, error, info, Level, trace};
+use tracing::{debug, error, info, Level, trace, warn};
 use lazy_static::lazy_static;
 use rabbitmq_stream_client::error::ProducerCloseError;
 use rabbitmq_stream_client::types::{Message, ResponseCode};
@@ -41,6 +41,7 @@ pub unsafe extern "C" fn connect_to_stream(
         info!("Already connected.");
         return;
     }
+
     debug!("Reading in parameters from C types...");
     let host = CStr::from_ptr(_host).to_string_lossy().to_string();
     let port = _port as u16;
@@ -48,25 +49,58 @@ pub unsafe extern "C" fn connect_to_stream(
     let pass = CStr::from_ptr(_pass).to_string_lossy().to_string();
     let stream = CStr::from_ptr(_stream).to_string_lossy().to_string();
     let heartbeat = _heartbeat as u32;
+
     debug!("C params read. Connecting to RabbitMQ stream ({user}@{host}:{port}, stream {stream})...");
+
     let producer = RUNTIME.block_on(async {
-        let environment = Environment::builder()
-            .host(&host)
-            .port(port)
-            .heartbeat(heartbeat)
-            .username(&user)
-            .password(&pass)
-            .build()
-            .await
-            .expect("Could not connect to RabbitMQ, please check socket and credentials");
-        debug!("Connected. Making producer...");
-        environment
-            .producer()
-            .batch_size(100000)
-            .batch_delay(Duration::from_millis(250))
-            .build(&stream)
-            .await
-            .expect("Could not make producer. Does the stream exist?")
+        // Retry connection up to 3 times
+        let mut retries = 0;
+        let max_retries = 3;
+        let mut last_error = None;
+
+        while retries < max_retries {
+            match Environment::builder()
+                .host(&host)
+                .port(port)
+                .heartbeat(heartbeat)
+                .username(&user)
+                .password(&pass)
+                .build()
+                .await
+            {
+                Ok(environment) => {
+                    debug!("Connected. Making producer...");
+                    match environment
+                        .producer()
+                        .batch_size(100000)
+                        .batch_delay(Duration::from_millis(250))
+                        .build(&stream)
+                        .await
+                    {
+                        Ok(producer) => return producer,
+                        Err(e) => {
+                            last_error = Some(e.to_string());
+                            warn!("Failed to create producer (attempt {} of {}): {}", retries + 1, max_retries, e);
+                        }
+                    }
+                },
+                Err(e) => {
+                    last_error = Some(e.to_string());
+                    warn!("Connection failed (attempt {} of {}): {}", retries + 1, max_retries, e);
+                }
+            }
+
+            retries += 1;
+            if retries < max_retries {
+                sleep(Duration::from_secs(1)).await; // Wait before retrying
+            }
+        }
+
+        panic!(
+            "Could not connect to RabbitMQ after {} attempts. Last error: {:?}",
+            max_retries,
+            last_error
+        );
     });
 
     PRODUCER = Some(producer);
