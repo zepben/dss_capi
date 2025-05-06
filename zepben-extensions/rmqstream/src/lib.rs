@@ -117,10 +117,6 @@ pub unsafe extern "C" fn connect_to_stream(
 pub unsafe extern "C" fn disconnect_from_stream() {
     if let Some(producer) = PRODUCER.take() {
         RUNTIME.block_on(async {
-            // There seems to be a bug in the rust stream client lib: outgoing messages are not
-            // confirmed to have been sent before attempting to close the producer. We wait
-            // 2 seconds here to be safe.
-            sleep(Duration::from_secs(2)).await;
             producer
                 .close()
                 .await
@@ -145,28 +141,35 @@ pub unsafe extern "C" fn disconnect_from_stream() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_len: libc::size_t) {
+pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_len: libc::size_t, confirm: bool) {
     if let Some(producer) = &mut PRODUCER {
         let busy_start = Instant::now();
         let msg_u8_ptr = msg_ptr as *const u8;
         let msg_bytes = slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec();
         RUNTIME.block_on(async move {
-            producer
-                .send(
-                    Message::builder().body(msg_bytes).build(),
-                    move |res| async move {
-                        match res {
-                            Ok(_) => {
-                                trace!("Streamed a message containing {} bytes.", msg_len)
+            if confirm {
+                producer.send_with_confirm(
+                    Message::builder().body(msg_bytes).build()
+                ).await.expect("Could not send message!");
+            }
+            else {
+                producer
+                    .send(
+                        Message::builder().body(msg_bytes).build(),
+                        move |res| async move {
+                            match res {
+                                Ok(_) => {
+                                    trace!("Streamed a message containing {} bytes.", msg_len)
+                                }
+                                Err(e) => {
+                                    error!("Could not confirm message! Full error: {}", e)
+                                }
                             }
-                            Err(e) => {
-                                error!("Could not confirm message! Full error: {}", e)
-                            }
-                        }
-                    },
-                )
-                .await
-                .expect("Could not send message!");
+                        },
+                    )
+                    .await
+                    .expect("Could not push message to output queue!");
+            }
         });
         BUSY_TIME += busy_start.elapsed();
         TOTAL_MESSAGES += 1;

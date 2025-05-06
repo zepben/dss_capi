@@ -147,14 +147,14 @@ void free_opendss_report(OpenDssReport* report) {
     free(report);
 }
 
-void send_opendss_report_batch() {
+void send_opendss_report_batch(bool confirm) {
     if (open_dss_report_batch.n_reports == 0) return;
 
     int len = open_dss_report_batch__get_packed_size(&open_dss_report_batch);
     void* buf = malloc(len);
     open_dss_report_batch__pack(&open_dss_report_batch, buf);
 
-    stream_out_message(buf, len);
+    stream_out_message(buf, len, confirm);
 
     free(buf);
 
@@ -165,9 +165,14 @@ void send_opendss_report_batch() {
 // Push a report onto the batch. `report` is assumed to point to a value on the stack, so it is copied to the heap here.
 // However, the caller is responsible for allocating heap space for the report's pointers (strings, repeated fields).
 void batch_push_opendss_report(OpenDssReport* report) {
+    batch_push_opendss_report_nosend()
+    if (open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_report_batch(false);
+}
+
+void batch_push_opendss_report_nosend(OpenDssReport* report) {
     reports[open_dss_report_batch.n_reports] = malloc(sizeof(OpenDssReport));
     *(reports[open_dss_report_batch.n_reports]) = *report;
-    if (++open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_report_batch();
+    open_dss_report_batch.n_reports++;
 }
 
 void batch_push_demand_interval_report(struct TDemandIntervalReport data) {
@@ -550,6 +555,7 @@ void send_final_opendss_report(bool failure) {
     report.report_case = OPEN_DSS_REPORT__REPORT_FAILURE;
     report.failure = failure;
     
-    batch_push_opendss_report(&report);
-    send_opendss_report_batch();
+    // batch is guaranteed to not be full when we call this--batch_push_opendss_report always calls send_opendss_report_batch when full which empties it
+    batch_push_opendss_report_nosend(&report);
+    send_opendss_report_batch(true);
 }

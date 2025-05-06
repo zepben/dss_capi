@@ -8,7 +8,7 @@
 // Use functions from rmqstream
 extern void connect_to_stream(char const *hostname, int const port, char const *username, char const *password, char const *stream, int const heartbeat);
 extern void disconnect_from_stream();
-extern void stream_out_message(void const *msg_ptr, size_t msg_size);
+extern void stream_out_message(void const *msg_ptr, size_t msg_size, bool confirm);
 
 // Repeated values for the DemandIntervalReport.
 struct TVoltBaseRegisters {
