@@ -165,7 +165,7 @@ void send_opendss_report_batch(bool confirm) {
 // Push a report onto the batch. `report` is assumed to point to a value on the stack, so it is copied to the heap here.
 // However, the caller is responsible for allocating heap space for the report's pointers (strings, repeated fields).
 void batch_push_opendss_report(OpenDssReport* report) {
-    batch_push_opendss_report_nosend()
+    batch_push_opendss_report_nosend(report);
     if (open_dss_report_batch.n_reports == REPORT_BATCH_SIZE) send_opendss_report_batch(false);
 }
 
@@ -554,7 +554,7 @@ void send_final_opendss_report(bool failure) {
     OpenDssReport report = OPEN_DSS_REPORT__INIT;
     report.report_case = OPEN_DSS_REPORT__REPORT_FAILURE;
     report.failure = failure;
-    
+
     // batch is guaranteed to not be full when we call this--batch_push_opendss_report always calls send_opendss_report_batch when full which empties it
     batch_push_opendss_report_nosend(&report);
     send_opendss_report_batch(true);
