@@ -3026,7 +3026,7 @@ begin
         end;
     end;
 
-    send_demand_interval_report(DemandIntervalReport);
+    batch_push_demand_interval_report(DemandIntervalReport);
 
     // Add to Class demand interval registers
     with DSS.EnergyMeterClass do
@@ -3077,7 +3077,7 @@ begin
             end;
         end;
 
-        send_phase_voltage_report(PhaseVoltageReport);
+        batch_push_phase_voltage_report(PhaseVoltageReport);
     end;
 end;
 
@@ -3370,6 +3370,7 @@ begin
                     Element := PDelem.FullName;
                     NormalAmps := PDElem.NormAmps;
                     EmergAmps := PDElem.EmergAmps;
+
                 end;
                 if PDElem.Normamps > 0.0 then
                     // Writing into memory will do nothing, so 
@@ -3427,7 +3428,7 @@ begin
                 end;
 
                 WriteintoMemStr(OV_MHandle, Char(10));
-                send_overload_report(OverloadReport);
+                batch_push_overload_report(OverloadReport);
             end;
         end;
     end;
@@ -3916,7 +3917,7 @@ begin
 
     end;
 
-    send_voltage_report(VoltageReport);
+    batch_push_voltage_report(VoltageReport);
 end;
 
 procedure TEnergyMeter.OpenAllDIFiles;

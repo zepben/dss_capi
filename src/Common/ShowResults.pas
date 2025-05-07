@@ -2721,7 +2721,7 @@ begin
                 else
                     LossesEntry.PctPower := CZERO.RE;
                 LossesEntry.KvarLosses := kLosses.im;
-                send_losses_entry(LossesEntry);
+                batch_push_losses_entry(LossesEntry);
             end;
             PDelem := DSS.ActiveCircuit.PDElements.Next;
         end;      {While}
@@ -2751,7 +2751,7 @@ begin
         else
             LossesTotals.TotalPctLosses := CZERO.re;
 
-        send_losses_totals(LossesTotals);
+        batch_push_losses_totals(LossesTotals);
 
     finally
         DSS.ParserVars.Add('@lastshowfile', FileNm);
@@ -2938,7 +2938,7 @@ begin
         IsolatedBusesReport.NumBuses := Length(IsolatedBusesReport.DisconnectedBuses);
         IsolatedBusesReport.NumAreas := Length(IsolatedBusesReport.IsolatedSubAreas);
         IsolatedBusesReport.NumElements := Length(IsolatedBusesReport.IsolatedElements);
-        send_isolated_elements_report(IsolatedBusesReport);
+        batch_push_isolated_elements_report(IsolatedBusesReport);
 
     finally
         Branch_List.Free;
@@ -3009,7 +3009,7 @@ begin
                                 Loop.LineB := lineObj.ParentClass.Name + '.' + lineObj.Name;
                                 Loop.Parallel := IsParallel;
                                 Loop.Looped := IsLoopedHere;
-                                send_loop_report(Loop);
+                                batch_push_loop_report(Loop);
                             end;
                     end;
                     PDElem := pMtr.BranchList.GoForward;
@@ -3613,7 +3613,7 @@ begin
             NodeMismatch.Node := nref;
             NodeMismatch.CurrentSum := dTemp;
             NodeMismatch.MaxCurrent := MaxNodeCurrent^[nRef];
-            send_node_mismatch_report(NodeMismatch);
+            batch_push_node_mismatch_report(NodeMismatch);
 
 
             for i := 1 to DSS.ActiveCircuit.NumBuses do
@@ -3632,7 +3632,7 @@ begin
                     NodeMismatch.Node := nref;
                     NodeMismatch.CurrentSum := dTemp;
                     NodeMismatch.MaxCurrent := MaxNodeCurrent^[nRef];
-                    send_node_mismatch_report(NodeMismatch);
+                    batch_push_node_mismatch_report(NodeMismatch);
                 end;
             end;
         end;
@@ -3673,7 +3673,7 @@ begin
                         KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
                         KvBaseMismatchReport.Bus := pLoad.GetBus(1);
                         KvBaseMismatchReport.KvBase := pBus.kVBase;
-                        send_kvbase_mismatch_report(KvBaseMismatchReport);
+                        batch_push_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end
                 else
@@ -3685,7 +3685,7 @@ begin
                         KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
                         KvBaseMismatchReport.Bus := pLoad.GetBus(1);
                         KvBaseMismatchReport.KvBase := pBus.kVBase;
-                        send_kvbase_mismatch_report(KvBaseMismatchReport);
+                        batch_push_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end;
             end;
@@ -3708,7 +3708,7 @@ begin
                         KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
                         KvBaseMismatchReport.Bus := pLoad.GetBus(1);
                         KvBaseMismatchReport.KvBase := pBus.kVBase;
-                        send_kvbase_mismatch_report(KvBaseMismatchReport);
+                        batch_push_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end
                 else
@@ -3720,7 +3720,7 @@ begin
                         KvBaseMismatchReport.Kv := pLoad.kVLoadBase;
                         KvBaseMismatchReport.Bus := pLoad.GetBus(1);
                         KvBaseMismatchReport.KvBase := pBus.kVBase;
-                        send_kvbase_mismatch_report(KvBaseMismatchReport);
+                        batch_push_kvbase_mismatch_report(KvBaseMismatchReport);
                     end;
                 end;
             end;
@@ -3872,7 +3872,7 @@ procedure ShowEventLog(DSS: TDSSContext; FileNm: String);
 begin
     try
         if Length(DSS.EventLog) > 0 then
-            send_eventlog(DSS.EventLog, Length(DSS.EventLog));
+            batch_push_eventlog(DSS.EventLog, Length(DSS.EventLog));
 
     finally
         DSS.ParserVars.Add('@lastshowfile', FileNm);
