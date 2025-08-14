@@ -2,7 +2,7 @@ FROM docker.io/library/amazoncorretto:11-al2023 AS java
 
 FROM ghcr.io/zepben/dss-capi-builder:latest-rust AS builder
 
-RUN mkdir -p /app /outputs/lib /outputs/include
+RUN mkdir -p /app/build /outputs/lib /outputs/include /outputs/java-lib
 WORKDIR /app
 
 COPY . .
@@ -16,15 +16,15 @@ RUN apt update && apt install -y swig
 
 COPY --from=java /usr/lib/jvm/java-11-amazon-corretto/include /outputs/include
 
-COPY Makefile.jvm dss_capi.i /outputs
-RUN mkdir /outputs/java-lib
+COPY Makefile.jvm dss_capi.i license.txt /outputs
 WORKDIR /outputs
 
-RUN mkdir -p /app/build && \
-    make -f Makefile.jvm all DSS_PATH=/outputs JAVA_PATH=/outputs OUTPUT_PATH=/outputs/java-lib && \
-    rm -rf /app /outputs/Makefile.jvm /outputs/dss_capi*
+RUN make -f Makefile.jvm all DSS_PATH=/outputs JAVA_PATH=/outputs OUTPUT_PATH=/outputs/java-lib && \
+    rm -rf /app /outputs/Makefile.jvm /outputs/licence.txt /outputs/dss_capi* && \
+    for f in /outputs/java-lib/*; do echo "$(cat /outputs/license.txt)\n\n$(cat ${f})" > ${f}; done
 
-FROM debian:trixie
+
+FROM gcr.io/distroless/static-debian12
 
 COPY --from=builder /outputs /outputs
 WORKDIR /outputs
