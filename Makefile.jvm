@@ -1,0 +1,23 @@
+DSS_PATH=/outputs
+JAVA_PATH=/outputs
+
+INCLUDE_PATH=-I${JAVA_PATH}/include -I${DSS_PATH}/include -I${JAVA_PATH}/include/linux
+LIBRARY_PATH=-L${DSS_PATH}/lib
+LBFLAGS=-ldss_capi -lklusolvex -lrmqpush
+
+CFLAGS=-shared -fPIC
+CC=gcc
+
+OUTPUT_PATH=output
+
+all: libdss_capi_java.so
+
+dss_capi_wrap.c: dss_capi.i
+	swig -java ${INCLUDE_PATH} -outdir ${OUTPUT_PATH} -package com.zepben.dss.generated dss_capi.i
+
+libdss_capi_java.so: dss_capi_wrap.c
+	${CC} ${CFLAGS} ${INCLUDE_PATH} ${LIBRARY_PATH} dss_capi_wrap.c -o ${DSS_PATH}/lib/libdss_capi_java.so ${LBFLAGS}
+
+.PHONY: clean
+clean:
+	rm -f *.c ${OUTPUT_PATH}/*.java ${LIBRARY_PATH}/*java*.so
