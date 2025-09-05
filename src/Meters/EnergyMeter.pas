@@ -444,6 +444,7 @@ uses
     MemoryMap_Lib,
     DSSHelper,
     DSSObjectHelper,
+    PVSystem,
     TypInfo;
 
 type
@@ -1272,6 +1273,7 @@ procedure TEnergyMeterObj.TakeSample;
 var
     i, j, idx: Integer;
 
+    S,
     S_Local,
     S_Totallosses,
     S_LoadLosses,
@@ -1291,6 +1293,7 @@ var
     PCelem: TPCElement;
     pLoad: TLoadobj;
     pGen: TGeneratorObj;
+    pPVSystem: TPVSystemObj;
    // doubles
     MaxExcesskWNorm,
     MaxExcesskWEmerg,
@@ -1477,6 +1480,13 @@ begin
                 begin
                     pGen := PCElem as TGeneratorObj;
                     Accumulate_Gen(pGen, TotalGenkW, TotalGenkvar);
+                end;
+                PVSYSTEM_ELEMENT:
+                begin
+                   pPVSystem := PCElem as TPVSystemObj;
+                   S := -pPVSystem.Power[1] * 0.001;
+                   TotalGenkW := TotalGenkW + S.re;
+                   TotalGenkvar := TotalGenkvar + S.im;
                 end;
             else
                 //Ignore other types of PC Elements

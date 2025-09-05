@@ -9,6 +9,7 @@
   * `int disconnect_rabbitmq()` &rarr; `void disconnect_from_stream()`.
   * Removed `int wait_for_outstanding_messages()`. `void disconnect_from_stream()` ensures all outstanding messages are
     sent before closing the connection.
+* PVSystem generation is now recorded by EnergyMeter's.
 
 ### New Features
 * OpenDSS reports are now sent to a RabbitMQ stream rather than a classic queue, improving throughput.
