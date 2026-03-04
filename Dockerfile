@@ -1,6 +1,6 @@
 FROM docker.io/library/amazoncorretto:11-al2023 AS java
 
-FROM ghcr.io/zepben/dss-capi-builder:latest-rust AS builder
+FROM ghcr.io/zepben/dss-capi-builder:latest-rust-20260302 AS builder
 
 RUN mkdir -p /app/build /outputs/lib /outputs/include /outputs/java-lib
 WORKDIR /app
