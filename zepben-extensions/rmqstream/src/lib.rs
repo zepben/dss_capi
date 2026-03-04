@@ -2,33 +2,47 @@ use std::ffi::CStr;
 use std::slice;
 use std::time::{Duration, Instant};
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
-use tracing::{debug, error, info, Level, trace, warn};
-use lazy_static::lazy_static;
+use tracing::{debug, error, info, trace, warn};
 use rabbitmq_stream_client::error::ProducerCloseError;
 use rabbitmq_stream_client::types::{Message, ResponseCode};
+use std::sync::{LazyLock, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::sleep;
-use tracing_subscriber::FmtSubscriber;
 
-lazy_static! {
-    static ref RUNTIME: Runtime = Runtime::new().unwrap();
+use crate::logging::initialise_logging;
+
+pub(crate) mod logging;
+
+/// This will be initialised using this closure on first use
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
+
+static PRODUCER: Mutex<Option<Producer<NoDedup>>> = Mutex::new(None);
+static STATS: Mutex<Stats> = Mutex::new(Stats::new());
+
+struct Stats {
+    pub busy_time: Duration,
+    pub start_time: Option<Instant>,
+    pub total_messages: u32,
+    pub total_bytes: usize,
 }
-static mut PRODUCER: Option<Producer<NoDedup>> = None;
-static mut BUSY_TIME: Duration = Duration::ZERO;
-static mut START_TIME: Option<Instant> = None;
-static mut TOTAL_MESSAGES: u32 = 0;
-static mut TOTAL_BYTES: usize = 0;
 
-#[no_mangle]
+impl Stats {
+    const fn new() -> Self {
+        Self {
+            busy_time: Duration::ZERO,
+            start_time: None,
+            total_messages: 0,
+            total_bytes: 0,
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn init_tracing() {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-    info!("Rust tracing enabled at DEBUG level.");
+    initialise_logging();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn connect_to_stream(
     _host: *const libc::c_char,
     _port: libc::c_int,
@@ -37,7 +51,9 @@ pub unsafe extern "C" fn connect_to_stream(
     _stream: *const libc::c_char,
     _heartbeat: libc::c_int,
 ) {
-    if PRODUCER.is_some() {
+    initialise_logging();
+
+    if PRODUCER.lock().unwrap().is_some() {
         info!("Already connected.");
         return;
     }
@@ -65,6 +81,7 @@ pub unsafe extern "C" fn connect_to_stream(
                 .heartbeat(heartbeat)
                 .username(&user)
                 .password(&pass)
+                .load_balancer_mode(true)
                 .build()
                 .await
             {
@@ -73,7 +90,6 @@ pub unsafe extern "C" fn connect_to_stream(
                     match environment
                         .producer()
                         .batch_size(100000)
-                        .batch_delay(Duration::from_millis(250))
                         .build(&stream)
                         .await
                     {
@@ -103,46 +119,51 @@ pub unsafe extern "C" fn connect_to_stream(
         );
     });
 
-    PRODUCER = Some(producer);
-    TOTAL_MESSAGES = 0;
-    TOTAL_BYTES = 0;
-    START_TIME = Some(Instant::now());
-    info!(
-        "Connected to RabbitMQ {}@{}:{}, for stream '{}'.",
-        &user, &host, port, &stream
-    );
+    *PRODUCER.lock().unwrap() = Some(producer);
+    STATS.lock().unwrap().total_messages = 0;
+    STATS.lock().unwrap().total_bytes = 0;
+    STATS.lock().unwrap().start_time = Some(Instant::now());
+
+    info!("Connected to RabbitMQ {user}@{host}:{port}, for stream '{stream}'.");
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn disconnect_from_stream() {
-    if let Some(producer) = PRODUCER.take() {
-        RUNTIME.block_on(async {
-            producer
-                .close()
-                .await
-                .map_err(|e| match e {
-                    ProducerCloseError::Close { stream: _, status: ResponseCode::PublisherDoesNotExist } => {
+    initialise_logging();
+
+    match PRODUCER.lock().unwrap().take() {
+        Some(producer) => {
+            RUNTIME.block_on(async {
+                match producer.close().await {
+                    Err(ProducerCloseError::Close { status: ResponseCode::PublisherDoesNotExist, .. }) => {
                         // Results processor may have already deleted the stream (and consequently, the publisher)
                         // so we handle it gracefully here.
                         eprintln!("Publisher does not exist (has the stream been deleted?), but the producer has closed anyway.");
                     }
-                    _ => panic!("Unexpected error when closing producer: {:?}", e)
-                }).unwrap_or_else(|_| ())
-        });
-        let seconds_elapsed = START_TIME.unwrap().elapsed().as_secs_f64();
-        let busy_percent = (BUSY_TIME.as_secs_f64() / seconds_elapsed) * 100.0;
-        let msg_per_sec = TOTAL_MESSAGES as f64 / seconds_elapsed;
-        let bits_per_sec = 8.0 * TOTAL_BYTES as f64 / seconds_elapsed;
-        info!("Disconnected from RabbitMQ. {} total messages, {}% busy, {} msg/sec, {} bits/sec", 
-            TOTAL_MESSAGES, busy_percent, msg_per_sec, bits_per_sec);
-    } else {
-        info!("Already disconnected.");
+                    Err(e) => panic!("Unexpected error when closing producer: {:?}", e),
+                    Ok(_) => (),
+                }
+            });
+            let total_messages = STATS.lock().unwrap().total_messages;
+            let seconds_elapsed = STATS.lock().unwrap().start_time.unwrap().elapsed().as_secs_f64();
+            let busy_percent = (STATS.lock().unwrap().busy_time.as_secs_f64() / seconds_elapsed) * 100.0;
+            let msg_per_sec = total_messages as f64 / seconds_elapsed;
+            let bits_per_sec = 8.0 * STATS.lock().unwrap().total_bytes as f64 / seconds_elapsed;
+            info!(
+                "Disconnected from RabbitMQ. {total_messages} total messages, {busy_percent}% busy, {msg_per_sec} msg/sec, {bits_per_sec} bits/sec",
+            );
+        }
+        None => info!("Already disconnected."),
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_len: libc::size_t, confirm: bool) {
-    if let Some(producer) = &mut PRODUCER {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stream_out_message(
+    msg_ptr: *const libc::c_void,
+    msg_len: libc::size_t,
+    confirm: bool,
+) {
+    if let Some(producer) = &mut *PRODUCER.lock().unwrap() {
         let busy_start = Instant::now();
         let msg_u8_ptr = msg_ptr as *const u8;
         let msg_bytes = slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec();
@@ -171,9 +192,9 @@ pub unsafe extern "C" fn stream_out_message(msg_ptr: *const libc::c_void, msg_le
                     .expect("Could not push message to output queue!");
             }
         });
-        BUSY_TIME += busy_start.elapsed();
-        TOTAL_MESSAGES += 1;
-        TOTAL_BYTES += msg_len;
+        STATS.lock().unwrap().busy_time += busy_start.elapsed();
+        STATS.lock().unwrap().total_messages += 1;
+        STATS.lock().unwrap().total_bytes += msg_len;
     } else {
         error!("Not connected to a RabbitMQ stream!");
     }
