@@ -239,7 +239,7 @@ async fn try_send(
                 delay = delay * 2;
                 retires += 1;
             }
-            Err(e) => error!("Could not send message: {e}"),
+            Err(e) => panic!("Could not send message: {e}"),
         }
     }
 }
