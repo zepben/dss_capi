@@ -2,6 +2,7 @@ use rabbitmq_stream_client::error::ProducerCloseError;
 use rabbitmq_stream_client::error::ProducerPublishError;
 use rabbitmq_stream_client::types::{Message, ResponseCode};
 use rabbitmq_stream_client::{Environment, NoDedup, Producer};
+use rand::random_range;
 use std::ffi::CStr;
 use std::slice;
 use std::sync::{LazyLock, Mutex};
@@ -60,11 +61,11 @@ pub unsafe extern "C" fn connect_to_stream(
     }
 
     debug!("Reading in parameters from C types...");
-    let host = CStr::from_ptr(_host).to_string_lossy().to_string();
+    let host = unsafe { CStr::from_ptr(_host).to_string_lossy().to_string() };
     let port = _port as u16;
-    let user = CStr::from_ptr(_user).to_string_lossy().to_string();
-    let pass = CStr::from_ptr(_pass).to_string_lossy().to_string();
-    let stream = CStr::from_ptr(_stream).to_string_lossy().to_string();
+    let user = unsafe { CStr::from_ptr(_user).to_string_lossy().to_string() };
+    let pass = unsafe { CStr::from_ptr(_pass).to_string_lossy().to_string() };
+    let stream = unsafe { CStr::from_ptr(_stream).to_string_lossy().to_string() };
     let heartbeat = _heartbeat as u32;
 
     debug!(
@@ -185,7 +186,7 @@ pub unsafe extern "C" fn stream_out_message(
     if let Some(producer) = &mut *PRODUCER.lock().unwrap() {
         let busy_start = Instant::now();
         let msg_u8_ptr = msg_ptr as *const u8;
-        let msg_bytes = slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec();
+        let msg_bytes = unsafe { slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec() };
         RUNTIME.block_on(async move {
             let message: Message = Message::builder().body(msg_bytes).build();
 
@@ -227,15 +228,23 @@ async fn try_send(
                 message.data().map_or(0, |data| data.len())
             ),
             Err(ProducerPublishError::Timeout) => {
+                let actual_delay = jittered_delay(delay);
+
                 warn!(
-                    "Timeout bublishing message. Waiting {}ms before retrying",
-                    delay.as_millis()
+                    "Timeout publishing message. Waiting {}ms before retrying",
+                    actual_delay.as_millis()
                 );
-                sleep(delay).await;
+
+                sleep(actual_delay).await;
                 delay = delay * 2;
                 retires += 1;
             }
             Err(e) => error!("Could not send message: {e}"),
         }
     }
+}
+
+/// Return the given delay, with 50% random jitter applied
+fn jittered_delay(delay: Duration) -> Duration {
+    random_range(Duration::ZERO..delay) - (delay / 2)
 }
