@@ -19,6 +19,7 @@
 
 ### Fixes
 * Update-changelog.sh doesn't check the released tag anymore, all flows fixed accordingly.
+* Handle RabbitMQ stream publishes timing out by retrying publishes.
 
 ### Notes
 * None.
@@ -74,4 +75,3 @@
 
 ### Notes
 * None.
-
