@@ -1,13 +1,14 @@
+use rabbitmq_stream_client::error::ProducerCloseError;
+use rabbitmq_stream_client::error::ProducerPublishError;
+use rabbitmq_stream_client::types::{Message, ResponseCode};
+use rabbitmq_stream_client::{Environment, NoDedup, Producer};
 use std::ffi::CStr;
 use std::slice;
-use std::time::{Duration, Instant};
-use rabbitmq_stream_client::{Environment, NoDedup, Producer};
-use tracing::{debug, error, info, trace, warn};
-use rabbitmq_stream_client::error::ProducerCloseError;
-use rabbitmq_stream_client::types::{Message, ResponseCode};
 use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 use tokio::time::sleep;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::logging::initialise_logging;
 
@@ -66,7 +67,9 @@ pub unsafe extern "C" fn connect_to_stream(
     let stream = CStr::from_ptr(_stream).to_string_lossy().to_string();
     let heartbeat = _heartbeat as u32;
 
-    debug!("C params read. Connecting to RabbitMQ stream ({user}@{host}:{port}, stream {stream})...");
+    debug!(
+        "C params read. Connecting to RabbitMQ stream ({user}@{host}:{port}, stream {stream})..."
+    );
 
     let producer = RUNTIME.block_on(async {
         // Retry connection up to 3 times
@@ -96,13 +99,23 @@ pub unsafe extern "C" fn connect_to_stream(
                         Ok(producer) => return producer,
                         Err(e) => {
                             last_error = Some(e.to_string());
-                            warn!("Failed to create producer (attempt {} of {}): {}", retries + 1, max_retries, e);
+                            warn!(
+                                "Failed to create producer (attempt {} of {}): {}",
+                                retries + 1,
+                                max_retries,
+                                e
+                            );
                         }
                     }
-                },
+                }
                 Err(e) => {
                     last_error = Some(e.to_string());
-                    warn!("Connection failed (attempt {} of {}): {}", retries + 1, max_retries, e);
+                    warn!(
+                        "Connection failed (attempt {} of {}): {}",
+                        retries + 1,
+                        max_retries,
+                        e
+                    );
                 }
             }
 
@@ -114,8 +127,7 @@ pub unsafe extern "C" fn connect_to_stream(
 
         panic!(
             "Could not connect to RabbitMQ after {} attempts. Last error: {:?}",
-            max_retries,
-            last_error
+            max_retries, last_error
         );
     });
 
@@ -138,15 +150,22 @@ pub unsafe extern "C" fn disconnect_from_stream() {
                     Err(ProducerCloseError::Close { status: ResponseCode::PublisherDoesNotExist, .. }) => {
                         // Results processor may have already deleted the stream (and consequently, the publisher)
                         // so we handle it gracefully here.
-                        eprintln!("Publisher does not exist (has the stream been deleted?), but the producer has closed anyway.");
+                        warn!("Publisher does not exist (has the stream been deleted?), but the producer has closed anyway.");
                     }
                     Err(e) => panic!("Unexpected error when closing producer: {:?}", e),
                     Ok(_) => (),
                 }
             });
             let total_messages = STATS.lock().unwrap().total_messages;
-            let seconds_elapsed = STATS.lock().unwrap().start_time.unwrap().elapsed().as_secs_f64();
-            let busy_percent = (STATS.lock().unwrap().busy_time.as_secs_f64() / seconds_elapsed) * 100.0;
+            let seconds_elapsed = STATS
+                .lock()
+                .unwrap()
+                .start_time
+                .unwrap()
+                .elapsed()
+                .as_secs_f64();
+            let busy_percent =
+                (STATS.lock().unwrap().busy_time.as_secs_f64() / seconds_elapsed) * 100.0;
             let msg_per_sec = total_messages as f64 / seconds_elapsed;
             let bits_per_sec = 8.0 * STATS.lock().unwrap().total_bytes as f64 / seconds_elapsed;
             info!(
@@ -168,28 +187,15 @@ pub unsafe extern "C" fn stream_out_message(
         let msg_u8_ptr = msg_ptr as *const u8;
         let msg_bytes = slice::from_raw_parts(msg_u8_ptr, msg_len).to_vec();
         RUNTIME.block_on(async move {
+            let message: Message = Message::builder().body(msg_bytes).build();
+
             if confirm {
-                producer.send_with_confirm(
-                    Message::builder().body(msg_bytes).build()
-                ).await.expect("Could not send message!");
-            }
-            else {
-                producer
-                    .send(
-                        Message::builder().body(msg_bytes).build(),
-                        move |res| async move {
-                            match res {
-                                Ok(_) => {
-                                    trace!("Streamed a message containing {} bytes.", msg_len)
-                                }
-                                Err(e) => {
-                                    error!("Could not confirm message! Full error: {}", e)
-                                }
-                            }
-                        },
-                    )
-                    .await
-                    .expect("Could not push message to output queue!");
+                try_send(message, |message| async {
+                    producer.send_with_confirm(message).await.map(|_| ())
+                })
+                .await;
+            } else {
+                try_send(message, |message| producer.send(message, |_| async {})).await;
             }
         });
         STATS.lock().unwrap().busy_time += busy_start.elapsed();
@@ -197,5 +203,39 @@ pub unsafe extern "C" fn stream_out_message(
         STATS.lock().unwrap().total_bytes += msg_len;
     } else {
         error!("Not connected to a RabbitMQ stream!");
+    }
+}
+
+const SEND_MAX_RETRIES: usize = 3;
+const SEND_BACKOFF_DELAY: Duration = Duration::from_secs(5);
+
+/// Try to send a message with the given `send` closure. If the `send` closure
+/// returns `ProducerPublishError::Timeout` then the send is retried.
+///
+/// The message will be retried with exponential backoff
+async fn try_send(
+    message: Message,
+    send: impl AsyncFn(Message) -> Result<(), ProducerPublishError>,
+) {
+    let mut delay: Duration = SEND_BACKOFF_DELAY;
+    let mut retires = 0;
+
+    while retires < SEND_MAX_RETRIES {
+        match send(message.clone()).await {
+            Ok(_) => trace!(
+                "Streamed a message containing {} bytes",
+                message.data().map_or(0, |data| data.len())
+            ),
+            Err(ProducerPublishError::Timeout) => {
+                warn!(
+                    "Timeout bublishing message. Waiting {}ms before retrying",
+                    delay.as_millis()
+                );
+                sleep(delay).await;
+                delay = delay * 2;
+                retires += 1;
+            }
+            Err(e) => error!("Could not send message: {e}"),
+        }
     }
 }
