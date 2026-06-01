@@ -192,10 +192,14 @@ pub unsafe extern "C" fn stream_out_message(
 
             if confirm {
                 try_send(message, |message| async {
-                    producer.send_with_confirm(message).await.map(|_| ())
+                    let result = producer.send_with_confirm(message).await;
+                    result.map(|_| ()) // replace the confirmation status with
                 })
                 .await;
             } else {
+                // the callback `cb` passed to `send` is invoked on the confirmation of the message send.
+                // since we dont need the confirmation callback for anything, we pass a noop closure
+
                 try_send(message, |message| producer.send(message, |_| async {})).await;
             }
         });
