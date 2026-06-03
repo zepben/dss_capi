@@ -18,3 +18,8 @@ tracing = { version = "0.1.44", features = [] }
 tracing-subscriber = "0.3.22"
 tracing-log = "0.2.0"
 rand = "0.10.1"
+
+
+[dev-dependencies]
+ntest = "0.9.5"
+tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "time", "test-util"] }

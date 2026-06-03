@@ -15,6 +15,9 @@ use crate::logging::initialise_logging;
 
 pub(crate) mod logging;
 
+#[cfg(test)]
+mod tests;
+
 /// This will be initialised using this closure on first use
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
@@ -227,10 +230,17 @@ async fn try_send(
 
     while retires < SEND_MAX_RETRIES {
         match send(message.clone()).await {
-            Ok(_) => trace!(
-                "Streamed a message containing {} bytes",
-                message.data().map_or(0, |data| data.len())
-            ),
+            Ok(_) => {
+                if retires > 0 {
+                    info!("Succeeded publishing message after `{retires}` retries")
+                } else {
+                    trace!(
+                        "Streamed a message containing {} bytes",
+                        message.data().map_or(0, |data| data.len())
+                    );
+                }
+                break;
+            }
             Err(ProducerPublishError::Timeout) => {
                 let actual_delay = jittered_delay(delay);
 
@@ -250,5 +260,5 @@ async fn try_send(
 
 /// Return the given delay, with 50% random jitter applied
 fn jittered_delay(delay: Duration) -> Duration {
-    random_range(Duration::ZERO..delay) - (delay / 2)
+    delay - random_range(Duration::ZERO..(delay / 2))
 }
