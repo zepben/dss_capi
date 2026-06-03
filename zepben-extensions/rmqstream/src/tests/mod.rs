@@ -1,6 +1,5 @@
 use super::*;
 use ntest::timeout;
-use std::sync::Arc;
 
 #[tokio::test]
 #[timeout(100)]
@@ -15,8 +14,8 @@ async fn try_send_succeeds() {
 #[tokio::test(start_paused = true)]
 #[timeout(100)]
 async fn try_send_timeout() {
-    // we count the number of times our send function is called with this
-    let retires = Arc::new(Mutex::new(0));
+    // count the number of times our send function is called
+    let retires = Mutex::new(0);
 
     // setup our fake `send` function
     let send = |_| async {
@@ -32,6 +31,7 @@ async fn try_send_timeout() {
 
 #[tokio::test]
 #[should_panic]
+#[timeout(100)]
 async fn try_send_error() {
     // setup our fake `send` function
     let send = |_| async { Err(ProducerPublishError::Closed) };
