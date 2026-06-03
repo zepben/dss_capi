@@ -1,22 +1,17 @@
-name: RMQStream CI
+name: Builds
 
 on:
   push:
     paths:
       - ".github/workflows/rmqstream-ci.yml"
       - "zepben-extensions/rmqstream/**"
-  pull_request:
-    paths:
-      - ".github/workflows/rmqstream-ci.yml"
-      - "zepben-extensions/rmqstream/**"
-  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   rmqstream:
-    name: rmqstream Check/Format/Lint/Test
+    name: rmqstream
     runs-on: ubuntu-latest
     defaults:
       run:
