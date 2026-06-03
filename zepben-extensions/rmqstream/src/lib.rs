@@ -256,5 +256,5 @@ async fn try_send(
 
 /// Return the given delay, with 50% random jitter applied
 fn jittered_delay(delay: Duration) -> Duration {
-    random_range(Duration::ZERO..delay) - (delay / 2)
+    delay - random_range(Duration::ZERO..(delay / 2))
 }
