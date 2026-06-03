@@ -1,0 +1,36 @@
+name: Builds
+
+on:
+  push:
+    paths:
+      - ".github/workflows/rmqstream-ci.yml"
+      - "zepben-extensions/rmqstream/**"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rmqstream:
+    name: rmqstream
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zepben-extensions/rmqstream
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update
+        run: rustup update && rustup default
+
+      - name: Check
+        run: cargo check
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test

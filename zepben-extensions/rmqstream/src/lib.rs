@@ -43,11 +43,13 @@ impl Stats {
 }
 
 #[unsafe(no_mangle)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn init_tracing() {
     initialise_logging();
 }
 
 #[unsafe(no_mangle)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn connect_to_stream(
     _host: *const libc::c_char,
     _port: libc::c_int,
@@ -144,6 +146,7 @@ pub unsafe extern "C" fn connect_to_stream(
 }
 
 #[unsafe(no_mangle)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn disconnect_from_stream() {
     initialise_logging();
 
@@ -181,6 +184,7 @@ pub unsafe extern "C" fn disconnect_from_stream() {
 }
 
 #[unsafe(no_mangle)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn stream_out_message(
     msg_ptr: *const libc::c_void,
     msg_len: libc::size_t,
@@ -250,7 +254,7 @@ async fn try_send(
                 );
 
                 sleep(actual_delay).await;
-                delay = delay * 2;
+                delay *= 2;
                 retires += 1;
             }
             Err(e) => panic!("Could not send message: {e}"),
