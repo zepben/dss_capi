@@ -24,6 +24,8 @@ jobs:
       #   uses: dtolnay/rust-toolchain@stable
       #   with:
       #     components: rustfmt, clippy
+      - name: Update
+        run: rustup update && rustup default
 
       - name: Check
         run: cargo check
