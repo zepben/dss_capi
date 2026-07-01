@@ -1406,6 +1406,8 @@ exports
     Transformers_Get_IsDelta,
     Transformers_Get_kV,
     Transformers_Get_kVA,
+    Transformers_Get_NormHkVA,
+    Transformers_Get_EmergHkVA,
     Transformers_Get_MaxTap,
     Transformers_Get_MinTap,
     Transformers_Get_Name,
