@@ -13,6 +13,7 @@
 
 ### New Features
 * OpenDSS reports are now sent to a RabbitMQ stream rather than a classic queue, improving throughput.
+* Added `Transformers_Get_NormHkVA` and `Transformers_Get_EmergHkVA`, plus context API and C++ wrapper declarations, for reading transformer normal and emergency kVA ratings.
 
 ### Enhancements
 * None.
