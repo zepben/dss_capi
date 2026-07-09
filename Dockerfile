@@ -10,7 +10,7 @@ COPY . .
 RUN make rmqpush && \
   ./build/build_linux_x64.sh && \
   cp /app/lib/linux_x64/*.so /outputs/lib && \
-  cp /app/include/* /outputs/include 
+  cp /app/include/* /outputs/include
 
 RUN apt update && apt install -y swig
 
@@ -21,7 +21,7 @@ WORKDIR /outputs
 
 RUN make -f Makefile.jvm all DSS_PATH=/outputs JAVA_PATH=/outputs OUTPUT_PATH=/outputs/java-lib && \
     /outputs/fix-jvm-bindings-license.sh && \
-    rm -rf /app /outputs/Makefile.jvm /outputs/fix-jvm-bindings-license.sh /outputs/dss_capi* 
+    rm -rf /app /outputs/Makefile.jvm /outputs/fix-jvm-bindings-license.sh /outputs/dss_capi*
 
 FROM gcr.io/distroless/static-debian12
 

@@ -8,7 +8,7 @@ python3 src/classic_to_ctx.py
 
 rm -rf build/units_x64
 mkdir build/units_x64
-fpc -Px86_64 @src/linux-x64.cfg -B src/dss_capi.lpr
+fpc -Px86_64 @src/linux-x64-hardened.cfg -B src/dss_capi.lpr
 
 # ----- Debug lib
 # rm -rf build/units_x64
