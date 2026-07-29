@@ -1,6 +1,6 @@
 [package]
 name = "rmqstream"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2024"
 
 [lib]
@@ -18,7 +18,6 @@ tracing = { version = "0.1.44", features = [] }
 tracing-subscriber = "0.3.22"
 tracing-log = "0.2.0"
 rand = "0.10.1"
-
 
 [dev-dependencies]
 ntest = "0.9.5"
