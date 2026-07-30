@@ -104,12 +104,15 @@ impl ResultsStream {
                 "streamed a message containing {} bytes",
                 message.data().map_or(0, |data| data.len())
             ),
-            Err(_) => todo!("log an error here, and expose the failure in a metric"),
+            Err(e) => {
+                warn!("failed to stream message: {e}");
+                self.stats.messages_failures.add(1);
+            }
         };
 
         self.stats.add_busy(start.elapsed()).await;
-        self.stats.increment_sent();
-        self.stats.add_sent_bytes(msg.len());
+        self.stats.messages_sent.add(1);
+        self.stats.bytes_sent.add(msg.len() as u64);
     }
 
     async fn on_confirm(
@@ -118,9 +121,12 @@ impl ResultsStream {
         result: Result<ConfirmationStatus, ProducerPublishError>,
     ) {
         match result {
-            Ok(status) if status.confirmed() => stats.increment_confirmed(),
-            Ok(_) => stats.increment_unconfirmed(),
-            Err(error) => todo!("log error and potentially expose failure"),
+            Ok(status) if status.confirmed() => stats.messages_confirmed.add(1),
+            Ok(_) => stats.messages_unconfirmed.add(1),
+            Err(error) => {
+                debug!("failure during message confirmation: {error}");
+                stats.messages_failures.add(1);
+            }
         }
 
         // ignore the possibility that the channel is closed
@@ -132,9 +138,9 @@ impl ResultsStream {
         match tokio::time::timeout(timeout, self.messages_confirmed_rx.wait_for(|&x| x)).await {
             Ok(_) => (),
             Err(_) => {
-                // TODO: add a metric to track how often this happens
+                self.stats.confirmation_wait_timeouts.add(1);
                 error!(
-                    "failed to confirm all RabbitMQ stream messages within {}ms of finishing",
+                    "failed to confirm all RabbitMQ stream messages within {}ms",
                     timeout.as_millis()
                 )
             }
@@ -144,18 +150,16 @@ impl ResultsStream {
     /// Disconnect from the results stream, and log a summary of stream statistics
     pub async fn disconnect(self) {
         match self.producer.close().await {
-            Ok(_) => (),
+            Ok(_) => info!("disconnected from RabbitMQ"),
             Err(ProducerCloseError::Close {
                 status: ResponseCode::PublisherDoesNotExist,
                 ..
-            }) => {
-                warn!("stream already closed (publisher)")
-            }
+            }) => warn!("stream already closed (publisher)"),
             Err(_) => {
-                todo!("log a warning and add to a metric here so we can see how often this happens")
+                self.stats.disconnects_failed.add(1);
+                error!("failed to disconnect from RabbitMQ stream");
             }
         }
-        info!("disconnected from RabbitMQ");
 
         self.stats.log_summary().await;
     }

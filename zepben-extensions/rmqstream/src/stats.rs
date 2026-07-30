@@ -4,37 +4,46 @@
 //! option, to avoid having to check all atomic uses for ordering constraints. It would be possible
 //! to use a more relaxed memory ordering.
 
-use std::{
-    sync::atomic::{
-        AtomicU64, AtomicUsize,
-        Ordering::{self, SeqCst},
-    },
-    time::{Duration, Instant},
-};
+use crate::monitoring::initialise_metrics;
 
+use opentelemetry::{global, metrics::Counter};
+use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
+use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::info;
 
-/// Global statistics for the performance and health of the results stream.
+/// Statistics for the performance and health of the results stream.
 pub struct Stats {
     busy_time: Mutex<Duration>,
     start_time: Instant,
-    send_bytes: AtomicUsize,
-    sent_messages: Messages,
-    confirmed_messages: Messages,
+    pub bytes_sent: ExposedCounter,
+    pub messages_sent: ExposedCounter,
+    /// The number of messages that fail to send after retries
+    pub messages_failures: ExposedCounter,
+    pub messages_confirmed: ExposedCounter,
     /// Explicitly unconfirmed messages
-    unconfirmed_messages: Messages,
+    pub messages_unconfirmed: ExposedCounter,
+
+    /// The number of times that we have timed out waiting for all messages to be confirmed
+    pub confirmation_wait_timeouts: ExposedCounter,
+    /// The number of times that disconnecting from RabbitMQ has failed
+    pub disconnects_failed: ExposedCounter,
 }
 
 impl Stats {
     pub fn new() -> Self {
+        initialise_metrics();
+
         Self {
             busy_time: Mutex::const_new(Duration::ZERO),
             start_time: Instant::now(),
-            send_bytes: AtomicUsize::new(0),
-            sent_messages: Messages::new(),
-            confirmed_messages: Messages::new(),
-            unconfirmed_messages: Messages::new(),
+            bytes_sent: ExposedCounter::new("bytes_sent"),
+            messages_sent: ExposedCounter::new("messages_sent"),
+            messages_failures: ExposedCounter::new("messages_failures"),
+            messages_confirmed: ExposedCounter::new("messages_confirmed"),
+            messages_unconfirmed: ExposedCounter::new("messages_unconfirmed"),
+            confirmation_wait_timeouts: ExposedCounter::new("confirmation_wait_timeouts"),
+            disconnects_failed: ExposedCounter::new("disconnects_failed"),
         }
     }
 
@@ -42,32 +51,16 @@ impl Stats {
         *self.busy_time.lock().await += busy
     }
 
-    pub fn add_sent_bytes(&self, bytes: usize) {
-        self.send_bytes.fetch_add(bytes, Ordering::SeqCst);
-    }
-
-    pub fn increment_sent(&self) {
-        self.sent_messages.increment();
-    }
-
-    pub fn increment_confirmed(&self) {
-        self.confirmed_messages.increment();
-    }
-
-    pub fn increment_unconfirmed(&self) {
-        self.unconfirmed_messages.increment();
-    }
-
     pub fn all_messages_confirmed(&self) -> bool {
-        self.confirmed_messages.get() == self.sent_messages.get()
+        self.messages_confirmed.get() == self.messages_sent.get()
     }
 
     pub async fn log_summary(&self) {
-        let total_messages = self.sent_messages.get();
+        let total_messages = self.messages_sent.get();
         let seconds_elapsed = self.start_time.elapsed().as_secs_f64();
         let busy_percent = (self.busy_time.lock().await.as_secs_f64() / seconds_elapsed) * 100.0;
-        let msg_per_sec = self.sent_messages.get() as f64 / seconds_elapsed;
-        let bits_per_sec = 8.0 * self.send_bytes.load(Ordering::SeqCst) as f64 / seconds_elapsed;
+        let msg_per_sec = self.messages_sent.get() as f64 / seconds_elapsed;
+        let bits_per_sec = 8.0 * self.bytes_sent.get() as f64 / seconds_elapsed;
 
         info!(
             "results stream statistics: {total_messages} total messages, {busy_percent}% busy, {msg_per_sec} msg/sec, {bits_per_sec} bits/sec",
@@ -75,19 +68,28 @@ impl Stats {
     }
 }
 
-pub struct Messages {
+/// An atomic counter that is also exposed as a metric.
+pub struct ExposedCounter {
     count: AtomicU64,
+    counter: Counter<u64>,
 }
 
-impl Messages {
-    pub const fn new() -> Self {
+impl ExposedCounter {
+    pub fn new(metric_name: &'static str) -> Self {
+        const METER_NAME: &'static str = "meter_name";
+
+        let meter = global::meter(METER_NAME);
+        let counter = meter.u64_counter(metric_name).build();
+
         Self {
             count: AtomicU64::new(0),
+            counter,
         }
     }
 
-    pub fn increment(&self) {
-        self.count.fetch_add(1, SeqCst);
+    pub fn add(&self, x: u64) {
+        self.count.fetch_add(x, SeqCst);
+        self.counter.add(x, &[]);
     }
 
     pub fn get(&self) -> u64 {

@@ -18,6 +18,9 @@ tracing = { version = "0.1.44", features = [] }
 tracing-subscriber = "0.3.22"
 tracing-log = "0.2.0"
 rand = "0.10.1"
+opentelemetry = "0.31.0"
+opentelemetry_sdk = "0.31.0"
+opentelemetry-otlp = {version = "0.31.0", features = ["grpc-tonic"]}
 
 [dev-dependencies]
 ntest = "0.9.5"

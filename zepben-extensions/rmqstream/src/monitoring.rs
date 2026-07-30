@@ -1,6 +1,9 @@
+use opentelemetry::global;
+use opentelemetry_otlp::MetricExporter;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use std::error::Error;
 use std::sync::Mutex;
-use tracing::{Level, warn};
+use tracing::{Level, debug, warn};
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
 
@@ -17,6 +20,25 @@ pub fn initialise_logging() {
 
 pub fn try_enable_logging<L: LoggingProvider>() -> Result<(), Box<dyn Error>> {
     L::enable()
+}
+
+/// Initialise OpenTelemetry metrics over otlp-grpc. If monitoring is not enabled in the environment
+/// then metrics will not be exported, and a noop implementation used.
+pub fn initialise_metrics() {
+    if std::env::var("ZEPBEN_OPENTELEMETRY_ENABLED") != Ok(String::from("1")) {
+        debug!("opentelemetry disabled. no metrics will be emitted")
+    }
+
+    // this automatically picks up protocol and endpoint from environment variables.
+    let exporter = match MetricExporter::builder().with_tonic().build() {
+        Ok(provider) => provider,
+        Err(e) => return warn!("failed to initialise metrics: {e}"),
+    };
+    let provider = SdkMeterProvider::builder()
+        .with_periodic_exporter(exporter)
+        .build();
+
+    global::set_meter_provider(provider);
 }
 
 /// This allows us to abstract over enabling logging, and test that logging is
@@ -60,7 +82,6 @@ impl LoggingProvider for MockLogging {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logging::{LOGGING_INITIALISED, MockLogging};
     use std::{error::Error, sync::Mutex};
 
     /// This allows us to synchronise our tests for tracing initialisation. We use

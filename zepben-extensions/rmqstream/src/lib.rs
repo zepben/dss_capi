@@ -5,16 +5,13 @@ use std::time::Duration;
 use tokio::runtime::Runtime;
 use tracing::{debug, error, info};
 
-use crate::logging::initialise_logging;
+use crate::monitoring::initialise_logging;
 use crate::results_stream::ResultsStream;
 
-pub(crate) mod logging;
+pub(crate) mod monitoring;
 pub(crate) mod results_stream;
 pub(crate) mod retry;
 pub(crate) mod stats;
-
-#[cfg(test)]
-mod tests;
 
 /// This will be initialised using this closure on first use
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
