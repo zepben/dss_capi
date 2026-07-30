@@ -22,12 +22,12 @@ static RESULTS_STREAM: Mutex<Option<ResultsStream>> = Mutex::new(None);
 const CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[unsafe(no_mangle)]
-#[allow(clippy::missing_safety_doc)]
 pub extern "C" fn init_tracing() {
     initialise_logging();
 }
 
 #[unsafe(no_mangle)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn connect_to_stream(
     _host: *const libc::c_char,
     _port: libc::c_int,

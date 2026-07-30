@@ -76,7 +76,7 @@ pub struct ExposedCounter {
 
 impl ExposedCounter {
     pub fn new(metric_name: &'static str) -> Self {
-        const METER_NAME: &'static str = "meter_name";
+        const METER_NAME: &str = "meter_name";
 
         let meter = global::meter(METER_NAME);
         let counter = meter.u64_counter(metric_name).build();
