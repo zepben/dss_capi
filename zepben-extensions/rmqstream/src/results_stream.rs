@@ -3,8 +3,9 @@ use rabbitmq_stream_client::{
     error::{ProducerCloseError, ProducerPublishError},
     types::{Message, ResponseCode},
 };
+use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::Notify;
+use tokio::sync::watch::{self, Receiver, Sender};
 use tracing::{debug, error, info, warn};
 use tracing_log::log::trace;
 
@@ -14,11 +15,10 @@ const BATCH_SIZE: usize = 100000;
 
 pub struct ResultsStream {
     producer: Producer<NoDedup>,
-    stats: Stats,
+    stats: Arc<Stats>,
 
-    /// A notification that can be awaited to check that all sent messages have
-    /// been confirmed
-    all_messages_confirmed: Notify,
+    messages_confirmed_tx: Sender<bool>,
+    messages_confirmed_rx: Receiver<bool>,
 }
 
 impl ResultsStream {
@@ -64,10 +64,13 @@ impl ResultsStream {
                     "connected to RabbitMQ {username}@{host}:{port}, for stream '{stream_name}'."
                 );
 
+                let (tx, rx) = watch::channel(true);
+
                 Ok(Self {
                     producer,
-                    stats: Stats::new(),
-                    all_messages_confirmed: Notify::new(),
+                    stats: Arc::new(Stats::new()),
+                    messages_confirmed_tx: tx,
+                    messages_confirmed_rx: rx,
                 })
             },
         )
@@ -87,8 +90,12 @@ impl ResultsStream {
             "publishing message",
             |e| matches!(e, ProducerPublishError::Timeout),
             || {
-                self.producer
-                    .send(message.clone(), ResultsStream::on_confirm)
+                let confirmation_tx = self.messages_confirmed_tx.clone();
+                let stats = self.stats.clone();
+
+                self.producer.send(message.clone(), |confirmation| {
+                    ResultsStream::on_confirm(confirmation_tx, stats, confirmation)
+                })
             },
         )
         .await
@@ -100,18 +107,29 @@ impl ResultsStream {
             Err(_) => todo!("log an error here, and expose the failure in a metric"),
         };
 
-        self.stats.busy_time += start.elapsed();
-        self.stats.total_messages += 1;
-        self.stats.total_bytes += msg.len();
+        self.stats.add_busy(start.elapsed()).await;
+        self.stats.increment_sent();
+        self.stats.add_sent_bytes(msg.len());
     }
 
-    async fn on_confirm(result: Result<ConfirmationStatus, ProducerPublishError>) {
-        todo!()
+    async fn on_confirm(
+        tx: Sender<bool>,
+        stats: Arc<Stats>,
+        result: Result<ConfirmationStatus, ProducerPublishError>,
+    ) {
+        match result {
+            Ok(status) if status.confirmed() => stats.increment_confirmed(),
+            Ok(_) => stats.increment_unconfirmed(),
+            Err(error) => todo!("log error and potentially expose failure"),
+        }
+
+        // ignore the possibility that the channel is closed
+        let _ = tx.send(stats.all_messages_confirmed());
     }
 
     /// Wait for all messages to be confirmed.
-    pub async fn wait_confirmation(&self, timeout: Duration) {
-        match tokio::time::timeout(timeout, self.all_messages_confirmed.notified()).await {
+    pub async fn wait_confirmation(&mut self, timeout: Duration) {
+        match tokio::time::timeout(timeout, self.messages_confirmed_rx.wait_for(|&x| x)).await {
             Ok(_) => (),
             Err(_) => {
                 // TODO: add a metric to track how often this happens
@@ -139,6 +157,6 @@ impl ResultsStream {
         }
         info!("disconnected from RabbitMQ");
 
-        self.stats.log_summary();
+        self.stats.log_summary().await;
     }
 }
