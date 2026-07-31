@@ -161,6 +161,9 @@ impl ResultsStream {
             }
         }
 
+        if let Some(ref metrics_provider) = self.stats.metrics_provider {
+            let _ = metrics_provider.force_flush(); // ignore errors when flushing metrics
+        }
         self.stats.log_summary().await;
     }
 }

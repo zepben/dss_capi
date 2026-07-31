@@ -7,6 +7,7 @@
 use crate::monitoring::initialise_metrics;
 
 use opentelemetry::{global, metrics::Counter};
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
@@ -14,6 +15,10 @@ use tracing::info;
 
 /// Statistics for the performance and health of the results stream.
 pub struct Stats {
+    /// The metrics provider. This is retained so we can flush all metrics when exiting. This is
+    /// `None` if metrics are not enabled.
+    pub metrics_provider: Option<SdkMeterProvider>,
+
     busy_time: Mutex<Duration>,
     start_time: Instant,
     pub bytes_sent: ExposedCounter,
@@ -32,9 +37,10 @@ pub struct Stats {
 
 impl Stats {
     pub fn new() -> Self {
-        initialise_metrics();
+        let metrics_provider = initialise_metrics();
 
         Self {
+            metrics_provider,
             busy_time: Mutex::const_new(Duration::ZERO),
             start_time: Instant::now(),
             bytes_sent: ExposedCounter::new("bytes_sent"),

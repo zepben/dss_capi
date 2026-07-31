@@ -24,21 +24,26 @@ pub fn try_enable_logging<L: LoggingProvider>() -> Result<(), Box<dyn Error>> {
 
 /// Initialise OpenTelemetry metrics over otlp-grpc. If monitoring is not enabled in the environment
 /// then metrics will not be exported, and a noop implementation used.
-pub fn initialise_metrics() {
+pub fn initialise_metrics() -> Option<SdkMeterProvider> {
     if std::env::var("ZEPBEN_OPENTELEMETRY_ENABLED") != Ok(String::from("1")) {
-        debug!("opentelemetry disabled. no metrics will be emitted")
+        debug!("opentelemetry disabled. no metrics will be emitted");
+        return None;
     }
 
     // this automatically picks up protocol and endpoint from environment variables.
     let exporter = match MetricExporter::builder().with_tonic().build() {
         Ok(provider) => provider,
-        Err(e) => return warn!("failed to initialise metrics: {e}"),
+        Err(e) => {
+            warn!("failed to initialise metrics: {e}");
+            return None;
+        }
     };
     let provider = SdkMeterProvider::builder()
         .with_periodic_exporter(exporter)
         .build();
 
-    global::set_meter_provider(provider);
+    global::set_meter_provider(provider.clone());
+    Some(provider)
 }
 
 /// This allows us to abstract over enabling logging, and test that logging is
