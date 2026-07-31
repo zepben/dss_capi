@@ -1,5 +1,6 @@
+use async_trait::async_trait;
 use rabbitmq_stream_client::{
-    ConfirmationStatus, Environment, NoDedup, Producer,
+    ConfirmationStatus, Environment, NoDedup, OnClosed, Producer,
     error::{ProducerCloseError, ProducerPublishError},
     types::{Message, ResponseCode},
 };
@@ -56,6 +57,7 @@ impl ResultsStream {
                 let producer = environment
                     .producer()
                     .batch_size(BATCH_SIZE)
+                    .on_closed(Box::new(OnClosedHandler))
                     .build(stream_name)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -165,5 +167,16 @@ impl ResultsStream {
             let _ = metrics_provider.force_flush(); // ignore errors when flushing metrics
         }
         self.stats.log_summary().await;
+    }
+}
+
+struct OnClosedHandler;
+
+#[async_trait]
+impl OnClosed for OnClosedHandler {
+    async fn on_closed(&self, unconfirmed: Vec<Message>) {
+        if !unconfirmed.is_empty() {
+            warn!("discarding {} unconfirmed messages", unconfirmed.len())
+        }
     }
 }
