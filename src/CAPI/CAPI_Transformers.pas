@@ -12,6 +12,8 @@ function Transformers_Get_First(): Integer; CDECL;
 function Transformers_Get_IsDelta(): TAPIBoolean; CDECL;
 function Transformers_Get_kV(): Double; CDECL;
 function Transformers_Get_kVA(): Double; CDECL;
+function Transformers_Get_NormHkVA(): Double; CDECL;
+function Transformers_Get_EmergHkVA(): Double; CDECL;
 function Transformers_Get_MaxTap(): Double; CDECL;
 function Transformers_Get_MinTap(): Double; CDECL;
 function Transformers_Get_Name(): PAnsiChar; CDECL;
@@ -201,6 +203,28 @@ begin
     if (elem.ActiveWinding > 0) and 
        (elem.ActiveWinding <= elem.NumWindings) then
         Result := elem.WdgKVA[elem.ActiveWinding];
+end;
+//------------------------------------------------------------------------------
+function Transformers_Get_NormHkVA(): Double; CDECL;
+var
+    elem: TObj;
+begin
+    Result := 0.0;
+    if not _activeObj(DSSPrime, elem) then
+        Exit;
+
+    Result := elem.NormMaxHkVA;
+end;
+//------------------------------------------------------------------------------
+function Transformers_Get_EmergHkVA(): Double; CDECL;
+var
+    elem: TObj;
+begin
+    Result := 0.0;
+    if not _activeObj(DSSPrime, elem) then
+        Exit;
+
+    Result := elem.EmergMaxHkVA;
 end;
 //------------------------------------------------------------------------------
 function Transformers_Get_MaxTap(): Double; CDECL;

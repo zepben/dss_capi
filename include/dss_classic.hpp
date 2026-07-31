@@ -6750,6 +6750,24 @@ using namespace dss::capi;
         }
 
         /// 
+        /// Normal kVA rating for the active Transformer.
+        /// 
+        double NormHkVA() // getter
+        {
+            APIUtil::ErrorChecker error_checker(api_util);
+            return ctx_Transformers_Get_NormHkVA(ctx);
+        }
+
+        /// 
+        /// Emergency kVA rating for the active Transformer.
+        /// 
+        double EmergHkVA() // getter
+        {
+            APIUtil::ErrorChecker error_checker(api_util);
+            return ctx_Transformers_Get_EmergHkVA(ctx);
+        }
+
+        /// 
         /// Complex array of voltages for active winding
         /// 
         template <typename VectorT=Eigen::Matrix<double, Eigen::Dynamic, 1>>

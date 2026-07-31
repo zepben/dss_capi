@@ -5980,6 +5980,16 @@ extern "C" {
     DSS_CAPI_DLL double Transformers_Get_kVA(void);
 
     /*! 
+    Normal kVA rating for the active Transformer.
+    */
+    DSS_CAPI_DLL double Transformers_Get_NormHkVA(void);
+
+    /*! 
+    Emergency kVA rating for the active Transformer.
+    */
+    DSS_CAPI_DLL double Transformers_Get_EmergHkVA(void);
+
+    /*! 
     Active Winding maximum tap in per-unit.
     */
     DSS_CAPI_DLL double Transformers_Get_MaxTap(void);
