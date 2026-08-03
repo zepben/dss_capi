@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use rabbitmq_stream_client::{
-    ConfirmationStatus, Environment, NoDedup, OnClosed, Producer,
+    Environment, NoDedup, OnClosed, Producer,
     error::{ProducerCloseError, ProducerPublishError},
     types::{Message, ResponseCode},
 };
@@ -10,19 +10,23 @@ use tokio::sync::watch::{self, Receiver, Sender};
 use tracing::{debug, error, info, warn};
 use tracing_log::log::trace;
 
-use crate::{retry::with_retries, stats::Stats};
+use crate::{
+    producer::{Confirmation, ConfirmationResult, StreamProducer},
+    retry::with_retries,
+    stats::Stats,
+};
 
 const BATCH_SIZE: usize = 100000;
 
-pub struct ResultsStream {
-    producer: Producer<NoDedup>,
+pub struct ResultsStream<T: StreamProducer> {
+    producer: T,
     stats: Arc<Stats>,
 
     messages_confirmed_tx: Sender<bool>,
     messages_confirmed_rx: Receiver<bool>,
 }
 
-impl ResultsStream {
+impl ResultsStream<Producer<NoDedup>> {
     /// Create the [ResultsStream]. This will open an internal connection to RabbitMQ, and then
     /// create the stream with the given connection options.
     ///
@@ -36,7 +40,7 @@ impl ResultsStream {
         password: &str,
         stream_name: &str,
         heartbeat: u32,
-    ) -> Self {
+    ) -> ResultsStream<Producer<NoDedup>> {
         debug!("connecting to RabbitMQ stream `{username}@{host}:{port}` on stream {stream_name}");
 
         match with_retries(
@@ -82,7 +86,9 @@ impl ResultsStream {
             Err(e) => panic!("failed to connect to RabbitMQ: {e:?}"),
         }
     }
+}
 
+impl<T: StreamProducer + 'static> ResultsStream<T> {
     /// Send a message to the results stream.
     pub async fn send(&mut self, msg: &[u8]) {
         let start = Instant::now();
@@ -96,9 +102,16 @@ impl ResultsStream {
                 let stats = self.stats.clone();
 
                 self.producer
-                    .send(message.clone(), |confirmation| {
-                        ResultsStream::on_confirm(confirmation_tx, stats, confirmation)
-                    })
+                    .send(
+                        message.clone(),
+                        Box::new(|confirmation| {
+                            Box::pin(ResultsStream::<T>::on_confirm(
+                                confirmation_tx,
+                                stats,
+                                confirmation,
+                            ))
+                        }),
+                    )
                     .await?;
                 self.note_sent_message();
                 Ok(())
@@ -131,14 +144,10 @@ impl ResultsStream {
             .send(self.stats.all_messages_confirmed()); // ignore the possibility that the channel is closed
     }
 
-    async fn on_confirm(
-        tx: Sender<bool>,
-        stats: Arc<Stats>,
-        result: Result<ConfirmationStatus, ProducerPublishError>,
-    ) {
+    async fn on_confirm(tx: Sender<bool>, stats: Arc<Stats>, result: ConfirmationResult) {
         match result {
-            Ok(status) if status.confirmed() => stats.messages_confirmed.add(1),
-            Ok(_) => stats.messages_unconfirmed.add(1),
+            Ok(Confirmation::Confirmed) => stats.messages_confirmed.add(1),
+            Ok(Confirmation::Unconfirmed) => stats.messages_unconfirmed.add(1),
             Err(error) => {
                 debug!("failure during message confirmation: {error}");
                 stats.messages_failures.add(1);

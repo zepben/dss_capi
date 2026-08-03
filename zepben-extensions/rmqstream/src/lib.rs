@@ -1,3 +1,4 @@
+use rabbitmq_stream_client::{NoDedup, Producer};
 use std::ffi::CStr;
 use std::slice;
 use std::sync::{LazyLock, Mutex};
@@ -9,6 +10,7 @@ use crate::monitoring::initialise_logging;
 use crate::results_stream::ResultsStream;
 
 pub(crate) mod monitoring;
+pub(crate) mod producer;
 pub(crate) mod results_stream;
 pub(crate) mod retry;
 pub(crate) mod stats;
@@ -16,7 +18,7 @@ pub(crate) mod stats;
 /// This will be initialised using this closure on first use
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
-static RESULTS_STREAM: Mutex<Option<ResultsStream>> = Mutex::new(None);
+static RESULTS_STREAM: Mutex<Option<ResultsStream<Producer<NoDedup>>>> = Mutex::new(None);
 
 /// The timeout when waiting for all confirmations when disconnecting from the results stream
 const CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(5);
