@@ -22,6 +22,8 @@ pub struct Stats {
     busy_time: Mutex<Duration>,
     start_time: Instant,
     pub bytes_sent: ExposedCounter,
+    /// The number of messages that we have asked to be sent. These may not have all made it to
+    /// RabbitMQ, or been confirmed.
     pub messages_sent: ExposedCounter,
     /// The number of messages that fail to send after retries
     pub messages_failures: ExposedCounter,
