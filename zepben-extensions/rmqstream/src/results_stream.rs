@@ -91,13 +91,17 @@ impl ResultsStream {
         match with_retries(
             "publishing message",
             |e| matches!(e, ProducerPublishError::Timeout),
-            || {
+            async || {
                 let confirmation_tx = self.messages_confirmed_tx.clone();
                 let stats = self.stats.clone();
 
-                self.producer.send(message.clone(), |confirmation| {
-                    ResultsStream::on_confirm(confirmation_tx, stats, confirmation)
-                })
+                self.producer
+                    .send(message.clone(), |confirmation| {
+                        ResultsStream::on_confirm(confirmation_tx, stats, confirmation)
+                    })
+                    .await?;
+                self.note_sent_message();
+                Ok(())
             },
         )
         .await
@@ -113,8 +117,18 @@ impl ResultsStream {
         };
 
         self.stats.add_busy(start.elapsed()).await;
-        self.stats.messages_sent.add(1);
         self.stats.bytes_sent.add(msg.len() as u64);
+    }
+
+    /// Update the state of the [ResultsStream] to note that a new message has been sent.
+    ///
+    /// This updates the sent messages count, and refreshes the status if all messages have been
+    /// confirmed.
+    fn note_sent_message(&self) {
+        self.stats.messages_sent.add(1);
+        let _ = self
+            .messages_confirmed_tx
+            .send(self.stats.all_messages_confirmed()); // ignore the possibility that the channel is closed
     }
 
     async fn on_confirm(
