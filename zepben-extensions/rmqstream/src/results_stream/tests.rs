@@ -1,21 +1,12 @@
 use super::*;
-use crate::{
-    producer::{ConfirmationCallback, StreamProducer},
-    retry::MAX_RETRIES,
-};
+use crate::producer::{ConfirmationCallback, StreamProducer};
 use async_trait::async_trait;
 use rabbitmq_stream_client::{
     error::{ProducerCloseError, ProducerPublishError},
     types::{Message, ResponseCode},
 };
-use std::sync::Mutex;
 
-#[derive(Clone, Copy)]
-enum SendResult {
-    Success,
-    Timeout,
-    Closed,
-}
+use tokio::sync::Mutex;
 
 struct TestProducerState {
     sent_messages: Vec<Vec<u8>>,
@@ -39,29 +30,17 @@ impl Default for TestProducerState {
 struct TestProducer {
     state: Arc<Mutex<TestProducerState>>,
     /// Results of `send` to simulate, in reverse order.
-    send_results: Arc<Mutex<Vec<SendResult>>>,
+    send_results: Arc<Mutex<Vec<Result<(), ProducerPublishError>>>>,
     close_result: Arc<Mutex<Option<Result<(), ProducerCloseError>>>>,
     immediate_confirmation: Option<Confirmation>,
 }
 
 impl TestProducer {
-    fn send_calls(&self) -> usize {
-        self.state.lock().unwrap().send_calls
-    }
-
-    fn close_calls(&self) -> usize {
-        self.state.lock().unwrap().close_calls
-    }
-
-    fn sent_messages(&self) -> Vec<Vec<u8>> {
-        self.state.lock().unwrap().sent_messages.clone()
-    }
-
     async fn confirm(&self, index: usize, result: ConfirmationResult) {
         let callback = self
             .state
             .lock()
-            .unwrap()
+            .await
             .confirmations
             .get_mut(index)
             .and_then(Option::take)
@@ -77,41 +56,31 @@ impl StreamProducer for TestProducer {
         message: &Message,
         on_confirmation: ConfirmationCallback,
     ) -> Result<(), ProducerPublishError> {
-        self.state.lock().unwrap().send_calls += 1;
+        self.state.lock().await.send_calls += 1;
         self.state
             .lock()
-            .unwrap()
+            .await
             .sent_messages
             .push(message.data().map_or(Vec::new(), |x| x.to_vec()));
-        let result = self
-            .send_results
-            .lock()
-            .unwrap()
-            .pop()
-            .unwrap_or(SendResult::Success);
-        let immediate_confirmation = self.immediate_confirmation;
 
-        match result {
-            SendResult::Success => {
-                if let Some(confirmation) = immediate_confirmation {
-                    on_confirmation(Ok(confirmation)).await;
-                } else {
-                    self.state
-                        .lock()
-                        .unwrap()
-                        .confirmations
-                        .push(Some(on_confirmation));
-                }
-                Ok(())
-            }
-            SendResult::Timeout => Err(ProducerPublishError::Timeout),
-            SendResult::Closed => Err(ProducerPublishError::Closed),
+        self.send_results.lock().await.pop().unwrap_or(Ok(()))?; // propagate an error send result
+
+        match self.immediate_confirmation {
+            Some(confirmation) => on_confirmation(Ok(confirmation)).await,
+            None => self
+                .state
+                .lock()
+                .await
+                .confirmations
+                .push(Some(on_confirmation)),
         }
+
+        Ok(())
     }
 
     async fn close(self) -> Result<(), ProducerCloseError> {
-        self.state.lock().unwrap().close_calls += 1;
-        return self.close_result.lock().unwrap().take().unwrap();
+        self.state.lock().await.close_calls += 1;
+        return self.close_result.lock().await.take().unwrap();
     }
 }
 
@@ -124,7 +93,7 @@ struct PendingStateObservation {
 struct PendingStateObservingProducer {
     confirmation_state: Receiver<bool>,
     stats: Arc<Stats>,
-    observation: Arc<Mutex<Option<PendingStateObservation>>>,
+    observation: Arc<std::sync::Mutex<Option<PendingStateObservation>>>,
 }
 
 #[async_trait]
@@ -148,11 +117,13 @@ impl StreamProducer for PendingStateObservingProducer {
 
 impl ResultsStream<TestProducer> {
     fn with<const N: usize>(
-        send_results: [SendResult; N],
+        mut send_results: [Result<(), ProducerPublishError>; N],
         close_result: Result<(), ProducerCloseError>,
         immediate_confirmation: Option<Confirmation>,
     ) -> ResultsStream<TestProducer> {
         let (messages_confirmed_tx, messages_confirmed_rx) = watch::channel(true);
+
+        send_results.reverse();
 
         ResultsStream {
             producer: TestProducer {
@@ -168,23 +139,6 @@ impl ResultsStream<TestProducer> {
     }
 }
 
-// fn results_stream<'a, const N: usize>(
-//     producer: &TestProducer<N>,
-// ) -> (ResultsStream<TestProducer<N>>, Arc<Stats>) {
-//     let stats = Arc::new(Stats::new());
-//     let (messages_confirmed_tx, messages_confirmed_rx) = watch::channel(true);
-
-//     (
-//         ResultsStream {
-//             producer: producer.clone(),
-//             stats: stats.clone(),
-//             messages_confirmed_tx,
-//             messages_confirmed_rx,
-//         },
-//         stats,
-//     )
-// }
-
 #[tokio::test]
 async fn successful_send_records_message_and_statistics() {
     let mut stream = ResultsStream::with([], Ok(()), None);
@@ -192,7 +146,7 @@ async fn successful_send_records_message_and_statistics() {
     stream.send(b"message body").await;
 
     assert_eq!(
-        stream.producer.sent_messages(),
+        stream.producer.state.lock().await.sent_messages,
         vec![b"message body".to_vec()]
     );
     assert_eq!(stream.stats.messages_sent, 1);
@@ -204,7 +158,7 @@ async fn successful_send_records_message_and_statistics() {
 async fn message_is_pending_before_producer_send_starts() {
     let stats = Arc::new(Stats::new());
     let (messages_confirmed_tx, messages_confirmed_rx) = watch::channel(true);
-    let observation = Arc::new(Mutex::new(None));
+    let observation = Arc::new(std::sync::Mutex::new(None));
     let producer = PendingStateObservingProducer {
         confirmation_state: messages_confirmed_rx.clone(),
         stats: stats.clone(),
@@ -229,7 +183,7 @@ async fn message_is_pending_before_producer_send_starts() {
 
 #[tokio::test]
 async fn record_messages_and_bytes_sent_for_successful_send() {
-    let mut stream = ResultsStream::with([SendResult::Success], Ok(()), None);
+    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
 
@@ -239,11 +193,11 @@ async fn record_messages_and_bytes_sent_for_successful_send() {
 
 #[tokio::test]
 async fn dont_record_messages_or_bytes_sent_for_failed_send() {
-    let mut stream = ResultsStream::with([SendResult::Closed], Ok(()), None);
+    let mut stream = ResultsStream::with([Err(ProducerPublishError::Closed)], Ok(()), None);
 
     stream.send(b"not sent").await;
 
-    assert_eq!(stream.producer.send_calls(), 1);
+    assert_eq!(stream.producer.state.lock().await.send_calls, 1);
     assert_eq!(stream.stats.messages_sent, 0);
     assert_eq!(stream.stats.bytes_sent, 0);
     assert_eq!(stream.stats.messages_failures, 1);
@@ -253,9 +207,9 @@ async fn dont_record_messages_or_bytes_sent_for_failed_send() {
 async fn timeout_is_retried_and_success_is_counted_once() {
     let mut stream = ResultsStream::with(
         [
-            SendResult::Timeout,
-            SendResult::Timeout,
-            SendResult::Success,
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Ok(()),
         ],
         Ok(()),
         None,
@@ -263,7 +217,7 @@ async fn timeout_is_retried_and_success_is_counted_once() {
 
     stream.send(b"eventually sent").await;
 
-    assert_eq!(stream.producer.send_calls(), 3); // we tried to send 3 times
+    assert_eq!(stream.producer.state.lock().await.send_calls, 3); // we tried to send 3 times
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.bytes_sent, 15);
     assert_eq!(stream.stats.messages_failures, 0);
@@ -271,11 +225,21 @@ async fn timeout_is_retried_and_success_is_counted_once() {
 
 #[tokio::test(start_paused = true)]
 async fn exhausted_timeout_retries_counts_one_failure() {
-    let mut stream = ResultsStream::with([SendResult::Timeout; MAX_RETRIES + 1], Ok(()), None);
+    let mut stream = ResultsStream::with(
+        [
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+        ],
+        Ok(()),
+        None,
+    );
 
     stream.send(b"never sent").await;
 
-    assert_eq!(stream.producer.send_calls(), MAX_RETRIES + 1);
+    assert_eq!(stream.producer.state.lock().await.send_calls, 4);
     assert_eq!(stream.stats.messages_sent, 0);
     assert_eq!(stream.stats.bytes_sent, 0);
     assert_eq!(stream.stats.messages_failures, 1);
@@ -283,11 +247,11 @@ async fn exhausted_timeout_retries_counts_one_failure() {
 
 #[tokio::test]
 async fn non_timeout_error_is_not_retried() {
-    let mut stream = ResultsStream::with([SendResult::Closed, SendResult::Success], Ok(()), None);
+    let mut stream = ResultsStream::with([Err(ProducerPublishError::Closed), Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
 
-    assert_eq!(stream.producer.send_calls(), 1);
+    assert_eq!(stream.producer.state.lock().await.send_calls, 1);
     assert_eq!(stream.stats.messages_failures, 1);
     assert_eq!(stream.stats.messages_sent, 0);
 }
@@ -301,6 +265,7 @@ async fn immediate_confirmation_does_not_leave_stale_state() {
 
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.messages_confirmed, 1);
+    assert_eq!(stream.stats.bytes_sent, 7);
     assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
 }
 

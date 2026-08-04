@@ -94,7 +94,10 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         let start = Instant::now();
         let message = Message::builder().body(msg).build();
 
-        match with_retries(
+        // mark that not all messages are confirmed, while we are in progress sending this message
+        let _ = self.messages_confirmed_tx.send(false);
+
+        let result = with_retries(
             "publishing message",
             |e| matches!(e, ProducerPublishError::Timeout),
             async || {
@@ -113,16 +116,17 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
                         }),
                     )
                     .await?;
-                self.note_sent_message();
+                self.stats.messages_sent.add(1);
+                self.stats.bytes_sent.add(msg.len() as u64);
                 Ok(())
             },
         )
-        .await
-        {
-            Ok(_) => trace!(
-                "streamed a message containing {} bytes",
-                message.data().map_or(0, |data| data.len())
-            ),
+        .await;
+
+        self.update_all_messages_confirmed();
+
+        match result {
+            Ok(_) => trace!("streamed a message containing {} bytes", msg.len()),
             Err(e) => {
                 warn!("failed to stream message: {e}");
                 self.stats.messages_failures.add(1);
@@ -130,15 +134,12 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         };
 
         self.stats.add_busy(start.elapsed()).await;
-        self.stats.bytes_sent.add(msg.len() as u64);
     }
 
     /// Update the state of the [ResultsStream] to note that a new message has been sent.
     ///
-    /// This updates the sent messages count, and refreshes the status if all messages have been
-    /// confirmed.
-    fn note_sent_message(&self) {
-        self.stats.messages_sent.add(1);
+    /// This refreshes the status of if all messages have been confirmed.
+    fn update_all_messages_confirmed(&self) {
         let _ = self
             .messages_confirmed_tx
             .send(self.stats.all_messages_confirmed()); // ignore the possibility that the channel is closed
