@@ -103,7 +103,7 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
 
                 self.producer
                     .send(
-                        message.clone(),
+                        &message,
                         Box::new(|confirmation| {
                             Box::pin(ResultsStream::<T>::on_confirm(
                                 confirmation_tx,
@@ -203,3 +203,6 @@ impl OnClosed for OnClosedHandler {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

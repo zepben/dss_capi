@@ -77,6 +77,7 @@ impl Stats {
 }
 
 /// An atomic counter that is also exposed as a metric.
+#[derive(Debug)]
 pub struct ExposedCounter {
     count: AtomicU64,
     counter: Counter<u64>,
@@ -102,5 +103,11 @@ impl ExposedCounter {
 
     pub fn get(&self) -> u64 {
         self.count.load(SeqCst)
+    }
+}
+
+impl PartialEq<u64> for ExposedCounter {
+    fn eq(&self, other: &u64) -> bool {
+        self.count.load(SeqCst) == *other
     }
 }
