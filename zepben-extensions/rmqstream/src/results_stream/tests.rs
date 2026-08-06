@@ -1,3 +1,5 @@
+use std::assert_matches;
+
 use super::*;
 use crate::producer::{ConfirmationCallback, StreamProducer};
 use async_trait::async_trait;
@@ -10,7 +12,8 @@ use tokio::sync::{Mutex, MutexGuard};
 
 struct TestProducerState {
     sent_messages: Vec<Vec<u8>>,
-    confirmations: Vec<Option<ConfirmationCallback>>,
+    /// The confirmation callback for the last message that was sent
+    confirmation_callback: Option<ConfirmationCallback>,
     send_calls: usize,
     close_calls: usize,
 
@@ -26,16 +29,12 @@ struct TestProducer {
 }
 
 impl TestProducer {
-    async fn confirm(&self, index: usize, result: ConfirmationResult) {
-        let callback = self
-            .state
-            .lock()
-            .await
-            .confirmations
-            .get_mut(index)
-            .and_then(Option::take)
-            .expect("confirmation callback was not available");
-        callback(result).await;
+    /// Confirm the last message sent with the given [`ConfirmationResult`].
+    async fn confirm(&self, result: ConfirmationResult) {
+        match self.state().await.confirmation_callback {
+            ref mut callback @ Some(_) => callback.take().unwrap()(result).await,
+            None => panic!("no confirmation callback registered"),
+        }
     }
 
     async fn state(&self) -> MutexGuard<'_, TestProducerState> {
@@ -62,7 +61,7 @@ impl StreamProducer for TestProducer {
         let immediate_confirmation = self.state().await.immediate_confirmation;
         match immediate_confirmation {
             Some(confirmation) => on_confirmation(Ok(confirmation)).await,
-            None => self.state().await.confirmations.push(Some(on_confirmation)),
+            None => self.state().await.confirmation_callback = Some(on_confirmation),
         }
 
         Ok(())
@@ -71,37 +70,6 @@ impl StreamProducer for TestProducer {
     async fn close(self) -> Result<(), ProducerCloseError> {
         self.state().await.close_calls += 1;
         return self.state().await.close_result.take().unwrap();
-    }
-}
-
-#[derive(Clone, Copy)]
-struct PendingStateObservation {
-    messages_sent: u64,
-    all_messages_confirmed: bool,
-}
-
-struct PendingStateObservingProducer {
-    confirmation_state: Receiver<bool>,
-    stats: Arc<Stats>,
-    observation: Arc<std::sync::Mutex<Option<PendingStateObservation>>>,
-}
-
-#[async_trait]
-impl StreamProducer for PendingStateObservingProducer {
-    async fn send(
-        &self,
-        _message: &Message,
-        _on_confirmation: ConfirmationCallback,
-    ) -> Result<(), ProducerPublishError> {
-        *self.observation.lock().unwrap() = Some(PendingStateObservation {
-            messages_sent: self.stats.messages_sent.get(),
-            all_messages_confirmed: *self.confirmation_state.borrow(),
-        });
-        Ok(())
-    }
-
-    async fn close(self) -> Result<(), ProducerCloseError> {
-        Ok(())
     }
 }
 
@@ -119,7 +87,7 @@ impl ResultsStream<TestProducer> {
             producer: TestProducer {
                 state: Arc::new(Mutex::new(TestProducerState {
                     sent_messages: Vec::new(),
-                    confirmations: Vec::new(),
+                    confirmation_callback: None,
                     send_calls: 0,
                     close_calls: 0,
                     send_results: Vec::from(send_results),
@@ -147,33 +115,6 @@ async fn successful_send_records_message_and_statistics() {
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.bytes_sent, 12);
     assert_eq!(stream.stats.messages_failures, 0);
-}
-
-#[tokio::test]
-async fn message_is_pending_before_producer_send_starts() {
-    let stats = Arc::new(Stats::new());
-    let (messages_confirmed_tx, messages_confirmed_rx) = watch::channel(true);
-    let observation = Arc::new(std::sync::Mutex::new(None));
-    let producer = PendingStateObservingProducer {
-        confirmation_state: messages_confirmed_rx.clone(),
-        stats: stats.clone(),
-        observation: observation.clone(),
-    };
-    let mut stream = ResultsStream {
-        producer,
-        stats,
-        messages_confirmed_tx,
-        messages_confirmed_rx,
-    };
-
-    stream.send(b"message").await;
-
-    let observation = observation
-        .lock()
-        .unwrap()
-        .expect("producer send was not called");
-    assert_eq!(observation.messages_sent, 0);
-    assert!(!observation.all_messages_confirmed);
 }
 
 #[tokio::test]
@@ -256,7 +197,6 @@ async fn immediate_confirmation_does_not_leave_stale_state() {
     let mut stream = ResultsStream::with([], Ok(()), Some(Confirmation::Confirmed));
 
     stream.send(b"message").await;
-    stream.wait_confirmation(Duration::from_millis(1)).await;
 
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.messages_confirmed, 1);
@@ -264,115 +204,73 @@ async fn immediate_confirmation_does_not_leave_stale_state() {
     assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
 }
 
-// // TODO: how does this test work
-// #[tokio::test]
-// async fn wait_confirmation_blocks_until_confirmation_arrives() {
-//     let mut stream = ResultsStream::with([SendResult::Success], Ok(()), None);
+#[tokio::test(start_paused = true)]
+async fn wait_confirmation_times_out_if_not_all_confirmed() {
+    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
-//     // let handle = TestProducer::builder().build();
-//     // let (mut stream, stats) = results_stream(&handle);
-//     stream.send(b"message").await;
+    stream.send(b"message").await;
 
-//     let wait = stream.wait_confirmation(Duration::from_secs(1));
-//     tokio::pin!(wait);
-//     tokio::select! {
-//         biased;
-//         _ = &mut wait => panic!("confirmation wait completed while a message was outstanding"),
-//         _ = tokio::task::yield_now() => {}
-//     }
+    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
+    assert_eq!(wait, Err(())); // we timed out waiting on confirmation
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+}
 
-//     stream
-//         .producer
-//         .confirm(0, Ok(Confirmation::Confirmed))
-//         .await;
-//     wait.await;
-//     assert_eq!(stream.stats.confirmation_wait_timeouts.get(), 0);
-// }
+#[tokio::test(start_paused = true)]
+async fn wait_confirmation_succeeds_if_all_messages_confirmed() {
+    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
-// #[tokio::test]
-// async fn wait_confirmation_waits_for_every_message() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, stats) = results_stream(&handle);
-//     stream.send(b"first").await;
-//     stream.send(b"second").await;
+    stream.send(b"message").await;
 
-//     handle.confirm(1, Ok(Confirmation::Confirmed)).await;
-//     let wait = stream.wait_confirmation(Duration::from_secs(1));
-//     tokio::pin!(wait);
-//     tokio::select! {
-//         biased;
-//         _ = &mut wait => panic!("confirmation wait completed before every message resolved"),
-//         _ = tokio::task::yield_now() => {}
-//     }
+    stream.producer.confirm(Ok(Confirmation::Confirmed)).await;
+    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
 
-//     handle.confirm(0, Ok(Confirmation::Confirmed)).await;
-//     wait.await;
-//     assert_eq!(stats.messages_confirmed.get(), 2);
-// }
+    assert_eq!(wait, Ok(()));
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+}
 
-// #[tokio::test(start_paused = true)]
-// async fn confirmation_wait_timeout_is_recorded() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, stats) = results_stream(&handle);
-//     stream.send(b"message").await;
-//     // why does this test work? this shouldnt be timing out i would think
-//     stream.wait_confirmation(Duration::from_secs(1)).await;
+#[tokio::test(start_paused = true)]
+async fn unconfirmed_message_is_recorded_and_waits_until_timeout() {
+    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
-//     assert_eq!(stats.confirmation_wait_timeouts.get(), 1);
-// }
+    stream.send(b"message").await;
+    stream.producer.confirm(Ok(Confirmation::Unconfirmed)).await;
 
-// #[tokio::test(start_paused = true)]
-// async fn unconfirmed_message_is_recorded_and_waits_until_timeout() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, stats) = results_stream(&handle);
-//     stream.send(b"message").await;
-//     handle.confirm(0, Ok(Confirmation::Unconfirmed)).await;
+    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
+    assert_eq!(wait, Err(())); // we timed out waiting on confirmation
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+    assert_eq!(stream.stats.messages_confirmed, 0);
+    assert_eq!(stream.stats.messages_unconfirmed, 1);
+}
 
-//     stream.wait_confirmation(Duration::from_secs(1)).await;
+#[tokio::test(start_paused = true)]
+async fn confirmation_callback_error_does_not_make_message_confirmed() {
+    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
-//     assert_eq!(stats.messages_unconfirmed.get(), 1);
-//     assert_eq!(stats.messages_confirmed.get(), 0);
-//     assert_eq!(stats.confirmation_wait_timeouts.get(), 1);
-// }
+    stream.send(b"message").await;
+    stream
+        .producer
+        .confirm(Err(ProducerPublishError::Closed))
+        .await;
 
-// #[tokio::test(start_paused = true)]
-// async fn confirmation_callback_error_is_only_logged_and_waits_until_timeout() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, stats) = results_stream(&handle);
-//     stream.send(b"message").await;
-//     handle.confirm(0, Err(ProducerPublishError::Timeout)).await;
+    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
+    assert_eq!(wait, Err(()));
+    assert_eq!(stream.stats.messages_failures, 1);
+    assert_eq!(stream.stats.messages_confirmed, 0);
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+}
 
-//     stream.wait_confirmation(Duration::from_secs(1)).await;
+#[tokio::test]
+async fn wait_confirmation_returns_immediately_when_no_messages_have_been_sent() {
+    let mut stream = ResultsStream::with([], Ok(()), None);
 
-//     assert_eq!(stats.messages_failures.get(), 0);
-//     assert_eq!(stats.messages_confirmed.get(), 0);
-//     assert_eq!(stats.confirmation_wait_timeouts.get(), 1);
-// }
-
-// #[tokio::test]
-// async fn wait_confirmation_returns_immediately_when_nothing_was_sent() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, stats) = results_stream(&handle);
-
-//     stream.wait_confirmation(Duration::from_millis(1)).await;
-
-//     assert_eq!(stats.confirmation_wait_timeouts.get(), 0);
-// }
-
-// #[tokio::test]
-// async fn disconnect_waits_for_outstanding_confirmations_before_closing() {
-//     let handle = TestProducer::builder().build();
-//     let (mut stream, _stats) = results_stream(&handle);
-//     stream.send(b"message").await;
-
-//     let disconnect_task = tokio::spawn(stream.disconnect());
-//     tokio::task::yield_now().await;
-//     assert_eq!(handle.close_calls(), 0);
-
-//     handle.confirm(0, Ok(Confirmation::Confirmed)).await;
-//     disconnect_task.await.unwrap();
-//     assert_eq!(handle.close_calls(), 1);
-// }
+    let result = tokio::time::timeout(
+        Duration::from_millis(1),
+        stream.wait_confirmation(Duration::from_secs(1)),
+    )
+    .await;
+    assert_matches!(result, Ok(_));
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+}
 
 #[tokio::test]
 async fn publisher_does_not_exist_is_not_a_disconnect_failure() {

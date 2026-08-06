@@ -66,7 +66,7 @@ pub extern "C" fn disconnect_from_stream() {
     match RESULTS_STREAM.lock().unwrap().take() {
         Some(mut results_stream) => {
             run_blocking(async {
-                results_stream.wait_confirmation(CONFIRMATION_TIMEOUT).await;
+                let _ = results_stream.wait_confirmation(CONFIRMATION_TIMEOUT).await;
                 results_stream.disconnect().await;
             });
         }

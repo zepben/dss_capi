@@ -160,15 +160,16 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
     }
 
     /// Wait for all messages to be confirmed.
-    pub async fn wait_confirmation(&mut self, timeout: Duration) {
+    pub async fn wait_confirmation(&mut self, timeout: Duration) -> Result<(), ()> {
         match tokio::time::timeout(timeout, self.messages_confirmed_rx.wait_for(|&x| x)).await {
-            Ok(_) => (),
+            Ok(_) => Ok(()),
             Err(_) => {
                 self.stats.confirmation_wait_timeouts.add(1);
                 error!(
                     "failed to confirm all RabbitMQ stream messages within {}ms",
                     timeout.as_millis()
-                )
+                );
+                Err(())
             }
         }
     }
