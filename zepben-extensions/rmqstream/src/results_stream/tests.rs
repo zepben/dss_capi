@@ -6,33 +6,23 @@ use rabbitmq_stream_client::{
     types::{Message, ResponseCode},
 };
 
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 struct TestProducerState {
     sent_messages: Vec<Vec<u8>>,
     confirmations: Vec<Option<ConfirmationCallback>>,
     send_calls: usize,
     close_calls: usize,
-}
 
-impl Default for TestProducerState {
-    fn default() -> Self {
-        Self {
-            sent_messages: Vec::new(),
-            confirmations: Vec::new(),
-            send_calls: 0,
-            close_calls: 0,
-        }
-    }
+    /// Results of `send` to simulate, in reverse order.
+    send_results: Vec<Result<(), ProducerPublishError>>,
+    close_result: Option<Result<(), ProducerCloseError>>,
+    immediate_confirmation: Option<Confirmation>,
 }
 
 #[derive(Clone)]
 struct TestProducer {
     state: Arc<Mutex<TestProducerState>>,
-    /// Results of `send` to simulate, in reverse order.
-    send_results: Arc<Mutex<Vec<Result<(), ProducerPublishError>>>>,
-    close_result: Arc<Mutex<Option<Result<(), ProducerCloseError>>>>,
-    immediate_confirmation: Option<Confirmation>,
 }
 
 impl TestProducer {
@@ -47,6 +37,10 @@ impl TestProducer {
             .expect("confirmation callback was not available");
         callback(result).await;
     }
+
+    async fn state(&self) -> MutexGuard<'_, TestProducerState> {
+        self.state.lock().await
+    }
 }
 
 #[async_trait]
@@ -56,31 +50,27 @@ impl StreamProducer for TestProducer {
         message: &Message,
         on_confirmation: ConfirmationCallback,
     ) -> Result<(), ProducerPublishError> {
-        self.state.lock().await.send_calls += 1;
-        self.state
-            .lock()
+        self.state().await.send_calls += 1;
+
+        self.state()
             .await
             .sent_messages
             .push(message.data().map_or(Vec::new(), |x| x.to_vec()));
 
-        self.send_results.lock().await.pop().unwrap_or(Ok(()))?; // propagate an error send result
+        self.state().await.send_results.pop().unwrap_or(Ok(()))?; // propagate an error send result
 
-        match self.immediate_confirmation {
+        let immediate_confirmation = self.state().await.immediate_confirmation;
+        match immediate_confirmation {
             Some(confirmation) => on_confirmation(Ok(confirmation)).await,
-            None => self
-                .state
-                .lock()
-                .await
-                .confirmations
-                .push(Some(on_confirmation)),
+            None => self.state().await.confirmations.push(Some(on_confirmation)),
         }
 
         Ok(())
     }
 
     async fn close(self) -> Result<(), ProducerCloseError> {
-        self.state.lock().await.close_calls += 1;
-        return self.close_result.lock().await.take().unwrap();
+        self.state().await.close_calls += 1;
+        return self.state().await.close_result.take().unwrap();
     }
 }
 
@@ -127,10 +117,15 @@ impl ResultsStream<TestProducer> {
 
         ResultsStream {
             producer: TestProducer {
-                state: Arc::new(Mutex::new(TestProducerState::default())),
-                send_results: Arc::new(Mutex::new(Vec::from(send_results))),
-                close_result: Arc::new(Mutex::new(Some(close_result))),
-                immediate_confirmation,
+                state: Arc::new(Mutex::new(TestProducerState {
+                    sent_messages: Vec::new(),
+                    confirmations: Vec::new(),
+                    send_calls: 0,
+                    close_calls: 0,
+                    send_results: Vec::from(send_results),
+                    close_result: Some(close_result),
+                    immediate_confirmation,
+                })),
             },
             stats: Arc::new(Stats::new()),
             messages_confirmed_tx,
