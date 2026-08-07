@@ -863,7 +863,11 @@ begin
     end;
 
 
-     // call helper routine to compute YPrim_Shunt
+    // Direct solutions do not call InjCurrents, so refresh the time-dependent
+    // nominal power here before constructing the primitive admittance.
+    SetNominalPower;
+
+    // call helper routine to compute YPrim_Shunt
     CalcYPrimMatrix(YPrim_Shunt);
 
      // Set YPrim_Series based on a small fraction of the diagonals of YPrim_shunt
@@ -1093,7 +1097,8 @@ begin
                         Factor := 1.0;
                         CalcDailyMult(DynaVars.dblHour) // Daily dispatch curve
                     end;
-                    TSolveMode.YEARLYMODE:
+                    TSolveMode.YEARLYMODE,
+                    TSolveMode.LINEARYEARLYMODE:
                     begin
                         Factor := 1.0;
                         CalcYearlyMult(DynaVars.dblHour);

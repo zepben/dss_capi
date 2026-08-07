@@ -137,7 +137,8 @@ type
         OutOfOomph,
         FElementListSpecified,
         Wait4Step,
-        FkWBandSpecified: Boolean;  // true if kWBand specified as an absolute value (for use in Follow Discharge Mode to update the target)
+        FkWBandSpecified,  // true if kWBand specified as an absolute value (for use in Follow Discharge Mode to update the target)
+        LinearYearlyUnsupportedWarningIssued: Boolean;  // limit unsupported redispatch warning to once per mode activation
 
         Seasons,
         FleetSize,
@@ -162,6 +163,7 @@ type
         procedure SetFleetToIdle;
         procedure SetFleetToExternal;
         procedure SetFleetDesiredState(state: Integer);
+        procedure WarnLinearYearlyRedispatch;
         procedure CalcYearlyMult(Hr: Double);
         procedure CalcDailyMult(Hr: Double);
         procedure CalcDutyMult(Hr: Double);
@@ -657,6 +659,7 @@ begin
     DnrampTime := 0.25;
     LastpctDischargeRate := 0.0;
     Wait4Step := FALSE;     // for sync discharge with charge when there is a transition
+    LinearYearlyUnsupportedWarningIssued := FALSE;
     ResetLevel := 0.8;
     Seasons := 1;         // For dynamic targets
     setlength(SeasonTargets, 1);
@@ -1281,6 +1284,7 @@ begin
                                 // Next time, the inverter will be OFF and the control won't dispatch a new power
                                             if StorageVars.kWhStored > StorageVars.kWhReserve then
                                             begin
+                                                Self.WarnLinearYearlyRedispatch;
                                                 kW := DispatchkW;
                                                 SetNominalDEROutput();
                                                 ActualkWDispatch := PresentkW;
@@ -1308,6 +1312,7 @@ begin
                                     if StorageVars.kWhStored > StorageVars.kWhReserve then
                                     begin  // Attempt to set discharge kW;  Storage element will revert to idling if out of capacity
 
+                                        Self.WarnLinearYearlyRedispatch;
                                         kW := DispatchkW;
                                         SetNominalDEROutput();
                                         ActualkWDispatch := PresentkW;
@@ -1553,6 +1558,7 @@ begin
                                 // Next time the inverter will be OFF and the control won't dispatch a new power
                                             if StorageVars.kWhStored > StorageVars.kWhReserve then
                                             begin
+                                                Self.WarnLinearYearlyRedispatch;
                                                 kW := ChargekW;
                                                 SetNominalDEROutput();
                                                 ActualkWDispatch := PresentkW;
@@ -1580,6 +1586,7 @@ begin
                                     if StorageVars.kWhStored < StorageVars.kWhRating then
                                     begin  // Attempt to set discharge kW;  Storage element will revert to idling if out of capacity
                                      //StorageObj.PresentkW  :=  ChargekW;
+                                        Self.WarnLinearYearlyRedispatch;
                                         kW := ChargekW;
                                         SetNominalDEROutput();
                                         ActualkWDispatch := PresentkW;
@@ -1717,7 +1724,8 @@ begin
         case Mode of
             TSolveMode.DAILYMODE:
                 CalcDailyMult(DynaVars.dblHour); // Daily dispatch curve
-            TSolveMode.YEARLYMODE:
+            TSolveMode.YEARLYMODE,
+            TSolveMode.LINEARYEARLYMODE:
                 CalcYearlyMult(DynaVars.dblHour);
             TSolveMode.LOADDURATION2:
                 CalcDailyMult(DynaVars.dblHour);
@@ -1789,6 +1797,7 @@ procedure TStorageControllerObj.SetFleetChargeRate;
 var
     i: Integer;
 begin
+    WarnLinearYearlyRedispatch;
     for i := 1 to FleetPointerList.Count do
         TStorageObj(FleetPointerList.Get(i)).pctkWin := pctChargeRate;
 end;
@@ -1806,8 +1815,22 @@ procedure TStorageControllerObj.SetFleetkWRate(pctkw: Double);
 var
     i: Integer;
 begin
+    WarnLinearYearlyRedispatch;
     for i := 1 to FleetPointerList.Count do
         TStorageObj(FleetPointerList.Get(i)).pctkWout := pctkw;
+end;
+
+procedure TStorageControllerObj.WarnLinearYearlyRedispatch;
+begin
+    if LinearYearlyUnsupportedWarningIssued or
+        (ActiveCircuit.Solution.Mode <> TSolveMode.LINEARYEARLYMODE) then
+        Exit;
+
+    LinearYearlyUnsupportedWarningIssued := TRUE;
+    DoSimpleMsg(DSS,
+        'StorageController "%s" requested continuous kW or percentage-rate redispatch in LinearYearly mode. ' +
+        'Version 1 supports controller timing and discrete Storage state transitions only; quantitative redispatch results are unsupported.',
+        [FullName], 14410);
 end;
 
 procedure TStorageControllerObj.SetFleetToCharge;
@@ -1927,6 +1950,7 @@ end;
 procedure TStorageControllerObj.Reset;
 begin
   // inherited;
+    LinearYearlyUnsupportedWarningIssued := FALSE;
     SetFleetToIdle;
 
  // do we want to set fleet to 100% charged storage?
