@@ -219,13 +219,13 @@ As a final note, keep in mind that not all commands are implemented in the DSS-E
 | Maxcontroliter | Max control iterations per solution.  Default is 10. |
 | maxiterations | Sets the maximum allowable iterations for power flow solutions. Default is 15. |
 | MinIterations | Minimum number of iterations required for a solution. Default is 2. |
-| mode | Set the solution Mode: One of<br>  Snapshot,<br>  Daily,<br>  Yearly (follow Yearly curve),<br>  DIrect,<br>  DUtycycle,<br>  Time, ( see LoadShapeClass, SampleEnergymeters options)<br>  DYnamic,  ( see LoadShapeClass option)<br>  Harmonic,<br>  HarmonicT,  (sequential Harmonic Mode)<br>  M1 (Monte Carlo 1),<br>  M2 (Monte Carlo 2),<br>  M3 (Monte Carlo 3),<br>  Faultstudy,<br>  MF (monte carlo fault study)<br>  Peakday,<br>  LD1 (load-duration 1)<br>  LD2 (load-duration 2)<br>  AutoAdd (see AddType)<br><br>Side effect: setting the Mode propergy resets all monitors and energy meters. It also resets the time step, etc. to defaults for each mode.  After the initial reset, the user must explicitly reset the monitors and/or meters until another Set Mode= command. |
+| mode | Set the solution Mode: One of<br>  Snapshot,<br>  Daily,<br>  Yearly (follow Yearly curve),<br>  LinearYearly (follow the Yearly curve using direct constant-admittance solves),<br>  DIrect,<br>  DUtycycle,<br>  Time, ( see LoadShapeClass, SampleEnergymeters options)<br>  DYnamic,  ( see LoadShapeClass option)<br>  Harmonic,<br>  HarmonicT,  (sequential Harmonic Mode)<br>  M1 (Monte Carlo 1),<br>  M2 (Monte Carlo 2),<br>  M3 (Monte Carlo 3),<br>  Faultstudy,<br>  MF (monte carlo fault study)<br>  Peakday,<br>  LD1 (load-duration 1)<br>  LD2 (load-duration 2)<br>  AutoAdd (see AddType)<br><br>`LinearYearly` forces the Admittance load model and ignores the iterative Algorithm option. See `docs/linear_yearly.md` for model and control limitations.<br><br>Side effect: setting the Mode propergy resets all monitors and energy meters. It also resets the time step, etc. to defaults for each mode.  After the initial reset, the user must explicitly reset the monitors and/or meters until another Set Mode= command. |
 | NeglectLoadY | {YES/TRUE \| NO/FALSE}  Default is NO. For Harmonic solution, neglect the Load shunt admittance branch that can siphon off some of the Load injection current. <br><br>If YES, the current injected from the LOAD at harmonic frequencies will be nearly ideal. |
 | Nodewidth | Width of node marker. Default=1. See MarkerCode |
 | normvmaxpu | Maximum permissible per unit voltage for normal conditions. Default is 1.05. |
 | normvminpu | Minimum permissible per unit voltage for normal conditions. Default is 0.95. |
 | Numallociterations | Default is 2. Maximum number of iterations for load allocations for each time the AllocateLoads or Estimate command is given. |
-| number | Number of solutions or time steps to perform for each Solve command. Defaults for selected modes: <br><br>Daily = 24<br>Yearly = 8760<br>Duty = 100 |
+| number | Number of solutions or time steps to perform for each Solve command. Defaults for selected modes: <br><br>Daily = 24<br>Yearly = 8760<br>LinearYearly = 8760<br>Duty = 100 |
 | object | Synonym for Element=. (See above) |
 | Overloadreport | {YES/TRUE \| NO/FALSE} Default = FALSE. For yearly solution mode, sets overload reporting on/off. DemandInterval must be set to true for this to have effect. |
 | Pricecurve | Sets the PRICESHAPE object to use to obtain for price signal. Default is none (null string). If none, price signal either remains constant or is set by an external process using Set Price= option. Curve is defined as a PRICESHAPE  in actual values (not normalized) and should be defined to correspond to the type of analysis being performed (daily, yearly, etc.). |
@@ -1820,5 +1820,4 @@ As a final note, keep in mind that not all commands are implemented in the DSS-E
 | 33 | basefreq | Base Frequency for ratings. |
 | 34 | enabled | {Yes\|No or True\|False} Indicates whether this element is enabled. |
 | 35 | like | Make like another object, e.g.:<br><br>New Capacitor.C2 like=c1  ... |
-
 
