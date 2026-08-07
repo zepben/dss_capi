@@ -53,6 +53,7 @@ implementation
 
 uses
     DSSGlobals,
+    Dynamics,
     CmdForms,
     Utilities,
     SysUtils,

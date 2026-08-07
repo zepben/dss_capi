@@ -1827,7 +1827,7 @@ begin
         Exit;
 
     LinearYearlyUnsupportedWarningIssued := TRUE;
-    DoSimpleMsg(DSS,
+    DoSimpleMsg(
         'StorageController "%s" requested continuous kW or percentage-rate redispatch in LinearYearly mode. ' +
         'Version 1 supports controller timing and discrete Storage state transitions only; quantitative redispatch results are unsupported.',
         [FullName], 14410);

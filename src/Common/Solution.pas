@@ -1236,68 +1236,71 @@ begin
 
     Inc(SolutionCount); // Unique number for this solution
 
+    try
 {$IFDEF DSS_CAPI_ADIAKOPTICS}
-    if not ADiakoptics or (DSS.Parent <> NIL) then
-    begin
+        if not ADiakoptics or (DSS.Parent <> NIL) then
+        begin
 {$ENDIF}
-        if ForcePCRefresh or LoadsNeedUpdating then
-            DSS.ActiveCircuit.InvalidateAllPCElements;
+            if ForcePCRefresh or LoadsNeedUpdating then
+                DSS.ActiveCircuit.InvalidateAllPCElements;
 
-        if SystemYChanged then
-        begin
-            BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
-        end;
+            if SystemYChanged then
+            begin
+                BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
+            end;
 
-        if DSS.SolutionAbort then
-            Exit;
+            if DSS.SolutionAbort then
+                Exit;
 
-        LoadsNeedUpdating := FALSE;
+            LoadsNeedUpdating := FALSE;
 
-        ZeroInjCurr;   // Side Effect: Allocates InjCurr
-        if DSS.SolutionAbort then
-            Exit;
+            ZeroInjCurr;   // Side Effect: Allocates InjCurr
+            if DSS.SolutionAbort then
+                Exit;
 
-        GetSourceInjCurrents;
+            GetSourceInjCurrents;
 
-        // Pick up PCELEMENT injections for Harmonics mode and Dynamics mode
-        // Ignore these injections for powerflow; Use only admittance in Y matrix
-        if IsDynamicModel or IsHarmonicModel then
-            GetPCInjCurr;
+            // Pick up PCELEMENT injections for Harmonics mode and Dynamics mode
+            // Ignore these injections for powerflow; Use only admittance in Y matrix
+            if IsDynamicModel or IsHarmonicModel then
+                GetPCInjCurr;
 
-        Result := SolveSystem(NodeV); // Solve with source injection current
-        if Result <> 1 then
-        begin
-            DoSimpleMsg(DSS, _('Error Solving System Y Matrix. Sparse matrix solver returned code %d.'), [Result], 11003);
-            DSS.SolutionAbort := TRUE;
-            Exit;
-        end;
+            Result := SolveSystem(NodeV); // Solve with source injection current
+            if Result <> 1 then
+            begin
+                DoSimpleMsg(DSS, _('Error Solving System Y Matrix. Sparse matrix solver returned code %d.'), [Result], 11003);
+                DSS.SolutionAbort := TRUE;
+                Exit;
+            end;
 
-        DSS.ActiveCircuit.IsSolved := TRUE;
-        ConvergedFlag := TRUE;
-{$IFDEF DSS_CAPI_ADIAKOPTICS}
-    end
-    else
-    begin
-        ADiak_PCInj := FALSE;
-        Solve_Diakoptics(DSS); // A-Diakoptics
-
-        if not DSS.SolutionAbort then
-        begin
-            Result := 1;
             DSS.ActiveCircuit.IsSolved := TRUE;
             ConvergedFlag := TRUE;
+{$IFDEF DSS_CAPI_ADIAKOPTICS}
+        end
+        else
+        begin
+            ADiak_PCInj := FALSE;
+            Solve_Diakoptics(DSS); // A-Diakoptics
+
+            if not DSS.SolutionAbort then
+            begin
+                Result := 1;
+                DSS.ActiveCircuit.IsSolved := TRUE;
+                ConvergedFlag := TRUE;
+            end;
         end;
-    end;
 {$ENDIF}
-    {$IFDEF MSWINDOWS}
-    QueryPerformanceCounter(SolveEndTime);
-    {$ELSE}
-    SolveEndTime := GetTickCount64;
-    {$ENDIF}
-    Solve_Time_Elapsed := ((SolveEndtime - SolveStartTime) / CPU_Freq) * 1000000;
-    Total_Time_Elapsed := Total_Time_Elapsed + Solve_Time_Elapsed;
-    Iteration := 1;
-    LastSolutionWasDirect := TRUE;
+    finally
+        {$IFDEF MSWINDOWS}
+        QueryPerformanceCounter(SolveEndTime);
+        {$ELSE}
+        SolveEndTime := GetTickCount64;
+        {$ENDIF}
+        Solve_Time_Elapsed := ((SolveEndtime - SolveStartTime) / CPU_Freq) * 1000000;
+        Total_Time_Elapsed := Total_Time_Elapsed + Solve_Time_Elapsed;
+        Iteration := 1;
+        LastSolutionWasDirect := TRUE;
+    end;
 end;
 
 function TSolutionObj.SolveCircuit: Integer;
