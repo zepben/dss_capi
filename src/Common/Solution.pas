@@ -266,7 +266,7 @@ type
         procedure Solve;                // Main Solution dispatch
         procedure SnapShotInit;
         function SolveSnap: Integer;    // solve for now once
-        function SolveDirect: Integer;  // solve for now once, direct solution
+        function SolveDirect(ForcePCRefresh: Boolean = TRUE): Integer;  // solve for now once, direct solution
         function SolveYDirect: Integer; // Similar to SolveDirect; used for initialization
         function SolveCircuit: Integer; // SolveSnap sans control iteration
         procedure CheckControls;       // Snapshot checks with matrix rebuild
@@ -276,6 +276,7 @@ type
         procedure Check_Fault_Status;
 
         procedure SetGeneratorDispRef;
+        procedure Set_LoadModel(const Value: Integer; UpdateDefault: Boolean = TRUE);
         procedure SetVoltageBases;
 
         procedure SaveVoltages;
@@ -602,7 +603,8 @@ begin
             case Dynavars.SolutionMode of
                 TSolveMode.SNAPSHOT:
                     SolveSnap;
-                TSolveMode.YEARLYMODE:
+                TSolveMode.YEARLYMODE,
+                TSolveMode.LINEARYEARLYMODE:
                     SolveYearly;
                 TSolveMode.DAILYMODE:
                     SolveDaily;
@@ -762,7 +764,8 @@ begin
 
             TSolveMode.SNAPSHOT:
                 GeneratorDispatchReference := LoadMultiplier * DefaultGrowthFactor;
-            TSolveMode.YEARLYMODE:
+            TSolveMode.YEARLYMODE,
+            TSolveMode.LINEARYEARLYMODE:
                 GeneratorDispatchReference := DefaultGrowthFactor * DefaultHourMult.re;
             TSolveMode.DAILYMODE:
                 GeneratorDispatchReference := LoadMultiplier * DefaultGrowthFactor * DefaultHourMult.re;
@@ -2098,12 +2101,15 @@ begin
             IntervalHrs := 1.0;
             NumberOfTimes := 1;
         end;
-        TSolveMode.YEARLYMODE:
+        TSolveMode.YEARLYMODE,
+        TSolveMode.LINEARYEARLYMODE:
         begin
             IntervalHrs := 1.0;
             DynaVars.h := 3600.0;
             NumberOfTimes := 8760;
             SampleTheMeters := TRUE;
+            if Dynavars.SolutionMode = TSolveMode.LINEARYEARLYMODE then
+                LoadModel := ADMITTANCE;
         end;
         TSolveMode.DUTYCYCLE:
         begin
@@ -2187,6 +2193,19 @@ begin
     DSS.EnergyMeterClass.ResetAll;
     DoResetFaults(DSS);
     DoResetControls(DSS);
+end;
+
+procedure TSolutionObj.Set_LoadModel(const Value: Integer; UpdateDefault: Boolean = TRUE);
+begin
+    if (Mode = TSolveMode.LINEARYEARLYMODE) and (Value <> ADMITTANCE) then
+    begin
+        DoSimpleMsg(DSS, _('LinearYearly requires LoadModel=Admittance. The load model was not changed.'), 5005);
+        Exit;
+    end;
+
+    LoadModel := Value;
+    if UpdateDefault then
+        DefaultLoadModel := Value;
 end;
 
 procedure TSolutionObj.AddInAuxCurrents(SolveType: Integer);
@@ -2568,7 +2587,8 @@ begin
                             case Dynavars.SolutionMode of
                                 TSolveMode.SNAPSHOT:
                                     SolveSnap;
-                                TSolveMode.YEARLYMODE:
+                                TSolveMode.YEARLYMODE,
+                                TSolveMode.LINEARYEARLYMODE:
                                     SolveYearly;
                                 TSolveMode.DAILYMODE:
                                     SolveDaily;

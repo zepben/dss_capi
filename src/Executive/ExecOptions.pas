@@ -394,8 +394,7 @@ begin
             19:
                 with DSS.ActiveCircuit.solution do
                 begin
-                    DefaultLoadModel := DSS.DefaultLoadModelEnum.StringToOrdinal(Param); // for reverting to last on specified
-                    LoadModel := DefaultLoadModel;
+                    Set_LoadModel(DSS.DefaultLoadModelEnum.StringToOrdinal(Param));
                 end;
             ord(TExecOption.Loadmult):
             begin
