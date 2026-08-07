@@ -1184,6 +1184,9 @@ begin
         Inc(ControlIteration);
 
         Result := SolveCircuit;  // Do circuit solution w/o checking controls
+        if DSS.SolutionAbort then
+            Break;
+
        {Now Check controls}
         DSS.Fire_CheckControls();
         CheckControls;
@@ -1205,7 +1208,8 @@ begin
     if DSS.ActiveCircuit.LogEvents then
         LogThisEvent(DSS, 'Solution Done');
 
-    DSS.Fire_StepControls();
+    if not DSS.SolutionAbort then
+        DSS.Fire_StepControls();
 
     {$IFDEF MSWINDOWS}
     QueryPerformanceCounter(SolveEndTime);
@@ -1217,11 +1221,13 @@ begin
 
 end;
 
-function TSolutionObj.SolveDirect: Integer;  // solve for now once, direct solution
+function TSolutionObj.SolveDirect(ForcePCRefresh: Boolean): Integer;  // solve for now once, direct solution
 begin
     Result := 0;
 
-    LoadsNeedUpdating := TRUE;  // Force possible update of loads and generators
+    ConvergedFlag := FALSE;
+    DSS.ActiveCircuit.IsSolved := FALSE;
+
     {$IFDEF MSWINDOWS}
     QueryPerformanceCounter(SolveStartTime);
     {$ELSE}
@@ -1233,13 +1239,24 @@ begin
 {$IFDEF DSS_CAPI_ADIAKOPTICS}
     if not ADiakoptics or (DSS.Parent <> NIL) then
     begin
-{$ENDIF}    
+{$ENDIF}
+        if ForcePCRefresh or LoadsNeedUpdating then
+            DSS.ActiveCircuit.InvalidateAllPCElements;
+
         if SystemYChanged then
         begin
             BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
         end;
 
+        if DSS.SolutionAbort then
+            Exit;
+
+        LoadsNeedUpdating := FALSE;
+
         ZeroInjCurr;   // Side Effect: Allocates InjCurr
+        if DSS.SolutionAbort then
+            Exit;
+
         GetSourceInjCurrents;
 
         // Pick up PCELEMENT injections for Harmonics mode and Dynamics mode
@@ -1247,12 +1264,16 @@ begin
         if IsDynamicModel or IsHarmonicModel then
             GetPCInjCurr;
 
-        if SolveSystem(NodeV) = 1   // Solve with Zero injection current
-        then
+        Result := SolveSystem(NodeV); // Solve with source injection current
+        if Result <> 1 then
         begin
-            DSS.ActiveCircuit.IsSolved := TRUE;
-            ConvergedFlag := TRUE;
+            DoSimpleMsg(DSS, _('Error Solving System Y Matrix. Sparse matrix solver returned code %d.'), [Result], 11003);
+            DSS.SolutionAbort := TRUE;
+            Exit;
         end;
+
+        DSS.ActiveCircuit.IsSolved := TRUE;
+        ConvergedFlag := TRUE;
 {$IFDEF DSS_CAPI_ADIAKOPTICS}
     end
     else
@@ -1260,8 +1281,12 @@ begin
         ADiak_PCInj := FALSE;
         Solve_Diakoptics(DSS); // A-Diakoptics
 
-        DSS.ActiveCircuit.IsSolved := TRUE;
-        ConvergedFlag := TRUE;
+        if not DSS.SolutionAbort then
+        begin
+            Result := 1;
+            DSS.ActiveCircuit.IsSolved := TRUE;
+            ConvergedFlag := TRUE;
+        end;
     end;
 {$ENDIF}
     {$IFDEF MSWINDOWS}
@@ -1280,7 +1305,7 @@ begin
     Result := 0;
     if LoadModel = ADMITTANCE then
         try
-            SolveDirect     // no sense horsing around when it's all admittance
+            Result := SolveDirect(FALSE)     // no sense horsing around when it's all admittance
         except
             ON E: EEsolv32Problem do
             begin

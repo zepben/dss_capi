@@ -150,6 +150,12 @@ begin
                         if PriceCurveObj <> NIL then
                             PriceSignal := PriceCurveObj.GetPrice(dblHour);
                         SolveSnap;
+
+                        if ((Mode = TSolveMode.LINEARYEARLYMODE) or
+                            ((Mode = TSolveMode.YEARLYMODE) and (LoadModel = ADMITTANCE))) and
+                            (DSS.SolutionAbort or not ConvergedFlag) then
+                            Break;
+
                         DSS.MonitorClass.SampleAll;  // Make all monitors take a sample
                         if SampleTheMeters then
                             DSS.EnergyMeterClass.SampleAll; // Make all Energy Meters take a sample
