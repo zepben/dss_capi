@@ -31,6 +31,7 @@ class LinearYearlyRuntimeTests(unittest.TestCase):
         cls.dss.Solution_Solve.argtypes = []
         cls.dss.Solution_Get_Hour.restype = ctypes.c_int32
         cls.dss.Solution_Get_Converged.restype = ctypes.c_uint16
+        cls.dss.YMatrix_Get_SolverOptions.restype = ctypes.c_uint64
         cls.dss.Circuit_Get_AllBusVmag.argtypes = [
             ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
             ctypes.POINTER(ctypes.c_int32),
@@ -100,6 +101,89 @@ class LinearYearlyRuntimeTests(unittest.TestCase):
         self.assertEqual(len(results[0]), len(results[1]))
         self.assertGreater(max(abs(a - b) for a, b in zip(results[0], results[1])), 1e-3)
         self.assertGreater(max(abs(a - b) for a, b in zip(results[1], results[2])), 1e-3)
+
+    def test_internal_reuse_does_not_change_public_solver_options(self) -> None:
+        self.command(
+            "new line.feeder bus1=sourcebus bus2=loadbus phases=3 "
+            "r1=0.5 x1=0.2 r0=0.5 x0=0.2 length=1 units=km"
+        )
+        self.command("new loadshape.year npts=2 interval=1 mult=(0.5 1.5)")
+        self.command(
+            "new load.customer bus1=loadbus.1.2.3 phases=3 conn=wye "
+            "kv=12.47 kw=6000 kvar=2000 yearly=year"
+        )
+
+        self.assertEqual(0, self.dss.YMatrix_Get_SolverOptions())
+        self.dss.Solution_Set_Mode(18)
+        self.dss.Solution_Set_Number(2)
+        self.dss.Solution_Solve()
+
+        self.assertTrue(self.dss.Solution_Get_Converged())
+        self.assertEqual(0, self.dss.YMatrix_Get_SolverOptions())
+
+    def test_incremental_steps_match_forced_full_rebuilds(self) -> None:
+        def configure() -> None:
+            self.dss.DSS_ClearAll()
+            self.dss.DSS_NewCircuit(b"linear_yearly_equivalence")
+            self.command(
+                "new line.feeder bus1=sourcebus bus2=loadbus phases=3 "
+                "r1=0.5 x1=0.2 r0=0.5 x0=0.2 length=1 units=km"
+            )
+            self.command("new loadshape.year npts=3 interval=1 mult=(0.5 1.0 1.5)")
+            self.command(
+                "new load.customer bus1=loadbus.1.2.3 phases=3 conn=wye "
+                "kv=12.47 kw=6000 kvar=2000 yearly=year"
+            )
+            self.dss.Solution_Set_Mode(18)
+            self.dss.Solution_Set_Number(1)
+            self.dss.Solution_Set_StepSize(3600.0)
+
+        configure()
+        incremental = []
+        for _ in range(3):
+            self.dss.Solution_Solve()
+            incremental.append(self.bus_magnitudes())
+
+        configure()
+        full_rebuild = []
+        for _ in range(3):
+            self.command("buildy")
+            self.dss.Solution_Solve()
+            full_rebuild.append(self.bus_magnitudes())
+
+        for incremental_step, full_step in zip(incremental, full_rebuild):
+            self.assertEqual(len(incremental_step), len(full_step))
+            self.assertLess(
+                max(abs(a - b) for a, b in zip(incremental_step, full_step)),
+                1e-7,
+            )
+
+    def test_node_map_change_falls_back_to_safe_reallocation(self) -> None:
+        self.command(
+            "new line.feeder bus1=sourcebus bus2=loadbus phases=3 "
+            "r1=0.5 x1=0.2 r0=0.5 x0=0.2 length=1 units=km"
+        )
+        self.command(
+            "new load.customer bus1=loadbus.1.2.3 phases=3 conn=wye "
+            "kv=12.47 kw=3000 kvar=1000"
+        )
+        self.dss.Solution_Set_Mode(18)
+        self.dss.Solution_Set_Number(1)
+        self.dss.Solution_Solve()
+        original_node_count = len(self.bus_magnitudes())
+
+        self.command(
+            "new line.extension bus1=loadbus bus2=newbus phases=3 "
+            "r1=0.2 x1=0.1 r0=0.2 x0=0.1 length=1 units=km"
+        )
+        self.command(
+            "new load.added bus1=newbus.1.2.3 phases=3 conn=wye "
+            "kv=12.47 kw=1000 kvar=300"
+        )
+        self.dss.Solution_Solve()
+
+        self.assertTrue(self.dss.Solution_Get_Converged())
+        self.assertGreater(len(self.bus_magnitudes()), original_node_count)
 
 if __name__ == "__main__":
     unittest.main()

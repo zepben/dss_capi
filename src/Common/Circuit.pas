@@ -323,6 +323,9 @@ type
         procedure DoResetMeterZones;
         function SetElementActive(const FullObjectName: String): Integer;
         procedure InvalidateAllPCElements;
+{$IFDEF DSS_CAPI_INCREMENTAL_Y}
+        function QueueAllPCElementsForIncrementalY: Boolean;
+{$ENDIF}
 
         procedure DebugDump(var F: TFileStream);
 
@@ -2390,6 +2393,30 @@ begin
 
     Solution.SystemYChanged := TRUE;  // Force rebuild of matrix on next solution
 end;
+
+{$IFDEF DSS_CAPI_INCREMENTAL_Y}
+function TDSSCircuit.QueueAllPCElementsForIncrementalY: Boolean;
+var
+    p: TDSSCktElement;
+begin
+    Result := FALSE;
+
+    // Incremental restamping requires an existing matrix with an unchanged
+    // node map and valid primitive matrices for every enabled PC element.
+    if Solution.SystemYChanged or BusNameRedefined or (Solution.hYsystem = 0) then
+        Exit;
+
+    for p in PCElements do
+        if p.Enabled and ((p.Yprim = NIL) or p.YprimInvalid) then
+            Exit;
+
+    for p in PCElements do
+        if p.Enabled then
+            IncrCktElements.Add(p);
+
+    Result := TRUE;
+end;
+{$ENDIF}
 
 procedure TDSSCircuit.Set_LoadMultiplier(Value: Double);
 begin

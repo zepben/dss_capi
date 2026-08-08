@@ -41,6 +41,7 @@ uses
     Utilities,
     KLUSolve,
     Solution,
+    Dynamics,
     DSSClassDefs,
     GUtil,
     GSet,
@@ -151,6 +152,15 @@ begin
 end;
 
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
+function EffectiveSolverOptions(Solution: TSolutionObj): UInt64; inline;
+begin
+    Result := Solution.SolverOptions;
+    if Solution.Mode = TSolveMode.LINEARYEARLYMODE then
+        // Matrix values change every step, so symbolic reuse is the highest
+        // safe level. Preserve unrelated bits without changing the public setting.
+        Result := (Result and (not UInt64($3))) or ord(TSolverOptions.ReuseSymbolicFactorization);
+end;
+
 function UpdateYMatrix(Ckt: TDSSCircuit; BuildOption: Integer; AllocateVI: Boolean): Boolean;
 var
     IncrYprim: TCMatrix;
@@ -160,14 +170,20 @@ var
     coordIt: TCoordSet.TIterator;
     
     i, j, inode, jnode: Integer;
-    abortIncremental: Boolean;
+    abortIncremental, DirectIncremental: Boolean;
     val: Complex;
 begin
-    changedElements := TCoordSet.Create;
-    changedNodes := TNodeSet.Create;
     Result := False;
     IncrYprim := NIL;
     abortIncremental := False;
+    DirectIncremental := Ckt.Solution.Mode = TSolveMode.LINEARYEARLYMODE;
+    changedElements := NIL;
+    changedNodes := NIL;
+    if not DirectIncremental then
+    begin
+        changedElements := TCoordSet.Create;
+        changedNodes := TNodeSet.Create;
+    end;
 
     // Incremental Y update, only valid for BuildOption = WHOLEMATRIX.
     for pElem in Ckt.IncrCktElements do with pElem do
@@ -180,18 +196,18 @@ begin
 
         if (Enabled and (Yprim <> NIL)) then
         begin
-            if IncrYprim <> NIL then
+            if (IncrYprim = NIL) or (IncrYprim.order <> Yprim.order) then
             begin
-                IncrYprim.Free;
-                IncrYprim := NIL;
+                if IncrYprim <> NIL then
+                    IncrYprim.Free;
+                IncrYprim := TCmatrix.CreateMatrix(Yprim.order);
             end;
-            
-            IncrYprim := TCmatrix.CreateMatrix(Yprim.order);
+
+            IncrYprim.Clear;
             IncrYprim.CopyFrom(Yprim);
             IncrYprim.Negate;
-            
+
             CalcYPrim;
-            
 
             if (Yprim = NIL) or (IncrYprim.order <> Yprim.order) then
             begin
@@ -212,20 +228,57 @@ begin
                     val := IncrYprim[i, j];
                     if (val.re <> 0) or (val.im <> 0) then
                     begin
-                        changedNodes.Insert(inode);
-                        changedNodes.Insert(jnode);
-                        // Encode the coordinates as a 64-bit integer
-                        changedElements.Insert((QWord(inode) shl 32) or QWord(jnode));
+                        if DirectIncremental then
+                        begin
+                            // LinearYearly changes values but not connectivity. Apply the
+                            // YPrim delta to the existing compressed matrix so KLU can keep
+                            // its symbolic factorization.
+                            if IncrementMatrixElement(Ckt.Solution.hYsystem, inode, jnode, val.re, val.im) = 0 then
+                            begin
+                                abortIncremental := True;
+                                break;
+                            end;
+                        end
+                        else
+                        begin
+                            changedNodes.Insert(inode);
+                            changedNodes.Insert(jnode);
+                            // Encode the coordinates as a 64-bit integer
+                            changedElements.Insert((QWord(inode) shl 32) or QWord(jnode));
+                        end;
                     end;
                 end;
+
+                if abortIncremental then break;
             end;
         end;
+
+        if abortIncremental then break;
     end;
 
     if IncrYprim <> NIL then
     begin
         IncrYprim.Free;
         IncrYprim := NIL;
+    end;
+
+    if DirectIncremental then
+    begin
+        if abortIncremental then
+        begin
+            // A failed direct update can leave the numeric matrix partially
+            // changed. Invalidate the queued primitives and rebuild safely.
+            for pElem in Ckt.IncrCktElements do
+                pElem.YprimInvalid := TRUE;
+            Ckt.Solution.SystemYChanged := True;
+            BuildYMatrix(Ckt.DSS, BuildOption, AllocateVI);
+        end;
+
+        Ckt.IncrCktElements.Clear;
+        changedElements.Free;
+        changedNodes.Free;
+        Result := not abortIncremental;
+        Exit;
     end;
 
     if not abortIncremental then
@@ -312,11 +365,13 @@ var
     pElem: TDSSCktElement;
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
     Incremental: Boolean;
+    ActiveSolverOptions: UInt64;
 {$ENDIF}
 
 begin
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
     Incremental := False;
+    ActiveSolverOptions := EffectiveSolverOptions(DSS.ActiveCircuit.Solution);
 {$ENDIF}
 
     CmatArray := NIL;
@@ -336,7 +391,7 @@ begin
             WHOLEMATRIX:
             begin
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
-                Incremental := (Solution.SolverOptions <> ord(TSolverOptions.ReuseNothing)) and 
+                Incremental := ((ActiveSolverOptions and $FFFFFF) <> ord(TSolverOptions.ReuseNothing)) and
                     (not SystemYChanged) and 
                     (IncrCktElements.Count <> 0) and 
                     (not AllocateVI) and 
@@ -349,7 +404,7 @@ begin
 {$ENDIF}
                     ResetSparseMatrix(hYsystem, YMatrixSize);
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
-                    KLUSolve.SetOptions(hYsystem, SolverOptions);
+                    KLUSolve.SetOptions(hYsystem, ActiveSolverOptions and $FFFFFF);
                 end;
 {$ENDIF}
                 hY := hYsystem;

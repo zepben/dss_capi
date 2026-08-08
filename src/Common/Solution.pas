@@ -1222,6 +1222,9 @@ begin
 end;
 
 function TSolutionObj.SolveDirect(ForcePCRefresh: Boolean): Integer;  // solve for now once, direct solution
+var
+    AllocateVI: Boolean;
+    IncrementalPCRefreshQueued: Boolean;
 begin
     Result := 0;
 
@@ -1241,13 +1244,29 @@ begin
         if not ADiakoptics or (DSS.Parent <> NIL) then
         begin
 {$ENDIF}
-            if ForcePCRefresh or LoadsNeedUpdating then
+            IncrementalPCRefreshQueued := FALSE;
+{$IFDEF DSS_CAPI_INCREMENTAL_Y}
+            if LoadsNeedUpdating and (not ForcePCRefresh) and
+                (Mode = TSolveMode.LINEARYEARLYMODE) then
+                IncrementalPCRefreshQueued := DSS.ActiveCircuit.QueueAllPCElementsForIncrementalY;
+{$ENDIF}
+
+            if (ForcePCRefresh or LoadsNeedUpdating) and (not IncrementalPCRefreshQueued) then
                 DSS.ActiveCircuit.InvalidateAllPCElements;
 
             if SystemYChanged then
             begin
-                BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
-            end;
+                AllocateVI := TRUE;
+                if Mode = TSolveMode.LINEARYEARLYMODE then
+                    AllocateVI := (NodeV = NIL) or DSS.ActiveCircuit.BusNameRedefined;
+                BuildYMatrix(DSS, WHOLEMATRIX, AllocateVI);
+            end
+{$IFDEF DSS_CAPI_INCREMENTAL_Y}
+            else if DSS.ActiveCircuit.IncrCktElements.Count <> 0 then
+                BuildYMatrix(DSS, WHOLEMATRIX, FALSE);
+{$ELSE}
+            ;
+{$ENDIF}
 
             if DSS.SolutionAbort then
                 Exit;

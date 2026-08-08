@@ -88,6 +88,27 @@ int main() { return 0; }
         self.assertIn("DSS.ActiveCircuit.IsSolved := FALSE", solution)
         self.assertIn("if Result <> 1 then", solution)
 
+    def test_repeat_steps_use_existing_incremental_y_infrastructure(self) -> None:
+        circuit = source("src/Common/Circuit.pas")
+        ckt_element = source("src/Common/CktElement.pas")
+        solution = source("src/Common/Solution.pas")
+        ymatrix = source("src/Common/Ymatrix.pas")
+
+        self.assertIn("QueueAllPCElementsForIncrementalY", circuit)
+        self.assertIn("IncrCktElements.Add(p)", circuit)
+        self.assertIn("QueueAllPCElementsForIncrementalY", solution)
+        self.assertIn("EffectiveSolverOptions", ymatrix)
+        self.assertIn("ReuseSymbolicFactorization", ymatrix)
+        self.assertIn("DirectIncremental", ymatrix)
+        self.assertIn("IncrementMatrixElement", ymatrix)
+        self.assertIn("Mode = TSolveMode.LINEARYEARLYMODE", ckt_element)
+
+    def test_repeat_steps_reuse_solution_arrays_when_nodes_are_stable(self) -> None:
+        solution = source("src/Common/Solution.pas")
+
+        self.assertIn("AllocateVI := (NodeV = NIL) or DSS.ActiveCircuit.BusNameRedefined", solution)
+        self.assertIn("BuildYMatrix(DSS, WHOLEMATRIX, AllocateVI)", solution)
+
     def test_failed_direct_yearly_step_is_not_sampled(self) -> None:
         yearly = source("src/Common/SolutionAlgs.pas")
         solve_pos = yearly.index("SolveSnap;")
