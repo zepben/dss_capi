@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-08-08T01:48:46Z",
+  "benchmark_definition": {
+    "steps": 1440,
+    "step_seconds": 1800,
+    "warmup_runs_per_mode": 1,
+    "measured_repetitions_per_mode": 5,
+    "aggregation": "median wall-clock time",
+    "mode_order": "alternated between repetitions",
+    "original_yearly_selection": "current optimized build; the ordinary Yearly code path is unchanged"
+  },
+  "runtime_medians": [
+    {
+      "model": "BAR8B4",
+      "mode": "Original Yearly",
+      "median_seconds": 0.226505375,
+      "steps_per_second": 6357.46502704406,
+      "build": "optimized branch",
+      "sample_count": 5
+    },
+    {
+      "model": "BAR8B4",
+      "mode": "Initial LinearYearly",
+      "median_seconds": 0.501231375,
+      "steps_per_second": 2872.9247046835403,
+      "build": "initial LinearYearly branch",
+      "sample_count": 5
+    },
+    {
+      "model": "BAR8B4",
+      "mode": "Optimized LinearYearly",
+      "median_seconds": 0.310182833,
+      "steps_per_second": 4642.423263959292,
+      "build": "optimized branch",
+      "sample_count": 5
+    },
+    {
+      "model": "ADA12",
+      "mode": "Original Yearly",
+      "median_seconds": 0.4537365,
+      "steps_per_second": 3173.6481415976014,
+      "build": "optimized branch",
+      "sample_count": 5
+    },
+    {
+      "model": "ADA12",
+      "mode": "Initial LinearYearly",
+      "median_seconds": 0.889894541,
+      "steps_per_second": 1618.1692702394048,
+      "build": "initial LinearYearly branch",
+      "sample_count": 5
+    },
+    {
+      "model": "ADA12",
+      "mode": "Optimized LinearYearly",
+      "median_seconds": 0.546885667,
+      "steps_per_second": 2633.091497715189,
+      "build": "optimized branch",
+      "sample_count": 5
+    }
+  ],
+  "runtime_summary": [
+    {
+      "model": "BAR8B4",
+      "original_yearly_seconds": 0.226505375,
+      "initial_linear_seconds": 0.501231375,
+      "optimized_linear_seconds": 0.310182833,
+      "initial_linear_over_yearly": 2.2128895395970183,
+      "optimized_linear_over_yearly": 1.369428133879825,
+      "optimized_runtime_reduction": 0.3811583861844243,
+      "optimized_speedup": 1.6159223582821556,
+      "ordinary_yearly_cross_build_delta": 0.001936367491806923
+    },
+    {
+      "model": "ADA12",
+      "original_yearly_seconds": 0.4537365,
+      "initial_linear_seconds": 0.889894541,
+      "optimized_linear_seconds": 0.546885667,
+      "initial_linear_over_yearly": 1.9612584418489587,
+      "optimized_linear_over_yearly": 1.2052935282923019,
+      "optimized_runtime_reduction": 0.38544890230987494,
+      "optimized_speedup": 1.6272039928960143,
+      "ordinary_yearly_cross_build_delta": 0.005273459232675082
+    }
+  ],
+  "timing_samples": [
+    {"model": "BAR8B4", "mode": "Original Yearly", "run": 1, "seconds": 0.23828},
+    {"model": "BAR8B4", "mode": "Original Yearly", "run": 2, "seconds": 0.225896333},
+    {"model": "BAR8B4", "mode": "Original Yearly", "run": 3, "seconds": 0.226505375},
+    {"model": "BAR8B4", "mode": "Original Yearly", "run": 4, "seconds": 0.226300542},
+    {"model": "BAR8B4", "mode": "Original Yearly", "run": 5, "seconds": 0.228387583},
+    {"model": "BAR8B4", "mode": "Initial LinearYearly", "run": 1, "seconds": 0.501736458},
+    {"model": "BAR8B4", "mode": "Initial LinearYearly", "run": 2, "seconds": 0.487337625},
+    {"model": "BAR8B4", "mode": "Initial LinearYearly", "run": 3, "seconds": 0.499683375},
+    {"model": "BAR8B4", "mode": "Initial LinearYearly", "run": 4, "seconds": 0.506416625},
+    {"model": "BAR8B4", "mode": "Initial LinearYearly", "run": 5, "seconds": 0.501231375},
+    {"model": "BAR8B4", "mode": "Optimized LinearYearly", "run": 1, "seconds": 0.303830459},
+    {"model": "BAR8B4", "mode": "Optimized LinearYearly", "run": 2, "seconds": 0.302466042},
+    {"model": "BAR8B4", "mode": "Optimized LinearYearly", "run": 3, "seconds": 0.31258325},
+    {"model": "BAR8B4", "mode": "Optimized LinearYearly", "run": 4, "seconds": 0.310182833},
+    {"model": "BAR8B4", "mode": "Optimized LinearYearly", "run": 5, "seconds": 0.312903042},
+    {"model": "ADA12", "mode": "Original Yearly", "run": 1, "seconds": 0.4537365},
+    {"model": "ADA12", "mode": "Original Yearly", "run": 2, "seconds": 0.448652916},
+    {"model": "ADA12", "mode": "Original Yearly", "run": 3, "seconds": 0.464523334},
+    {"model": "ADA12", "mode": "Original Yearly", "run": 4, "seconds": 0.458568541},
+    {"model": "ADA12", "mode": "Original Yearly", "run": 5, "seconds": 0.447865},
+    {"model": "ADA12", "mode": "Initial LinearYearly", "run": 1, "seconds": 0.879609209},
+    {"model": "ADA12", "mode": "Initial LinearYearly", "run": 2, "seconds": 0.892441667},
+    {"model": "ADA12", "mode": "Initial LinearYearly", "run": 3, "seconds": 0.889894541},
+    {"model": "ADA12", "mode": "Initial LinearYearly", "run": 4, "seconds": 0.898625709},
+    {"model": "ADA12", "mode": "Initial LinearYearly", "run": 5, "seconds": 0.87572325},
+    {"model": "ADA12", "mode": "Optimized LinearYearly", "run": 1, "seconds": 0.546885667},
+    {"model": "ADA12", "mode": "Optimized LinearYearly", "run": 2, "seconds": 0.550180833},
+    {"model": "ADA12", "mode": "Optimized LinearYearly", "run": 3, "seconds": 0.534780666},
+    {"model": "ADA12", "mode": "Optimized LinearYearly", "run": 4, "seconds": 0.534167917},
+    {"model": "ADA12", "mode": "Optimized LinearYearly", "run": 5, "seconds": 0.584854166}
+  ],
+  "annual_equivalence": [
+    {
+      "model": "BAR8B4",
+      "steps": 17520,
+      "optimized_step_loop_seconds": 3.61719679197995,
+      "forced_full_rebuild_step_loop_seconds": 5.940047957992647,
+      "incremental_runtime_reduction": 0.3910492276223424,
+      "max_voltage_error_volts": 7.97426764620468e-08,
+      "max_head_power_error_kw_or_kvar": 1.320411655569842e-07,
+      "all_values_finite": true,
+      "public_solver_options_unchanged": true
+    },
+    {
+      "model": "ADA12",
+      "steps": 17472,
+      "optimized_step_loop_seconds": 6.60426545800874,
+      "forced_full_rebuild_step_loop_seconds": 10.673207541985903,
+      "incremental_runtime_reduction": 0.3812295477222659,
+      "max_voltage_error_volts": 5.723450158257037e-09,
+      "max_head_power_error_kw_or_kvar": 1.3564317669079173e-08,
+      "all_values_finite": true,
+      "public_solver_options_unchanged": true
+    }
+  ]
+}
