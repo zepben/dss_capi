@@ -20,8 +20,8 @@ static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 static RESULTS_STREAM: Mutex<Option<ResultsStream<Producer<NoDedup>>>> = Mutex::new(None);
 
-/// The timeout when waiting for all confirmations when disconnecting from the results stream
-const CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(5);
+/// The timeout when waiting for inflight messages.
+const INFLIGHT_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init_tracing() {
@@ -66,7 +66,7 @@ pub extern "C" fn disconnect_from_stream() {
     match RESULTS_STREAM.lock().unwrap().take() {
         Some(mut results_stream) => {
             run_blocking(async {
-                let _ = results_stream.wait_no_inflight(CONFIRMATION_TIMEOUT).await;
+                let _ = results_stream.wait_no_inflight(INFLIGHT_TIMEOUT).await;
                 results_stream.disconnect().await;
             });
         }
