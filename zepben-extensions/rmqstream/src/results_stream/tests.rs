@@ -99,7 +99,7 @@ impl ResultsStream<TestProducer> {
         close_result: Result<(), ProducerCloseError>,
         immediate_confirmation: Option<Confirmation>,
     ) -> ResultsStream<TestProducer> {
-        let (messages_confirmed_tx, messages_confirmed_rx) = watch::channel(true);
+        let (messages_inflight_tx, inflight_messages) = watch::channel(0);
 
         send_results.reverse();
 
@@ -117,9 +117,8 @@ impl ResultsStream<TestProducer> {
                     immediate_confirmation,
                 })),
             },
-            stats: Arc::new(Stats::new()),
-            messages_confirmed_tx,
-            messages_confirmed_rx,
+            stats: Arc::new(Stats::new(messages_inflight_tx.clone())),
+            inflight_messages,
         }
     }
 }
@@ -136,7 +135,7 @@ async fn successful_send_records_message_and_statistics() {
     );
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.bytes_sent, 12);
-    assert_eq!(stream.stats.messages_failures, 0);
+    assert_eq!(stream.stats.messages_failed, 0);
 }
 
 #[tokio::test]
@@ -150,15 +149,15 @@ async fn record_messages_and_bytes_sent_for_successful_send() {
 }
 
 #[tokio::test]
-async fn dont_record_messages_or_bytes_sent_for_failed_send() {
+async fn record_messages_and_bytes_sent_for_failed_send() {
     let mut stream = ResultsStream::with([Err(ProducerPublishError::Closed)], Ok(()), None);
 
     stream.send(b"not sent").await;
 
     assert_eq!(stream.producer.state.lock().await.send_calls, 1);
-    assert_eq!(stream.stats.messages_sent, 0);
-    assert_eq!(stream.stats.bytes_sent, 0);
-    assert_eq!(stream.stats.messages_failures, 1);
+    assert_eq!(stream.stats.messages_sent, 1);
+    assert_eq!(stream.stats.bytes_sent, 8);
+    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test(start_paused = true)]
@@ -178,7 +177,7 @@ async fn timeout_is_retried_and_success_is_counted_once() {
     assert_eq!(stream.producer.state.lock().await.send_calls, 3); // we tried to send 3 times
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.bytes_sent, 15);
-    assert_eq!(stream.stats.messages_failures, 0);
+    assert_eq!(stream.stats.messages_failed, 0);
 }
 
 #[tokio::test(start_paused = true)]
@@ -198,9 +197,8 @@ async fn exhausted_timeout_retries_counts_one_failure() {
     stream.send(b"never sent").await;
 
     assert_eq!(stream.producer.state.lock().await.send_calls, 4);
-    assert_eq!(stream.stats.messages_sent, 0);
-    assert_eq!(stream.stats.bytes_sent, 0);
-    assert_eq!(stream.stats.messages_failures, 1);
+    assert_eq!(stream.stats.messages_sent, 1);
+    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test]
@@ -210,8 +208,7 @@ async fn non_timeout_error_is_not_retried() {
     stream.send(b"message").await;
 
     assert_eq!(stream.producer.state.lock().await.send_calls, 1);
-    assert_eq!(stream.stats.messages_failures, 1);
-    assert_eq!(stream.stats.messages_sent, 0);
+    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test(start_paused = true)]
@@ -240,7 +237,19 @@ async fn synchronous_confirmation_timeout_is_retried() {
     );
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.bytes_sent, 20);
-    assert_eq!(stream.stats.messages_failures, 0);
+    assert_eq!(stream.stats.messages_failed, 0);
+}
+
+#[tokio::test(start_paused = true)]
+async fn synchronous_confirmation_does_not_leave_stale_state() {
+    let mut stream = ResultsStream::with([], Ok(()), None);
+
+    stream.send_and_wait_confirmation(b"message").await;
+
+    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
+    assert_eq!(wait, Ok(()));
+    assert_eq!(stream.stats.messages_confirmed, 1);
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
 }
 
 #[tokio::test]
@@ -261,40 +270,40 @@ async fn wait_confirmation_times_out_if_not_all_confirmed() {
 
     stream.send(b"message").await;
 
-    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
+    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Err(())); // we timed out waiting on confirmation
     assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
 }
 
 #[tokio::test(start_paused = true)]
-async fn wait_confirmation_succeeds_if_all_messages_confirmed() {
+async fn wait_inflight_confirmed_message() {
     let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
 
     stream.producer.confirm(Ok(Confirmation::Confirmed)).await;
-    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
+    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
 
     assert_eq!(wait, Ok(()));
     assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
 }
 
 #[tokio::test(start_paused = true)]
-async fn unconfirmed_message_is_recorded_and_waits_until_timeout() {
+async fn wait_inflight_unconfirmed_message() {
     let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
     stream.producer.confirm(Ok(Confirmation::Unconfirmed)).await;
 
-    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
-    assert_eq!(wait, Err(())); // we timed out waiting on confirmation
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
+    assert_eq!(wait, Ok(()));
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
     assert_eq!(stream.stats.messages_confirmed, 0);
     assert_eq!(stream.stats.messages_unconfirmed, 1);
 }
 
 #[tokio::test(start_paused = true)]
-async fn confirmation_callback_error_does_not_make_message_confirmed() {
+async fn wait_inflight_failed_message() {
     let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
@@ -303,20 +312,20 @@ async fn confirmation_callback_error_does_not_make_message_confirmed() {
         .confirm(Err(ProducerPublishError::Closed))
         .await;
 
-    let wait = stream.wait_confirmation(Duration::from_secs(1)).await;
-    assert_eq!(wait, Err(()));
-    assert_eq!(stream.stats.messages_failures, 1);
+    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
+    assert_eq!(wait, Ok(()));
+    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
     assert_eq!(stream.stats.messages_confirmed, 0);
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test]
-async fn wait_confirmation_returns_immediately_when_no_messages_have_been_sent() {
+async fn wait_inflight_none_sent() {
     let mut stream = ResultsStream::with([], Ok(()), None);
 
     let result = tokio::time::timeout(
         Duration::from_millis(1),
-        stream.wait_confirmation(Duration::from_secs(1)),
+        stream.wait_no_inflight(Duration::from_secs(1)),
     )
     .await;
     assert_matches!(result, Ok(_));

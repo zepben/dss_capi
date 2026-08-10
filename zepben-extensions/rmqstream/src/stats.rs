@@ -11,6 +11,7 @@ use opentelemetry_sdk::metrics::SdkMeterProvider;
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
+use tokio::sync::watch::Sender;
 use tracing::info;
 
 /// Statistics for the performance and health of the results stream.
@@ -21,12 +22,14 @@ pub struct Stats {
 
     busy_time: Mutex<Duration>,
     start_time: Instant,
+
+    /// The number of bytes that have been asked to be sent by unique messages.
     pub bytes_sent: ExposedCounter,
-    /// The number of messages that we have asked to be sent. These may not have all made it to
-    /// RabbitMQ, or been confirmed.
+    /// The number of messages unique messages that we have asked to be sent. These may not have all
+    /// made it to RabbitMQ, or been confirmed.
     pub messages_sent: ExposedCounter,
     /// The number of messages that fail to send after retries
-    pub messages_failures: ExposedCounter,
+    pub messages_failed: ExposedCounter,
     pub messages_confirmed: ExposedCounter,
     /// Explicitly unconfirmed messages
     pub messages_unconfirmed: ExposedCounter,
@@ -35,10 +38,13 @@ pub struct Stats {
     pub confirmation_wait_timeouts: ExposedCounter,
     /// The number of times that disconnecting from RabbitMQ has failed
     pub disconnects_failed: ExposedCounter,
+
+    /// The number of inflight messages
+    inflight_messages: Sender<u64>,
 }
 
 impl Stats {
-    pub fn new() -> Self {
+    pub fn new(sender: Sender<u64>) -> Self {
         let metrics_provider = initialise_metrics();
 
         Self {
@@ -47,20 +53,37 @@ impl Stats {
             start_time: Instant::now(),
             bytes_sent: ExposedCounter::new("bytes_sent"),
             messages_sent: ExposedCounter::new("messages_sent"),
-            messages_failures: ExposedCounter::new("messages_failures"),
+            messages_failed: ExposedCounter::new("messages_failed"),
             messages_confirmed: ExposedCounter::new("messages_confirmed"),
             messages_unconfirmed: ExposedCounter::new("messages_unconfirmed"),
             confirmation_wait_timeouts: ExposedCounter::new("confirmation_wait_timeouts"),
             disconnects_failed: ExposedCounter::new("disconnects_failed"),
+            inflight_messages: sender,
         }
+    }
+
+    pub fn increment_messages_sent(&self) {
+        self.messages_sent.add(1);
+        self.inflight_messages.send_modify(|x| *x += 1);
+    }
+
+    pub fn increment_messages_confirmed(&self) {
+        self.messages_confirmed.add(1);
+        self.inflight_messages.send_modify(|x| *x -= 1);
+    }
+
+    pub fn increment_messages_unconfirmed(&self) {
+        self.messages_unconfirmed.add(1);
+        self.inflight_messages.send_modify(|x| *x -= 1);
+    }
+
+    pub fn increment_messages_failed(&self) {
+        self.messages_failed.add(1);
+        self.inflight_messages.send_modify(|x| *x -= 1);
     }
 
     pub async fn add_busy(&self, busy: Duration) {
         *self.busy_time.lock().await += busy
-    }
-
-    pub fn all_messages_confirmed(&self) -> bool {
-        self.messages_confirmed.get() == self.messages_sent.get()
     }
 
     pub async fn log_summary(&self) {
@@ -109,5 +132,11 @@ impl ExposedCounter {
 impl PartialEq<u64> for ExposedCounter {
     fn eq(&self, other: &u64) -> bool {
         self.count.load(SeqCst) == *other
+    }
+}
+
+impl PartialEq for ExposedCounter {
+    fn eq(&self, other: &Self) -> bool {
+        self.count.load(SeqCst) == other.count.load(SeqCst)
     }
 }

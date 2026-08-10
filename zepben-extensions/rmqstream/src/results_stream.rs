@@ -6,7 +6,7 @@ use rabbitmq_stream_client::{
 };
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::watch::{self, Receiver, Sender};
+use tokio::sync::watch::{self, Receiver};
 use tracing::{debug, error, info, warn};
 use tracing_log::log::trace;
 
@@ -22,8 +22,8 @@ pub struct ResultsStream<T: StreamProducer> {
     producer: T,
     stats: Arc<Stats>,
 
-    messages_confirmed_tx: Sender<bool>,
-    messages_confirmed_rx: Receiver<bool>,
+    /// The number of inflight messages.
+    inflight_messages: Receiver<u64>,
 }
 
 impl ResultsStream<Producer<NoDedup>> {
@@ -47,6 +47,9 @@ impl ResultsStream<Producer<NoDedup>> {
             "connecting to RabbitMQ",
             |_: &String| true,
             || async {
+                let (tx, rx) = watch::channel(0);
+                let stats = Arc::new(Stats::new(tx));
+
                 let environment = Environment::builder()
                     .host(host)
                     .port(port)
@@ -61,7 +64,9 @@ impl ResultsStream<Producer<NoDedup>> {
                 let producer = environment
                     .producer()
                     .batch_size(BATCH_SIZE)
-                    .on_closed(Box::new(OnClosedHandler))
+                    .on_closed(Box::new(OnClosedHandler {
+                        stats: stats.clone(),
+                    }))
                     .build(stream_name)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -70,13 +75,10 @@ impl ResultsStream<Producer<NoDedup>> {
                     "connected to RabbitMQ {username}@{host}:{port}, for stream '{stream_name}'."
                 );
 
-                let (tx, rx) = watch::channel(true);
-
                 Ok(Self {
                     producer,
-                    stats: Arc::new(Stats::new()),
-                    messages_confirmed_tx: tx,
-                    messages_confirmed_rx: rx,
+                    stats,
+                    inflight_messages: rx,
                 })
             },
         )
@@ -91,62 +93,38 @@ impl ResultsStream<Producer<NoDedup>> {
 impl<T: StreamProducer + 'static> ResultsStream<T> {
     /// Send a message to the results stream.
     pub async fn send(&mut self, msg: &[u8]) {
-        match self
+        let result = self
             .send_internal(msg, async |message| {
-                let confirmation_tx = self.messages_confirmed_tx.clone();
                 let stats = self.stats.clone();
 
                 self.producer
                     .send(
                         message,
                         Box::new(|confirmation| {
-                            Box::pin(ResultsStream::<T>::on_confirm(
-                                confirmation_tx,
-                                stats,
-                                confirmation,
-                            ))
+                            Box::pin(async { record_confirmation(stats, confirmation) })
                         }),
                     )
                     .await?;
-                self.stats.messages_sent.add(1);
-                self.stats.bytes_sent.add(msg.len() as u64);
                 Ok(())
             })
-            .await
-        {
-            Ok(_) => trace!("streamed a message containing {} bytes", msg.len()),
-            Err(e) => {
-                warn!("failed to stream message: {e}");
-                self.stats.messages_failures.add(1);
-            }
+            .await;
+
+        if let Err(e) = result {
+            warn!("failed to stream message: {e}");
+            self.stats.increment_messages_failed();
         }
     }
 
     /// Send a message to the results stream and block publishing until the message is confirmed, or
     /// unconfirmed.
     pub async fn send_and_wait_confirmation(&self, msg: &[u8]) {
-        match self
+        let confirmation = self
             .send_internal(msg, async |message| {
-                let confirmation = self.producer.send_and_wait_confirmation(message).await?;
-                self.stats.messages_sent.add(1);
-                self.stats.bytes_sent.add(msg.len() as u64);
-                Ok(confirmation)
+                self.producer.send_and_wait_confirmation(message).await
             })
-            .await
-        {
-            Ok(Confirmation::Confirmed) => {
-                self.stats.messages_confirmed.add(1);
-                trace!("streamed a message containing {} bytes", msg.len())
-            }
-            Ok(Confirmation::Unconfirmed) => {
-                self.stats.messages_unconfirmed.add(1);
-                warn!("failed to stream message: unconfirmed")
-            }
-            Err(e) => {
-                self.stats.messages_failures.add(1);
-                warn!("failed to stream message: {e}")
-            }
-        }
+            .await;
+
+        record_confirmation(self.stats.clone(), confirmation);
     }
 
     async fn send_internal<U>(
@@ -157,8 +135,8 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         let start = Instant::now();
         let message = Message::builder().body(msg).build();
 
-        // mark that not all messages are confirmed, while we are in progress sending this message
-        let _ = self.messages_confirmed_tx.send(false);
+        self.stats.increment_messages_sent();
+        self.stats.bytes_sent.add(msg.len() as u64);
 
         let result = with_retries(
             "publishing message",
@@ -167,42 +145,18 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         )
         .await;
 
-        self.update_all_messages_confirmed();
         self.stats.add_busy(start.elapsed()).await;
         result
     }
 
-    /// Update the state of the [ResultsStream] to note that a new message has been sent.
-    ///
-    /// This refreshes the status of if all messages have been confirmed.
-    fn update_all_messages_confirmed(&self) {
-        let _ = self
-            .messages_confirmed_tx
-            .send(self.stats.all_messages_confirmed()); // ignore the possibility that the channel is closed
-    }
-
-    async fn on_confirm(tx: Sender<bool>, stats: Arc<Stats>, result: ConfirmationResult) {
-        match result {
-            Ok(Confirmation::Confirmed) => stats.messages_confirmed.add(1),
-            Ok(Confirmation::Unconfirmed) => stats.messages_unconfirmed.add(1),
-            Err(error) => {
-                debug!("failure during message confirmation: {error}");
-                stats.messages_failures.add(1);
-            }
-        }
-
-        // ignore the possibility that the channel is closed
-        let _ = tx.send(stats.all_messages_confirmed());
-    }
-
-    /// Wait for all messages to be confirmed.
-    pub async fn wait_confirmation(&mut self, timeout: Duration) -> Result<(), ()> {
-        match tokio::time::timeout(timeout, self.messages_confirmed_rx.wait_for(|&x| x)).await {
+    /// Wait for all messages to be confirmed, unconfirmed, or failed.
+    pub async fn wait_no_inflight(&mut self, timeout: Duration) -> Result<(), ()> {
+        match tokio::time::timeout(timeout, self.inflight_messages.wait_for(|&x| x == 0)).await {
             Ok(_) => Ok(()),
             Err(_) => {
                 self.stats.confirmation_wait_timeouts.add(1);
                 error!(
-                    "failed to confirm all RabbitMQ stream messages within {}ms",
+                    "some messages still inflight after waiting {}ms",
                     timeout.as_millis()
                 );
                 Err(())
@@ -231,13 +185,41 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
     }
 }
 
-struct OnClosedHandler;
+/// Record the given confirmation. This updates statistics, and by extension updates result stream
+/// inflight status.
+fn record_confirmation(stats: Arc<Stats>, confirmation: ConfirmationResult) {
+    match confirmation {
+        Ok(Confirmation::Confirmed) => {
+            stats.increment_messages_confirmed();
+            trace!("streamed a message")
+        }
+        Ok(Confirmation::Unconfirmed) => {
+            stats.increment_messages_unconfirmed();
+            warn!("failed to stream message: unconfirmed")
+        }
+        Err(e) => {
+            stats.increment_messages_failed();
+            warn!("failed to stream message: {e}")
+        }
+    }
+}
+
+struct OnClosedHandler {
+    stats: Arc<Stats>,
+}
 
 #[async_trait]
 impl OnClosed for OnClosedHandler {
     async fn on_closed(&self, unconfirmed: Vec<Message>) {
         if !unconfirmed.is_empty() {
-            warn!("discarding {} unconfirmed messages", unconfirmed.len())
+            warn!(
+                "{} unconfirmed messages may be discarded",
+                unconfirmed.len()
+            );
+        }
+
+        for _ in unconfirmed {
+            self.stats.increment_messages_unconfirmed();
         }
     }
 }
