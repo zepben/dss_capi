@@ -24,9 +24,11 @@ pub(crate) type ConfirmationCallback =
 pub(crate) trait StreamProducer: Send + Sync {
     async fn send(
         &self,
-        message: &Message,
+        message: Message,
         on_confirmation: ConfirmationCallback,
     ) -> Result<(), ProducerPublishError>;
+
+    async fn send_and_wait_confirmation(&self, message: Message) -> ConfirmationResult;
 
     async fn close(self) -> Result<(), ProducerCloseError>;
 }
@@ -35,10 +37,10 @@ pub(crate) trait StreamProducer: Send + Sync {
 impl StreamProducer for Producer<NoDedup> {
     async fn send(
         &self,
-        message: &Message,
+        message: Message,
         on_confirmation: ConfirmationCallback,
     ) -> Result<(), ProducerPublishError> {
-        Producer::<NoDedup>::send(self, message.clone(), move |result| {
+        Producer::<NoDedup>::send(self, message, move |result| {
             on_confirmation(result.map(|status| {
                 if status.confirmed() {
                     Confirmation::Confirmed
@@ -48,6 +50,14 @@ impl StreamProducer for Producer<NoDedup> {
             }))
         })
         .await
+    }
+
+    async fn send_and_wait_confirmation(&self, message: Message) -> ConfirmationResult {
+        match Producer::<NoDedup>::send_with_confirm(&self, message).await {
+            Ok(status) if status.confirmed() => Ok(Confirmation::Confirmed),
+            Ok(_) => Ok(Confirmation::Unconfirmed),
+            Err(e) => Err(e),
+        }
     }
 
     async fn close(self) -> Result<(), ProducerCloseError> {

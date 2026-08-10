@@ -79,13 +79,16 @@ pub extern "C" fn disconnect_from_stream() {
 pub unsafe extern "C" fn stream_out_message(
     msg_ptr: *const libc::c_void,
     msg_len: libc::size_t,
-    _confirm: bool,
+    confirm: bool,
 ) {
-    // TODO: include some mechanism to log that confirms being disabled are not supported.
-
     if let Some(results_stream) = RESULTS_STREAM.lock().unwrap().as_mut() {
         let msg = unsafe { slice::from_raw_parts(msg_ptr as *const u8, msg_len) };
-        run_blocking(async { results_stream.send(msg).await })
+        run_blocking(async {
+            match confirm {
+                true => results_stream.send_and_wait_confirmation(msg).await,
+                false => results_stream.send(msg).await,
+            }
+        })
     } else {
         error!("not connected to a RabbitMQ stream!");
     }

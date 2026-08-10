@@ -91,22 +91,14 @@ impl ResultsStream<Producer<NoDedup>> {
 impl<T: StreamProducer + 'static> ResultsStream<T> {
     /// Send a message to the results stream.
     pub async fn send(&mut self, msg: &[u8]) {
-        let start = Instant::now();
-        let message = Message::builder().body(msg).build();
-
-        // mark that not all messages are confirmed, while we are in progress sending this message
-        let _ = self.messages_confirmed_tx.send(false);
-
-        let result = with_retries(
-            "publishing message",
-            |e| matches!(e, ProducerPublishError::Timeout),
-            async || {
+        match self
+            .send_internal(msg, async |message| {
                 let confirmation_tx = self.messages_confirmed_tx.clone();
                 let stats = self.stats.clone();
 
                 self.producer
                     .send(
-                        &message,
+                        message,
                         Box::new(|confirmation| {
                             Box::pin(ResultsStream::<T>::on_confirm(
                                 confirmation_tx,
@@ -119,21 +111,65 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
                 self.stats.messages_sent.add(1);
                 self.stats.bytes_sent.add(msg.len() as u64);
                 Ok(())
-            },
-        )
-        .await;
-
-        self.update_all_messages_confirmed();
-
-        match result {
+            })
+            .await
+        {
             Ok(_) => trace!("streamed a message containing {} bytes", msg.len()),
             Err(e) => {
                 warn!("failed to stream message: {e}");
                 self.stats.messages_failures.add(1);
             }
-        };
+        }
+    }
 
+    /// Send a message to the results stream and block publishing until the message is confirmed, or
+    /// unconfirmed.
+    pub async fn send_and_wait_confirmation(&self, msg: &[u8]) {
+        match self
+            .send_internal(msg, async |message| {
+                let confirmation = self.producer.send_and_wait_confirmation(message).await?;
+                self.stats.messages_sent.add(1);
+                self.stats.bytes_sent.add(msg.len() as u64);
+                Ok(confirmation)
+            })
+            .await
+        {
+            Ok(Confirmation::Confirmed) => {
+                self.stats.messages_confirmed.add(1);
+                trace!("streamed a message containing {} bytes", msg.len())
+            }
+            Ok(Confirmation::Unconfirmed) => {
+                self.stats.messages_unconfirmed.add(1);
+                warn!("failed to stream message: unconfirmed")
+            }
+            Err(e) => {
+                self.stats.messages_failures.add(1);
+                warn!("failed to stream message: {e}")
+            }
+        }
+    }
+
+    async fn send_internal<U>(
+        &self,
+        msg: &[u8],
+        f: impl AsyncFn(Message) -> Result<U, ProducerPublishError>,
+    ) -> Result<U, ProducerPublishError> {
+        let start = Instant::now();
+        let message = Message::builder().body(msg).build();
+
+        // mark that not all messages are confirmed, while we are in progress sending this message
+        let _ = self.messages_confirmed_tx.send(false);
+
+        let result = with_retries(
+            "publishing message",
+            |e| matches!(e, ProducerPublishError::Timeout),
+            async || f(message.clone()).await,
+        )
+        .await;
+
+        self.update_all_messages_confirmed();
         self.stats.add_busy(start.elapsed()).await;
+        result
     }
 
     /// Update the state of the [ResultsStream] to note that a new message has been sent.
