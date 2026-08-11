@@ -38,7 +38,7 @@ impl StreamProducer for Producer<NoDedup> {
     }
 
     async fn send_and_wait_confirmation(&self, message: Message) -> ConfirmationResult {
-        Producer::<NoDedup>::send_with_confirm(&self, message)
+        Producer::<NoDedup>::send_with_confirm(self, message)
             .await
             .map(|status| status.confirmed())
     }
