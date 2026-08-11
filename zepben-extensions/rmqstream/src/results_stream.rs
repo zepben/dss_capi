@@ -10,7 +10,7 @@ use tokio::sync::watch::{self, Receiver};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::{
-    producer::{Confirmation, ConfirmationResult, StreamProducer},
+    producer::{ConfirmationResult, StreamProducer},
     retry::with_retries,
     stats::Stats,
 };
@@ -188,11 +188,11 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
 /// inflight status.
 fn record_confirmation(stats: Arc<Stats>, confirmation: ConfirmationResult) {
     match confirmation {
-        Ok(Confirmation::Confirmed) => {
+        Ok(true) => {
             stats.increment_messages_confirmed();
             trace!("streamed a message")
         }
-        Ok(Confirmation::Unconfirmed) => {
+        Ok(false) => {
             stats.increment_messages_unconfirmed();
             warn!("failed to stream message: unconfirmed")
         }

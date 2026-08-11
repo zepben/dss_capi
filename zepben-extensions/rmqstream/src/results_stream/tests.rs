@@ -2,7 +2,6 @@ use std::assert_matches;
 
 use super::*;
 use crate::producer::{ConfirmationCallback, StreamProducer};
-use async_trait::async_trait;
 use rabbitmq_stream_client::{
     error::{ProducerCloseError, ProducerPublishError},
     types::{Message, ResponseCode},
@@ -23,7 +22,7 @@ struct TestProducerState {
     /// Results of `send_and_wait_confirmation` to simulate, in reverse order.
     confirmation_results: Vec<ConfirmationResult>,
     close_result: Option<Result<(), ProducerCloseError>>,
-    immediate_confirmation: Option<Confirmation>,
+    immediate_confirmation: Option<bool>,
 }
 
 #[derive(Clone)]
@@ -50,7 +49,6 @@ impl TestProducer {
     }
 }
 
-#[async_trait]
 impl StreamProducer for TestProducer {
     async fn send(
         &self,
@@ -81,10 +79,7 @@ impl StreamProducer for TestProducer {
         state
             .sent_messages
             .push(message.data().map_or(Vec::new(), |x| x.to_vec()));
-        state
-            .confirmation_results
-            .pop()
-            .unwrap_or(Ok(Confirmation::Confirmed))
+        state.confirmation_results.pop().unwrap_or(Ok(true))
     }
 
     async fn close(self) -> Result<(), ProducerCloseError> {
@@ -97,7 +92,7 @@ impl ResultsStream<TestProducer> {
     fn with<const N: usize>(
         mut send_results: [Result<(), ProducerPublishError>; N],
         close_result: Result<(), ProducerCloseError>,
-        immediate_confirmation: Option<Confirmation>,
+        immediate_confirmation: Option<bool>,
     ) -> ResultsStream<TestProducer> {
         let (messages_inflight_tx, inflight_messages) = watch::channel(0);
 
@@ -219,7 +214,7 @@ async fn synchronous_confirmation_timeout_is_retried() {
         .set_confirmation_results([
             Err(ProducerPublishError::Timeout),
             Err(ProducerPublishError::Timeout),
-            Ok(Confirmation::Confirmed),
+            Ok(true),
         ])
         .await;
 
@@ -254,7 +249,7 @@ async fn synchronous_confirmation_does_not_leave_stale_state() {
 
 #[tokio::test]
 async fn immediate_confirmation_does_not_leave_stale_state() {
-    let mut stream = ResultsStream::with([], Ok(()), Some(Confirmation::Confirmed));
+    let mut stream = ResultsStream::with([], Ok(()), Some(true));
 
     stream.send(b"message").await;
 
@@ -281,7 +276,7 @@ async fn wait_inflight_confirmed_message() {
 
     stream.send(b"message").await;
 
-    stream.producer.confirm(Ok(Confirmation::Confirmed)).await;
+    stream.producer.confirm(Ok(true)).await;
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
 
     assert_eq!(wait, Ok(()));
@@ -293,7 +288,7 @@ async fn wait_inflight_unconfirmed_message() {
     let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
-    stream.producer.confirm(Ok(Confirmation::Unconfirmed)).await;
+    stream.producer.confirm(Ok(false)).await;
 
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Ok(()));
