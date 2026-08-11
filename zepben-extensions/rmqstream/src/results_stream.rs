@@ -103,8 +103,7 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
                             Box::pin(async { record_confirmation(stats, confirmation) })
                         }),
                     )
-                    .await?;
-                Ok(())
+                    .await
             })
             .await;
 
@@ -171,9 +170,9 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
                 status: ResponseCode::PublisherDoesNotExist,
                 ..
             }) => warn!("stream already closed (publisher)"),
-            Err(_) => {
+            Err(e) => {
                 self.stats.disconnects_failed.add(1);
-                error!("failed to disconnect from RabbitMQ stream");
+                error!("failed to disconnect from RabbitMQ stream: {e}");
             }
         }
 
