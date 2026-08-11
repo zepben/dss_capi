@@ -1,11 +1,9 @@
 use opentelemetry::global;
 use opentelemetry_otlp::MetricExporter;
-use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::{Resource, metrics::SdkMeterProvider};
 use std::error::Error;
 use std::sync::Mutex;
-use tracing::{Level, debug, warn};
-use tracing_log::LogTracer;
-use tracing_subscriber::FmtSubscriber;
+use tracing::{debug, warn};
 
 /// Has this library initialised logging yet?
 pub static LOGGING_INITIALISED: Mutex<bool> = Mutex::new(false);
@@ -40,6 +38,7 @@ pub fn initialise_metrics() -> Option<SdkMeterProvider> {
     };
     let provider = SdkMeterProvider::builder()
         .with_periodic_exporter(exporter)
+        .with_resource(Resource::builder().with_service_name("executor").build())
         .build();
 
     global::set_meter_provider(provider.clone());
@@ -59,11 +58,7 @@ impl LoggingProvider for DefaultLogging {
         let initialised = *LOGGING_INITIALISED.lock()?;
 
         if !initialised {
-            let subscriber = FmtSubscriber::builder()
-                .with_max_level(Level::DEBUG)
-                .finish();
-            tracing::subscriber::set_global_default(subscriber)?;
-            LogTracer::init()?;
+            tracing_subscriber::fmt::init();
             *LOGGING_INITIALISED.lock()? = true;
         }
 

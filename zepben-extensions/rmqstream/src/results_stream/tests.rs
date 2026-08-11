@@ -249,7 +249,7 @@ async fn synchronous_confirmation_does_not_leave_stale_state() {
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Ok(()));
     assert_eq!(stream.stats.messages_confirmed, 1);
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
 }
 
 #[tokio::test]
@@ -261,7 +261,7 @@ async fn immediate_confirmation_does_not_leave_stale_state() {
     assert_eq!(stream.stats.messages_sent, 1);
     assert_eq!(stream.stats.messages_confirmed, 1);
     assert_eq!(stream.stats.bytes_sent, 7);
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
 }
 
 #[tokio::test(start_paused = true)]
@@ -272,7 +272,7 @@ async fn wait_confirmation_times_out_if_not_all_confirmed() {
 
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Err(())); // we timed out waiting on confirmation
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 1);
+    assert_eq!(stream.stats.no_inflight_timeouts, 1);
 }
 
 #[tokio::test(start_paused = true)]
@@ -285,7 +285,7 @@ async fn wait_inflight_confirmed_message() {
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
 
     assert_eq!(wait, Ok(()));
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
 }
 
 #[tokio::test(start_paused = true)]
@@ -297,7 +297,7 @@ async fn wait_inflight_unconfirmed_message() {
 
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Ok(()));
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
     assert_eq!(stream.stats.messages_confirmed, 0);
     assert_eq!(stream.stats.messages_unconfirmed, 1);
 }
@@ -314,7 +314,7 @@ async fn wait_inflight_failed_message() {
 
     let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
     assert_eq!(wait, Ok(()));
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
     assert_eq!(stream.stats.messages_confirmed, 0);
     assert_eq!(stream.stats.messages_failed, 1);
 }
@@ -329,7 +329,7 @@ async fn wait_inflight_none_sent() {
     )
     .await;
     assert_matches!(result, Ok(_));
-    assert_eq!(stream.stats.confirmation_wait_timeouts, 0);
+    assert_eq!(stream.stats.no_inflight_timeouts, 0);
 }
 
 #[tokio::test]

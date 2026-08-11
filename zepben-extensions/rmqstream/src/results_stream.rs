@@ -7,8 +7,7 @@ use rabbitmq_stream_client::{
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::watch::{self, Receiver};
-use tracing::{debug, error, info, warn};
-use tracing_log::log::trace;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{
     producer::{Confirmation, ConfirmationResult, StreamProducer},
@@ -154,7 +153,7 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         match tokio::time::timeout(timeout, self.inflight_messages.wait_for(|&x| x == 0)).await {
             Ok(_) => Ok(()),
             Err(_) => {
-                self.stats.confirmation_wait_timeouts.add(1);
+                self.stats.no_inflight_timeouts.add(1);
                 error!(
                     "some messages still inflight after waiting {}ms",
                     timeout.as_millis()

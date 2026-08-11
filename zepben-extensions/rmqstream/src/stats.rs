@@ -34,8 +34,8 @@ pub struct Stats {
     /// Explicitly unconfirmed messages
     pub messages_unconfirmed: ExposedCounter,
 
-    /// The number of times that we have timed out waiting for all messages to be confirmed
-    pub confirmation_wait_timeouts: ExposedCounter,
+    /// The number of times that we have timed out waiting for no inflight messages
+    pub no_inflight_timeouts: ExposedCounter,
     /// The number of times that disconnecting from RabbitMQ has failed
     pub disconnects_failed: ExposedCounter,
 
@@ -56,7 +56,7 @@ impl Stats {
             messages_failed: ExposedCounter::new("messages_failed"),
             messages_confirmed: ExposedCounter::new("messages_confirmed"),
             messages_unconfirmed: ExposedCounter::new("messages_unconfirmed"),
-            confirmation_wait_timeouts: ExposedCounter::new("confirmation_wait_timeouts"),
+            no_inflight_timeouts: ExposedCounter::new("no_inflight_timeouts"),
             disconnects_failed: ExposedCounter::new("disconnects_failed"),
             inflight_messages: sender,
         }
@@ -94,7 +94,7 @@ impl Stats {
         let bits_per_sec = 8.0 * self.bytes_sent.get() as f64 / seconds_elapsed;
 
         info!(
-            "results stream statistics: {total_messages} total messages, {busy_percent}% busy, {msg_per_sec} msg/sec, {bits_per_sec} bits/sec",
+            "results stream statistics: {total_messages} total messages, {busy_percent:.2}% busy, {msg_per_sec:.2} msg/sec, {bits_per_sec:.2} bits/sec",
         );
     }
 }
@@ -108,7 +108,7 @@ pub struct ExposedCounter {
 
 impl ExposedCounter {
     pub fn new(metric_name: &'static str) -> Self {
-        const METER_NAME: &str = "meter_name";
+        const METER_NAME: &str = "results_stream";
 
         let meter = global::meter(METER_NAME);
         let counter = meter.u64_counter(metric_name).build();
