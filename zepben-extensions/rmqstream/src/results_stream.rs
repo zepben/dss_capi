@@ -91,6 +91,11 @@ impl ResultsStream<Producer<NoDedup>> {
 
 impl<T: StreamProducer + 'static> ResultsStream<T> {
     /// Send a message to the results stream.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the `msg` could not be sent, or the confirmation could not be
+    /// tracked due to a `ProducerPublishError`.
     pub async fn send(&mut self, msg: &[u8]) {
         let result = self
             .send_internal(msg, async |message| {
@@ -108,13 +113,18 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
             .await;
 
         if let Err(e) = result {
-            warn!("failed to stream message: {e}");
             self.stats.increment_messages_failed();
+            self.stats.flush();
+            panic!("failed to stream message: {e}")
         }
     }
 
     /// Send a message to the results stream and block publishing until the message is confirmed, or
     /// unconfirmed.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the `msg` could not be sent due to a `ProducerPublishError`.
     pub async fn send_and_wait_confirmation(&self, msg: &[u8]) {
         let confirmation = self
             .send_internal(msg, async |message| {
@@ -176,9 +186,7 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
             }
         }
 
-        if let Some(ref metrics_provider) = self.stats.metrics_provider {
-            let _ = metrics_provider.force_flush(); // ignore errors when flushing metrics
-        }
+        self.stats.flush();
         self.stats.log_summary().await;
     }
 }
@@ -197,7 +205,8 @@ fn record_confirmation(stats: Arc<Stats>, confirmation: ConfirmationResult) {
         }
         Err(e) => {
             stats.increment_messages_failed();
-            warn!("failed to stream message: {e}")
+            stats.flush();
+            panic!("failed to stream message: {e}")
         }
     }
 }

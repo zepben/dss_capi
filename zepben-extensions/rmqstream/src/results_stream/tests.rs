@@ -144,19 +144,14 @@ async fn record_messages_and_bytes_sent_for_successful_send() {
 }
 
 #[tokio::test]
-async fn record_messages_and_bytes_sent_for_failed_send() {
+#[should_panic]
+async fn failed_send_panics() {
     let mut stream = ResultsStream::with([Err(ProducerPublishError::Closed)], Ok(()), None);
-
     stream.send(b"not sent").await;
-
-    assert_eq!(stream.producer.state.lock().await.send_calls, 1);
-    assert_eq!(stream.stats.messages_sent, 1);
-    assert_eq!(stream.stats.bytes_sent, 8);
-    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test(start_paused = true)]
-async fn timeout_is_retried_and_success_is_counted_once() {
+async fn timeout_send_is_retried_and_success_is_counted_once() {
     let mut stream = ResultsStream::with(
         [
             Err(ProducerPublishError::Timeout),
@@ -176,7 +171,8 @@ async fn timeout_is_retried_and_success_is_counted_once() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn exhausted_timeout_retries_counts_one_failure() {
+#[should_panic]
+async fn exhausted_timeout_retries_panics() {
     let mut stream = ResultsStream::with(
         [
             Err(ProducerPublishError::Timeout),
@@ -190,14 +186,11 @@ async fn exhausted_timeout_retries_counts_one_failure() {
     );
 
     stream.send(b"never sent").await;
-
-    assert_eq!(stream.producer.state.lock().await.send_calls, 4);
-    assert_eq!(stream.stats.messages_sent, 1);
-    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test]
-async fn non_timeout_error_is_not_retried() {
+#[should_panic]
+async fn non_timeout_error_panics() {
     let mut stream = ResultsStream::with([Err(ProducerPublishError::Closed), Ok(())], Ok(()), None);
 
     stream.send(b"message").await;
@@ -295,23 +288,6 @@ async fn wait_inflight_unconfirmed_message() {
     assert_eq!(stream.stats.no_inflight_timeouts, 0);
     assert_eq!(stream.stats.messages_confirmed, 0);
     assert_eq!(stream.stats.messages_unconfirmed, 1);
-}
-
-#[tokio::test(start_paused = true)]
-async fn wait_inflight_failed_message() {
-    let mut stream = ResultsStream::with([Ok(())], Ok(()), None);
-
-    stream.send(b"message").await;
-    stream
-        .producer
-        .confirm(Err(ProducerPublishError::Closed))
-        .await;
-
-    let wait = stream.wait_no_inflight(Duration::from_secs(1)).await;
-    assert_eq!(wait, Ok(()));
-    assert_eq!(stream.stats.no_inflight_timeouts, 0);
-    assert_eq!(stream.stats.messages_confirmed, 0);
-    assert_eq!(stream.stats.messages_failed, 1);
 }
 
 #[tokio::test]

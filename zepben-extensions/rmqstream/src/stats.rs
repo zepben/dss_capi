@@ -97,6 +97,13 @@ impl Stats {
             "results stream statistics: {total_messages} total messages, {busy_percent:.2}% busy, {msg_per_sec:.2} msg/sec, {bits_per_sec:.2} bits/sec",
         );
     }
+
+    /// Flush the metrics tracking these statistics.
+    pub fn flush(&self) {
+        if let Some(ref metrics_provider) = self.metrics_provider {
+            let _ = metrics_provider.force_flush();
+        }
+    }
 }
 
 /// An atomic counter that is also exposed as a metric.
