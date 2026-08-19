@@ -33,6 +33,7 @@ pub struct Stats {
     pub messages_confirmed: ExposedCounter,
     /// Explicitly unconfirmed messages
     pub messages_unconfirmed: ExposedCounter,
+    pub messages_retried: ExposedCounter,
 
     /// The number of times that we have timed out waiting for no inflight messages
     pub no_inflight_timeouts: ExposedCounter,
@@ -56,6 +57,7 @@ impl Stats {
             messages_failed: ExposedCounter::new("messages_failed"),
             messages_confirmed: ExposedCounter::new("messages_confirmed"),
             messages_unconfirmed: ExposedCounter::new("messages_unconfirmed"),
+            messages_retried: ExposedCounter::new("messages_retried"),
             no_inflight_timeouts: ExposedCounter::new("no_inflight_timeouts"),
             disconnects_failed: ExposedCounter::new("disconnects_failed"),
             inflight_messages: sender,

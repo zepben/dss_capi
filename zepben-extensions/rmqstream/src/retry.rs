@@ -15,6 +15,7 @@ pub(crate) const BACKOFF_DELAY: Duration = Duration::from_secs(5);
 pub async fn with_retries<T, E: Debug, F: Future<Output = Result<T, E>>>(
     action: &'static str,
     retry_on: impl Fn(&E) -> bool,
+    on_retry: impl Fn() -> (),
     f: impl Fn() -> F,
 ) -> Result<T, E> {
     let mut retires = 0;
@@ -29,6 +30,7 @@ pub async fn with_retries<T, E: Debug, F: Future<Output = Result<T, E>>>(
                 );
 
                 sleep(delay).await;
+                on_retry();
                 retires += 1;
             }
             x => return x,
@@ -64,7 +66,7 @@ mod tests {
     #[tokio::test]
     #[timeout(100)]
     async fn with_retires_succeeds() -> Result<(), ()> {
-        with_retries("test", |_: &()| true, async || Ok(())).await?;
+        with_retries("test", |_: &()| true, || {}, async || Ok(())).await?;
         Ok(())
     }
 
@@ -77,6 +79,7 @@ mod tests {
         let result = with_retries(
             "intentional",
             |_| true,
+            || {},
             async || {
                 *tries.lock().await += 1;
                 Err::<(), _>("hello world")
@@ -98,6 +101,7 @@ mod tests {
         let result = with_retries(
             "intentional",
             |_| false,
+            || {},
             async || {
                 *tries.lock().await += 1;
                 Err::<(), _>(String::from("an error"))
@@ -107,6 +111,21 @@ mod tests {
 
         assert_eq!(1, *tries.lock().await);
         assert_eq!(Err(String::from("an error")), result)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn on_retry_is_called() {
+        let retries = std::sync::Mutex::new(0);
+
+        let _ = with_retries(
+            "intentional",
+            |_| true,
+            || *retries.lock().unwrap() += 1,
+            async || Err::<(), _>(String::from("an error")),
+        )
+        .await;
+
+        assert_eq!(3, *retries.lock().unwrap());
     }
 
     #[test]

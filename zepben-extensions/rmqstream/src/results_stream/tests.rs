@@ -325,3 +325,19 @@ async fn disconnect_error_is_recorded() {
     stream.disconnect().await;
     assert_eq!(stats.disconnects_failed, 1);
 }
+
+#[tokio::test]
+async fn message_retries_are_recorded() {
+    let stream = ResultsStream::with(
+        [
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Err(ProducerPublishError::Timeout),
+            Ok(()),
+        ],
+        Ok(()),
+        None,
+    );
+
+    assert_eq!(stream.stats.messages_retried, 0);
+}

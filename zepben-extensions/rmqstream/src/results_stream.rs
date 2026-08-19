@@ -45,6 +45,7 @@ impl ResultsStream<Producer<NoDedup>> {
         match with_retries(
             "connecting to RabbitMQ",
             |_: &String| true,
+            || {},
             || async {
                 let (tx, rx) = watch::channel(0);
                 let stats = Arc::new(Stats::new(tx));
@@ -149,6 +150,7 @@ impl<T: StreamProducer + 'static> ResultsStream<T> {
         let result = with_retries(
             "publishing message",
             |e| matches!(e, ProducerPublishError::Timeout),
+            || self.stats.messages_retried.add(1),
             async || f(message.clone()).await,
         )
         .await;
