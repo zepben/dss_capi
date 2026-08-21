@@ -15,7 +15,7 @@ pub(crate) const BACKOFF_DELAY: Duration = Duration::from_secs(5);
 pub async fn with_retries<T, E: Debug, F: Future<Output = Result<T, E>>>(
     action: &'static str,
     retry_on: impl Fn(&E) -> bool,
-    on_retry: impl Fn() -> (),
+    on_retry: impl Fn(),
     f: impl Fn() -> F,
 ) -> Result<T, E> {
     let mut retires = 0;
