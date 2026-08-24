@@ -1,6 +1,6 @@
 [package]
 name = "rmqstream"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2024"
 
 [lib]
@@ -12,13 +12,15 @@ crate-type = ["staticlib"]
 
 [dependencies]
 libc = "0.2"
-rabbitmq-stream-client = "0.10.0"
+rabbitmq-stream-client = "0.11.0"
 tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "time"] }
-tracing = { version = "0.1.44", features = [] }
-tracing-subscriber = "0.3.22"
-tracing-log = "0.2.0"
+tracing = { version = "0.1.44"}
+tracing-subscriber = {version = "0.3.22", features = ["tracing-log", "env-filter"]}
 rand = "0.10.1"
-
+opentelemetry = "0.31.0"
+opentelemetry_sdk = "0.31.0"
+opentelemetry-otlp = {version = "0.31.0", features = ["grpc-tonic"]}
+async-trait = "0.1.91"
 
 [dev-dependencies]
 ntest = "0.9.5"

@@ -1,8 +1,9 @@
+use opentelemetry::global;
+use opentelemetry_otlp::MetricExporter;
+use opentelemetry_sdk::{Resource, metrics::SdkMeterProvider};
 use std::error::Error;
 use std::sync::Mutex;
-use tracing::{Level, warn};
-use tracing_log::LogTracer;
-use tracing_subscriber::FmtSubscriber;
+use tracing::{debug, warn};
 
 /// Has this library initialised logging yet?
 pub static LOGGING_INITIALISED: Mutex<bool> = Mutex::new(false);
@@ -19,6 +20,31 @@ pub fn try_enable_logging<L: LoggingProvider>() -> Result<(), Box<dyn Error>> {
     L::enable()
 }
 
+/// Initialise OpenTelemetry metrics over otlp-grpc. If monitoring is not enabled in the environment
+/// then metrics will not be exported, and a noop implementation used.
+pub fn initialise_metrics() -> Option<SdkMeterProvider> {
+    if std::env::var("ZEPBEN_OPENTELEMETRY_ENABLED") != Ok(String::from("1")) {
+        debug!("opentelemetry disabled. no metrics will be emitted");
+        return None;
+    }
+
+    // this automatically picks up protocol and endpoint from environment variables.
+    let exporter = match MetricExporter::builder().with_tonic().build() {
+        Ok(provider) => provider,
+        Err(e) => {
+            warn!("failed to initialise metrics: {e}");
+            return None;
+        }
+    };
+    let provider = SdkMeterProvider::builder()
+        .with_periodic_exporter(exporter)
+        .with_resource(Resource::builder().with_service_name("executor").build())
+        .build();
+
+    global::set_meter_provider(provider.clone());
+    Some(provider)
+}
+
 /// This allows us to abstract over enabling logging, and test that logging is
 /// enabled
 pub trait LoggingProvider {
@@ -32,11 +58,7 @@ impl LoggingProvider for DefaultLogging {
         let initialised = *LOGGING_INITIALISED.lock()?;
 
         if !initialised {
-            let subscriber = FmtSubscriber::builder()
-                .with_max_level(Level::DEBUG)
-                .finish();
-            tracing::subscriber::set_global_default(subscriber)?;
-            LogTracer::init()?;
+            tracing_subscriber::fmt::init();
             *LOGGING_INITIALISED.lock()? = true;
         }
 
@@ -60,7 +82,6 @@ impl LoggingProvider for MockLogging {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logging::{LOGGING_INITIALISED, MockLogging};
     use std::{error::Error, sync::Mutex};
 
     /// This allows us to synchronise our tests for tracing initialisation. We use
