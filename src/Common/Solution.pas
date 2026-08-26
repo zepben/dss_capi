@@ -266,7 +266,7 @@ type
         procedure Solve;                // Main Solution dispatch
         procedure SnapShotInit;
         function SolveSnap: Integer;    // solve for now once
-        function SolveDirect: Integer;  // solve for now once, direct solution
+        function SolveDirect(ForcePCRefresh: Boolean = TRUE): Integer;  // solve for now once, direct solution
         function SolveYDirect: Integer; // Similar to SolveDirect; used for initialization
         function SolveCircuit: Integer; // SolveSnap sans control iteration
         procedure CheckControls;       // Snapshot checks with matrix rebuild
@@ -276,6 +276,7 @@ type
         procedure Check_Fault_Status;
 
         procedure SetGeneratorDispRef;
+        procedure Set_LoadModel(const Value: Integer; UpdateDefault: Boolean = TRUE);
         procedure SetVoltageBases;
 
         procedure SaveVoltages;
@@ -602,7 +603,8 @@ begin
             case Dynavars.SolutionMode of
                 TSolveMode.SNAPSHOT:
                     SolveSnap;
-                TSolveMode.YEARLYMODE:
+                TSolveMode.YEARLYMODE,
+                TSolveMode.LINEARYEARLYMODE:
                     SolveYearly;
                 TSolveMode.DAILYMODE:
                     SolveDaily;
@@ -762,7 +764,8 @@ begin
 
             TSolveMode.SNAPSHOT:
                 GeneratorDispatchReference := LoadMultiplier * DefaultGrowthFactor;
-            TSolveMode.YEARLYMODE:
+            TSolveMode.YEARLYMODE,
+            TSolveMode.LINEARYEARLYMODE:
                 GeneratorDispatchReference := DefaultGrowthFactor * DefaultHourMult.re;
             TSolveMode.DAILYMODE:
                 GeneratorDispatchReference := LoadMultiplier * DefaultGrowthFactor * DefaultHourMult.re;
@@ -1181,6 +1184,9 @@ begin
         Inc(ControlIteration);
 
         Result := SolveCircuit;  // Do circuit solution w/o checking controls
+        if DSS.SolutionAbort then
+            Break;
+
        {Now Check controls}
         DSS.Fire_CheckControls();
         CheckControls;
@@ -1202,7 +1208,8 @@ begin
     if DSS.ActiveCircuit.LogEvents then
         LogThisEvent(DSS, 'Solution Done');
 
-    DSS.Fire_StepControls();
+    if not DSS.SolutionAbort then
+        DSS.Fire_StepControls();
 
     {$IFDEF MSWINDOWS}
     QueryPerformanceCounter(SolveEndTime);
@@ -1214,11 +1221,13 @@ begin
 
 end;
 
-function TSolutionObj.SolveDirect: Integer;  // solve for now once, direct solution
+function TSolutionObj.SolveDirect(ForcePCRefresh: Boolean): Integer;  // solve for now once, direct solution
 begin
     Result := 0;
 
-    LoadsNeedUpdating := TRUE;  // Force possible update of loads and generators
+    ConvergedFlag := FALSE;
+    DSS.ActiveCircuit.IsSolved := FALSE;
+
     {$IFDEF MSWINDOWS}
     QueryPerformanceCounter(SolveStartTime);
     {$ELSE}
@@ -1227,49 +1236,71 @@ begin
 
     Inc(SolutionCount); // Unique number for this solution
 
+    try
 {$IFDEF DSS_CAPI_ADIAKOPTICS}
-    if not ADiakoptics or (DSS.Parent <> NIL) then
-    begin
-{$ENDIF}    
-        if SystemYChanged then
+        if not ADiakoptics or (DSS.Parent <> NIL) then
         begin
-            BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
-        end;
+{$ENDIF}
+            if ForcePCRefresh or LoadsNeedUpdating then
+                DSS.ActiveCircuit.InvalidateAllPCElements;
 
-        ZeroInjCurr;   // Side Effect: Allocates InjCurr
-        GetSourceInjCurrents;
+            if SystemYChanged then
+            begin
+                BuildYMatrix(DSS, WHOLEMATRIX, TRUE); // Side Effect: Allocates V
+            end;
 
-        // Pick up PCELEMENT injections for Harmonics mode and Dynamics mode
-        // Ignore these injections for powerflow; Use only admittance in Y matrix
-        if IsDynamicModel or IsHarmonicModel then
-            GetPCInjCurr;
+            if DSS.SolutionAbort then
+                Exit;
 
-        if SolveSystem(NodeV) = 1   // Solve with Zero injection current
-        then
-        begin
+            LoadsNeedUpdating := FALSE;
+
+            ZeroInjCurr;   // Side Effect: Allocates InjCurr
+            if DSS.SolutionAbort then
+                Exit;
+
+            GetSourceInjCurrents;
+
+            // Pick up PCELEMENT injections for Harmonics mode and Dynamics mode
+            // Ignore these injections for powerflow; Use only admittance in Y matrix
+            if IsDynamicModel or IsHarmonicModel then
+                GetPCInjCurr;
+
+            Result := SolveSystem(NodeV); // Solve with source injection current
+            if Result <> 1 then
+            begin
+                DoSimpleMsg(DSS, _('Error Solving System Y Matrix. Sparse matrix solver returned code %d.'), [Result], 11003);
+                DSS.SolutionAbort := TRUE;
+                Exit;
+            end;
+
             DSS.ActiveCircuit.IsSolved := TRUE;
             ConvergedFlag := TRUE;
-        end;
 {$IFDEF DSS_CAPI_ADIAKOPTICS}
-    end
-    else
-    begin
-        ADiak_PCInj := FALSE;
-        Solve_Diakoptics(DSS); // A-Diakoptics
+        end
+        else
+        begin
+            ADiak_PCInj := FALSE;
+            Solve_Diakoptics(DSS); // A-Diakoptics
 
-        DSS.ActiveCircuit.IsSolved := TRUE;
-        ConvergedFlag := TRUE;
-    end;
+            if not DSS.SolutionAbort then
+            begin
+                Result := 1;
+                DSS.ActiveCircuit.IsSolved := TRUE;
+                ConvergedFlag := TRUE;
+            end;
+        end;
 {$ENDIF}
-    {$IFDEF MSWINDOWS}
-    QueryPerformanceCounter(SolveEndTime);
-    {$ELSE}
-    SolveEndTime := GetTickCount64;
-    {$ENDIF}
-    Solve_Time_Elapsed := ((SolveEndtime - SolveStartTime) / CPU_Freq) * 1000000;
-    Total_Time_Elapsed := Total_Time_Elapsed + Solve_Time_Elapsed;
-    Iteration := 1;
-    LastSolutionWasDirect := TRUE;
+    finally
+        {$IFDEF MSWINDOWS}
+        QueryPerformanceCounter(SolveEndTime);
+        {$ELSE}
+        SolveEndTime := GetTickCount64;
+        {$ENDIF}
+        Solve_Time_Elapsed := ((SolveEndtime - SolveStartTime) / CPU_Freq) * 1000000;
+        Total_Time_Elapsed := Total_Time_Elapsed + Solve_Time_Elapsed;
+        Iteration := 1;
+        LastSolutionWasDirect := TRUE;
+    end;
 end;
 
 function TSolutionObj.SolveCircuit: Integer;
@@ -1277,7 +1308,7 @@ begin
     Result := 0;
     if LoadModel = ADMITTANCE then
         try
-            SolveDirect     // no sense horsing around when it's all admittance
+            Result := SolveDirect(FALSE)     // no sense horsing around when it's all admittance
         except
             ON E: EEsolv32Problem do
             begin
@@ -2098,12 +2129,15 @@ begin
             IntervalHrs := 1.0;
             NumberOfTimes := 1;
         end;
-        TSolveMode.YEARLYMODE:
+        TSolveMode.YEARLYMODE,
+        TSolveMode.LINEARYEARLYMODE:
         begin
             IntervalHrs := 1.0;
             DynaVars.h := 3600.0;
             NumberOfTimes := 8760;
             SampleTheMeters := TRUE;
+            if Dynavars.SolutionMode = TSolveMode.LINEARYEARLYMODE then
+                LoadModel := ADMITTANCE;
         end;
         TSolveMode.DUTYCYCLE:
         begin
@@ -2187,6 +2221,19 @@ begin
     DSS.EnergyMeterClass.ResetAll;
     DoResetFaults(DSS);
     DoResetControls(DSS);
+end;
+
+procedure TSolutionObj.Set_LoadModel(const Value: Integer; UpdateDefault: Boolean = TRUE);
+begin
+    if (Mode = TSolveMode.LINEARYEARLYMODE) and (Value <> ADMITTANCE) then
+    begin
+        DoSimpleMsg(DSS, _('LinearYearly requires LoadModel=Admittance. The load model was not changed.'), 5005);
+        Exit;
+    end;
+
+    LoadModel := Value;
+    if UpdateDefault then
+        DefaultLoadModel := Value;
 end;
 
 procedure TSolutionObj.AddInAuxCurrents(SolveType: Integer);
@@ -2568,7 +2615,8 @@ begin
                             case Dynavars.SolutionMode of
                                 TSolveMode.SNAPSHOT:
                                     SolveSnap;
-                                TSolveMode.YEARLYMODE:
+                                TSolveMode.YEARLYMODE,
+                                TSolveMode.LINEARYEARLYMODE:
                                     SolveYearly;
                                 TSolveMode.DAILYMODE:
                                     SolveDaily;

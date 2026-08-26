@@ -797,13 +797,13 @@ begin
 
 
     SolveModeEnum := TDSSEnum.Create('Solution Mode', True, 2, 9,
-        ['Snap', 'Daily', 'Yearly', 'M1', 'LD1', 'PeakDay', 'DutyCycle', 'Direct', 'MF', 'FaultStudy', 'M2', 'M3', 'LD2', 'AutoAdd', 'Dynamic', 'Harmonic', 'Time', 'HarmonicT', 'Snapshot',
+        ['Snap', 'Daily', 'Yearly', 'M1', 'LD1', 'PeakDay', 'DutyCycle', 'Direct', 'MF', 'FaultStudy', 'M2', 'M3', 'LD2', 'AutoAdd', 'Dynamic', 'Harmonic', 'Time', 'HarmonicT', 'LinearYearly', 'Snapshot',
             // Extras for compatibility
             'Dynamics', 'Harmonics',
             // TODO: Do we need special case for single letters?
             'S', 'Y', 'H', 'T','F'
         ],
-        [Ord(TSolveMode.SNAPSHOT), Ord(TSolveMode.DAILYMODE), Ord(TSolveMode.YEARLYMODE), Ord(TSolveMode.MONTECARLO1), Ord(TSolveMode.LOADDURATION1), Ord(TSolveMode.PEAKDAY), Ord(TSolveMode.DUTYCYCLE), Ord(TSolveMode.DIRECT), Ord(TSolveMode.MONTEFAULT), Ord(TSolveMode.FAULTSTUDY), Ord(TSolveMode.MONTECARLO2), Ord(TSolveMode.MONTECARLO3), Ord(TSolveMode.LOADDURATION2), Ord(TSolveMode.AUTOADDFLAG), Ord(TSolveMode.DYNAMICMODE), Ord(TSolveMode.HARMONICMODE), Ord(TSolveMode.GENERALTIME), Ord(TSolveMode.HARMONICMODET), Ord(TSolveMode.SNAPSHOT),
+        [Ord(TSolveMode.SNAPSHOT), Ord(TSolveMode.DAILYMODE), Ord(TSolveMode.YEARLYMODE), Ord(TSolveMode.MONTECARLO1), Ord(TSolveMode.LOADDURATION1), Ord(TSolveMode.PEAKDAY), Ord(TSolveMode.DUTYCYCLE), Ord(TSolveMode.DIRECT), Ord(TSolveMode.MONTEFAULT), Ord(TSolveMode.FAULTSTUDY), Ord(TSolveMode.MONTECARLO2), Ord(TSolveMode.MONTECARLO3), Ord(TSolveMode.LOADDURATION2), Ord(TSolveMode.AUTOADDFLAG), Ord(TSolveMode.DYNAMICMODE), Ord(TSolveMode.HARMONICMODE), Ord(TSolveMode.GENERALTIME), Ord(TSolveMode.HARMONICMODET), Ord(TSolveMode.LINEARYEARLYMODE), Ord(TSolveMode.SNAPSHOT),
          Ord(TSolveMode.DYNAMICMODE), Ord(TSolveMode.HARMONICMODE),
          Ord(TSolveMode.SNAPSHOT), Ord(TSolveMode.YEARLYMODE), Ord(TSolveMode.HARMONICMODE), Ord(TSolveMode.GENERALTIME), Ord(TSolveMode.FAULTSTUDY)]);
     SolveModeEnum.DefaultValue := Ord(TSolveMode.SNAPSHOT);

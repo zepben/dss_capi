@@ -1175,7 +1175,8 @@ begin
                         TSolveMode.SNAPSHOT: ; // Just solve for the present kW, kvar  // Don't check for state change
                         TSolveMode.DAILYMODE:
                             CalcDailyMult(DynaVars.dblHour); // Daily dispatch curve
-                        TSolveMode.YEARLYMODE:
+                        TSolveMode.YEARLYMODE,
+                        TSolveMode.LINEARYEARLYMODE:
                             CalcYearlyMult(DynaVars.dblHour);
                         // MONTECARLO1,
                         // MONTEFAULT,

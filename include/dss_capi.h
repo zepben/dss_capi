@@ -64,7 +64,8 @@ extern "C" {
         SolveModes_LD2 = 12, ///< Load-Duration Mode 2
         SolveModes_AutoAdd = 13, ///< Auto add generators or capacitors
         SolveModes_Dynamic = 14, ///< Solve for dynamics
-        SolveModes_Harmonic = 15 ///< Harmonic solution mode
+        SolveModes_Harmonic = 15, ///< Harmonic solution mode
+        SolveModes_LinearYearly = 18 ///< Sequential yearly solution using the direct admittance model
     };
 
     enum SolutionLoadModels { ///< Solution_[Get/Set]_LoadModel

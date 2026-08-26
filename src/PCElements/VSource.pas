@@ -843,7 +843,8 @@ begin
                 begin
                     CalcDailyMult(DynaVars.dblHour); // set Shapefactor.re = Pmult(t) or PerUnit
                 end;
-                TSolveMode.YEARLYMODE:
+                TSolveMode.YEARLYMODE,
+                TSolveMode.LINEARYEARLYMODE:
                 begin
                     CalcYearlyMult(DynaVars.dblHour);
                 end;
@@ -870,6 +871,7 @@ begin
 
             if (Mode = TSolveMode.DAILYMODE) or  // If a loadshape mode simulation
                 (Mode = TSolveMode.YEARLYMODE) or
+                (Mode = TSolveMode.LINEARYEARLYMODE) or
                 (Mode = TSolveMode.DUTYCYCLE) or
                 (Mode = TSolveMode.DYNAMICMODE) then
             begin  // Loadshape cases

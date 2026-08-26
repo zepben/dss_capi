@@ -841,7 +841,8 @@ begin
                         Factor := Factor * ActiveCircuit.LoadMultiplier;
                     CalcDailyMult(DynaVars.dblHour);
                 end;
-                TSolveMode.YEARLYMODE:
+                TSolveMode.YEARLYMODE,
+                TSolveMode.LINEARYEARLYMODE:
                 begin
                     Factor := ActiveCircuit.LoadMultiplier * GrowthFactor(Year);
                     CalcYearlyMult(DynaVars.dblHour);

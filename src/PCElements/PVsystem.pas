@@ -1042,7 +1042,8 @@ begin
                         CalcDailyMult(DynaVars.dblHour);
                         CalcDailyTemperature(DynaVars.dblHour);
                     end;
-                    TSolveMode.YEARLYMODE:
+                    TSolveMode.YEARLYMODE,
+                    TSolveMode.LINEARYEARLYMODE:
                     begin
                         CalcYearlyMult(DynaVars.dblHour);
                         CalcYearlyTemperature(DynaVars.dblHour);
