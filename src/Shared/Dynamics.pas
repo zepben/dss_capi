@@ -35,7 +35,8 @@ type
         DYNAMICMODE = 14,
         HARMONICMODE = 15,
         GENERALTIME = 16,
-        HARMONICMODET = 17 // Adds the variable for the Sequential-time harmonics mode
+        HARMONICMODET = 17, // Adds the variable for the Sequential-time harmonics mode
+        LINEARYEARLYMODE = 18
     );
 {$SCOPEDENUMS OFF}
 {$POP}

@@ -147,6 +147,8 @@ Similar steps are required for the ARM64 version.
 
 To understand the main concepts of DSS C-API and how it handles memory, see [the usage document](https://github.com/dss-extensions/dss_capi/blob/master/docs/usage.md).
 
+For annual studies using the direct constant-admittance approximation, see the [LinearYearly solution mode](docs/linear_yearly.md).
+
 Two minimal samples (without DSS scripts, please bring your own) are available in [examples](examples). Add the appropriate subfolder from `include` and the library from `lib` to the compilation. 
 
 The source code from DSS-Python, OpenDSSDirect.py and OpenDSSDirect.jl are more complete and advanced examples of usage.
@@ -180,4 +182,3 @@ Note that, since OpenDSS depends on KLU via KLUSolve, the KLU licensing conditio
 Also note that even though we don't add copyright notices to each of the files, most of files from the OpenDSS original codebase were modified to create the version presented today in this repository. Please refer to the Git commit history for more information.
 
 Thanks to colleagues at the University of Campinas, Brazil, for providing feedback and helping me test this project, especially during its inception in 2016-2017, as well as everyone that reported issues and helped the development since the public release in 2018.
-

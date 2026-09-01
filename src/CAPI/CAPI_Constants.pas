@@ -34,6 +34,7 @@ const
     dssAutoAdd = $0000000D;
     dssHarmonic = $0000000F;
     dssDynamic = $0000000E;
+    dssLinearYearly = $00000012;
 
 // Constants for enum Options
 const

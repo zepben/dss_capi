@@ -235,6 +235,7 @@ begin
     begin
         DynaVars.intHour := Value;
         Update_dblHour;
+        LoadsNeedUpdating := TRUE;
     end;
 end;
 //------------------------------------------------------------------------------
@@ -285,6 +286,7 @@ begin
     begin
         DynaVars.t := Value;
         Update_dblHour;
+        LoadsNeedUpdating := TRUE;
     end;
 end;
 //------------------------------------------------------------------------------
@@ -337,11 +339,7 @@ procedure Solution_Set_LoadModel(Value: Integer); CDECL;
 begin
     if InvalidCircuit(DSSPrime) then
         Exit;
-    with DSSPrime.ActiveCircuit.Solution do
-    begin
-        LoadModel := Value;
-        DefaultLoadModel := LoadModel;
-    end;
+    DSSPrime.ActiveCircuit.Solution.Set_LoadModel(Value);
 end;
 //------------------------------------------------------------------------------
 function Solution_Get_LDCurve(): PAnsiChar; CDECL;
@@ -580,6 +578,7 @@ begin
         DynaVars.intHour := Trunc(Value);
         DynaVars.dblHour := Value;
         Dynavars.t := (Value - DynaVars.intHour) * 3600.0;
+        LoadsNeedUpdating := TRUE;
     end;
 end;
 //------------------------------------------------------------------------------

@@ -904,6 +904,7 @@ enum class SolutionMode: int32_t
     Harmonic = 15, ///< Harmonic
     Time = 16, ///< Time
     HarmonicT = 17, ///< HarmonicT
+    LinearYearly = 18, ///< LinearYearly
     Snapshot = 0 ///< Snapshot
 };
 
@@ -66929,4 +66930,3 @@ int main()
     return 0;
 }
 */
-

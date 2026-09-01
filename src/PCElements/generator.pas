@@ -1010,7 +1010,8 @@ begin
                             Factor := ActiveCircuit.GenMultiplier;
                             CalcDailyMult(DynaVars.dblHour) // Daily dispatch curve
                         end;
-                        TSolveMode.YEARLYMODE:
+                        TSolveMode.YEARLYMODE,
+                        TSolveMode.LINEARYEARLYMODE:
                         begin
                             Factor := ActiveCircuit.GenMultiplier;
                             CalcYearlyMult(DynaVars.dblHour);

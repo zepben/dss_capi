@@ -159,6 +159,7 @@ uses
     Utilities,
     Math,
     Solution,
+    Dynamics,
     DSSHelper,
     DSSObjectHelper,
     TypInfo,
@@ -544,7 +545,8 @@ begin
         DoYPrimCalcs(YPrim);
 
 {$IFDEF DSS_CAPI_INCREMENTAL_Y}
-    if ((ActiveCircuit.Solution.SolverOptions and ord(TSolverOptions.AlwaysResetYPrimInvalid)) <> 0) then
+    if ((ActiveCircuit.Solution.SolverOptions and ord(TSolverOptions.AlwaysResetYPrimInvalid)) <> 0) or
+        (ActiveCircuit.Solution.Mode = TSolveMode.LINEARYEARLYMODE) then
         YPrimInvalid := False;
 {$ENDIF}
 end;

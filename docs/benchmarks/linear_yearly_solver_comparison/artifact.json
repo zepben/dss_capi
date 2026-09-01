@@ -1,0 +1,196 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Yearly Solver Benchmark: Original, Initial Linear, and Optimized Linear",
+    "description": "Technical benchmark report comparing ordinary Yearly, the initial LinearYearly implementation, and the optimized LinearYearly implementation on BAR8B4 and ADA12.",
+    "generatedAt": "2026-08-08T01:48:46Z",
+    "charts": [
+      {
+        "id": "median_runtime_comparison",
+        "title": "Median runtime for 1,440 half-hour steps",
+        "subtitle": "Five measured repetitions per mode after warmup; lower is faster.",
+        "type": "bar",
+        "intent": "comparison",
+        "question": "How do ordinary Yearly, initial LinearYearly, and optimized LinearYearly runtime compare on each feeder model?",
+        "rationale": "Grouped bars provide the clearest discrete comparison across three solver paths and two feeder models while retaining a zero baseline.",
+        "comparisonContext": {
+          "baseline": "Original Yearly on the current optimized build",
+          "denominator": "1,440 half-hour solve steps",
+          "grain": "model and solution path",
+          "unit": "seconds"
+        },
+        "dataset": "runtime_medians",
+        "sourceId": "benchmark_results",
+        "encodings": {
+          "x": {"field": "model", "type": "nominal", "label": "Model"},
+          "y": {"field": "median_seconds", "type": "quantitative", "label": "Median runtime", "format": "number"},
+          "color": {"field": "mode", "type": "nominal", "label": "Solution path"},
+          "tooltip": [
+            {"field": "steps_per_second", "type": "quantitative", "label": "Steps per second", "format": "number"},
+            {"field": "sample_count", "type": "quantitative", "label": "Measured runs", "format": "number"}
+          ]
+        },
+        "palette": {"kind": "categorical", "name": "blue-orange-gold"},
+        "legend": {"position": "bottom", "interactive": true, "sort": "spec", "title": "Solution path"},
+        "labels": {"values": "all"},
+        "yAxisTitle": "Median runtime (seconds)",
+        "valueFormat": "number",
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "runtime_summary",
+        "title": "Exact runtime and relative performance",
+        "subtitle": "Medians from five measured 1,440-step runs; ratios use ordinary Yearly as 1.00×.",
+        "dataset": "runtime_summary",
+        "sourceId": "benchmark_results",
+        "defaultSort": {"field": "model", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "model", "label": "Model", "type": "text"},
+          {"field": "original_yearly_seconds", "label": "Original Yearly (s)", "format": "number"},
+          {"field": "initial_linear_seconds", "label": "Initial Linear (s)", "format": "number"},
+          {"field": "optimized_linear_seconds", "label": "Optimized Linear (s)", "format": "number"},
+          {"field": "optimized_runtime_reduction", "label": "Linear runtime reduction", "format": "percent"},
+          {"field": "initial_linear_over_yearly", "label": "Initial / Yearly", "format": "number", "unit": "×"},
+          {"field": "optimized_linear_over_yearly", "label": "Optimized / Yearly", "format": "number", "unit": "×"}
+        ]
+      },
+      {
+        "id": "annual_equivalence",
+        "title": "Full-year incremental-update equivalence",
+        "subtitle": "Optimized LinearYearly compared with forced full Y-matrix rebuilds at six checkpoints.",
+        "dataset": "annual_equivalence",
+        "sourceId": "benchmark_results",
+        "defaultSort": {"field": "model", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "model", "label": "Model", "type": "text"},
+          {"field": "steps", "label": "Annual steps", "format": "number"},
+          {"field": "incremental_runtime_reduction", "label": "Step-loop reduction", "format": "percent"},
+          {"field": "max_voltage_error_volts", "label": "Max voltage error (V)", "format": "number"},
+          {"field": "max_head_power_error_kw_or_kvar", "label": "Max head-power error", "format": "number"},
+          {"field": "all_values_finite", "label": "Finite", "type": "boolean"},
+          {"field": "public_solver_options_unchanged", "label": "Options unchanged", "type": "boolean"}
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "benchmark_results",
+        "label": "Compiled DSS C-API benchmark results",
+        "path": "benchmark_queries.sql"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# Yearly Solver Benchmark: Original, Initial Linear, and Optimized Linear"
+      },
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "sourceId": "benchmark_results",
+        "body": "## The optimization consistently removes about 38% of LinearYearly runtime\n\nAcross both feeders, optimized LinearYearly is approximately **1.62× faster** than the initial implementation. On BAR8B4 its median falls from **0.501 s to 0.310 s**; on ADA12 it falls from **0.890 s to 0.547 s**. The remaining gap to ordinary Yearly is model-dependent: optimized LinearYearly is **36.9% slower** on BAR8B4 and **20.5% slower** on ADA12.\n\nThe full-year equivalence checks found only floating-point-scale differences relative to forcing a complete Y-matrix rebuild every step. The result supports the optimization as a performance-preserving code-path change, not a new numerical approximation."
+      },
+      {
+        "id": "runtime_finding",
+        "type": "markdown",
+        "sourceId": "benchmark_results",
+        "body": "## Both feeders show the same optimization gain, but different residual overhead\n\nThe grouped bars compare one batched 1,440-step annual solve for each path. Initial LinearYearly was nearly **2.21×** ordinary Yearly on BAR8B4 and **1.96×** on ADA12. Reusing the engine's existing incremental admittance and stable-node solution-array paths reduces those ratios to **1.37×** and **1.21×**, respectively. Lower bars indicate less wall-clock time."
+      },
+      {
+        "id": "runtime_chart",
+        "type": "chart",
+        "chartId": "median_runtime_comparison",
+        "layout": "full"
+      },
+      {
+        "id": "runtime_table_intro",
+        "type": "markdown",
+        "sourceId": "benchmark_results",
+        "body": "## Exact medians confirm the gain is consistent rather than feeder-specific\n\nBAR8B4 and ADA12 differ substantially in absolute solve time, yet the optimized path reduces initial LinearYearly runtime by **38.1%** and **38.5%**. Ordinary Yearly was also timed on both compiled builds; its median changed by only 0.19% on BAR8B4 and 0.53% on ADA12, which is consistent with normal run-to-run variation and supports using the current-build Yearly timing as the common baseline."
+      },
+      {
+        "id": "runtime_table",
+        "type": "table",
+        "tableId": "runtime_summary",
+        "layout": "full"
+      },
+      {
+        "id": "scope_definitions",
+        "type": "markdown",
+        "body": "## Scope and metric definitions\n\n- **Original Yearly** is the existing nonlinear yearly power-flow mode, measured using the optimized branch build. Its solver path was not changed by this work.\n- **Initial LinearYearly** is the first direct-admittance implementation before the incremental-update optimizations.\n- **Optimized LinearYearly** is commit `b21850de`, which reuses existing incremental Y-matrix updates and solution-array reuse when the node map is stable.\n- **Runtime** is wall-clock time for one native C-API solve covering 1,440 half-hour steps.\n- **Runtime reduction** is `1 - optimized LinearYearly median / initial LinearYearly median`.\n- Each reported median contains five measured runs after one warmup run per mode."
+      },
+      {
+        "id": "methodology",
+        "type": "markdown",
+        "body": "## Measurement design reduces ordering and initialization bias\n\nEach model was loaded afresh for every timed solve. Garbage collection was disabled around the timed native call. The benchmark warmed both Yearly and LinearYearly once, then alternated their execution order across five repetitions. Medians are reported because the sample count is small and individual timings contain normal operating-system scheduling noise.\n\nInitial and optimized LinearYearly use separate compiled ARM64 macOS DSS C-API libraries. The ordinary Yearly results from both libraries were retained as a cross-build noise check; the chart uses the current optimized-build measurement."
+      },
+      {
+        "id": "robustness",
+        "type": "markdown",
+        "sourceId": "benchmark_results",
+        "body": "## Full-year checks show no cumulative numerical drift from incremental updates\n\nThe optimized path was run for **17,520 steps** on BAR8B4 and **17,472 steps** on ADA12, then compared at six checkpoints with LinearYearly forced to rebuild the full Y matrix before every step. Maximum voltage-magnitude differences were **7.97×10⁻⁸ V** and **5.72×10⁻⁹ V**. Maximum feeder-head power-component differences were **1.32×10⁻⁷** and **1.36×10⁻⁸ kW or kvar**. All captured values were finite and public solver options remained unchanged."
+      },
+      {
+        "id": "annual_table",
+        "type": "table",
+        "tableId": "annual_equivalence",
+        "layout": "full"
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "body": "## The benchmark establishes local relative performance, not universal speed or AC accuracy\n\n- The runs were performed on one ARM64 macOS machine; absolute timings should not be generalized to other hardware or operating systems.\n- Five repetitions are sufficient to show a large local effect but not to estimate tight statistical confidence intervals.\n- The full-year step-loop timings include Python-to-C call overhead and should not be compared directly with the batched 1,440-step timings.\n- The equivalence test compares incremental LinearYearly with full-rebuild LinearYearly. It does **not** measure the constant-admittance approximation error against nonlinear AC Yearly.\n- These two feeders do not establish performance for every network topology or device mix."
+      },
+      {
+        "id": "recommendations",
+        "type": "markdown",
+        "body": "## Recommended next benchmark gates\n\n1. Add the 1,440-step benchmark as a non-blocking CI or scheduled performance job, using ratios rather than absolute time thresholds.\n2. Repeat the comparison on Linux and Windows builds to separate algorithmic gains from platform effects.\n3. Add at least one larger public benchmark feeder so results can be reproduced outside the two supplied models.\n4. Keep the full-year incremental-versus-rebuild equivalence check as the numerical regression guard."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Further questions\n\n- Which remaining LinearYearly operations account for the 21–37% residual overhead relative to ordinary Yearly?\n- Does the residual gap correlate primarily with PC-element count, the number of changed Y primitives, or matrix factorization cost?\n- What voltage and feeder-head power error does LinearYearly introduce relative to nonlinear Yearly across the complete annual traces?"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-08T01:48:46Z",
+    "status": "ready",
+    "datasets": {
+      "runtime_medians": [
+        {"model": "BAR8B4", "mode": "Original Yearly", "median_seconds": 0.226505375, "steps_per_second": 6357.46502704406, "build": "optimized branch", "sample_count": 5},
+        {"model": "BAR8B4", "mode": "Initial LinearYearly", "median_seconds": 0.501231375, "steps_per_second": 2872.9247046835403, "build": "initial LinearYearly branch", "sample_count": 5},
+        {"model": "BAR8B4", "mode": "Optimized LinearYearly", "median_seconds": 0.310182833, "steps_per_second": 4642.423263959292, "build": "optimized branch", "sample_count": 5},
+        {"model": "ADA12", "mode": "Original Yearly", "median_seconds": 0.4537365, "steps_per_second": 3173.6481415976014, "build": "optimized branch", "sample_count": 5},
+        {"model": "ADA12", "mode": "Initial LinearYearly", "median_seconds": 0.889894541, "steps_per_second": 1618.1692702394048, "build": "initial LinearYearly branch", "sample_count": 5},
+        {"model": "ADA12", "mode": "Optimized LinearYearly", "median_seconds": 0.546885667, "steps_per_second": 2633.091497715189, "build": "optimized branch", "sample_count": 5}
+      ],
+      "runtime_summary": [
+        {"model": "BAR8B4", "original_yearly_seconds": 0.226505375, "initial_linear_seconds": 0.501231375, "optimized_linear_seconds": 0.310182833, "initial_linear_over_yearly": 2.2128895395970183, "optimized_linear_over_yearly": 1.369428133879825, "optimized_runtime_reduction": 0.3811583861844243, "optimized_speedup": 1.6159223582821556, "ordinary_yearly_cross_build_delta": 0.001936367491806923},
+        {"model": "ADA12", "original_yearly_seconds": 0.4537365, "initial_linear_seconds": 0.889894541, "optimized_linear_seconds": 0.546885667, "initial_linear_over_yearly": 1.9612584418489587, "optimized_linear_over_yearly": 1.2052935282923019, "optimized_runtime_reduction": 0.38544890230987494, "optimized_speedup": 1.6272039928960143, "ordinary_yearly_cross_build_delta": 0.005273459232675082}
+      ],
+      "annual_equivalence": [
+        {"model": "BAR8B4", "steps": 17520, "optimized_step_loop_seconds": 3.61719679197995, "forced_full_rebuild_step_loop_seconds": 5.940047957992647, "incremental_runtime_reduction": 0.3910492276223424, "max_voltage_error_volts": 7.97426764620468e-08, "max_head_power_error_kw_or_kvar": 1.320411655569842e-07, "all_values_finite": true, "public_solver_options_unchanged": true},
+        {"model": "ADA12", "steps": 17472, "optimized_step_loop_seconds": 6.60426545800874, "forced_full_rebuild_step_loop_seconds": 10.673207541985903, "incremental_runtime_reduction": 0.3812295477222659, "max_voltage_error_volts": 5.723450158257037e-09, "max_head_power_error_kw_or_kvar": 1.3564317669079173e-08, "all_values_finite": true, "public_solver_options_unchanged": true}
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "benchmark_results",
+      "label": "Compiled DSS C-API benchmark results",
+      "path": "benchmark_queries.sql",
+      "description": "SQL VALUES queries reproduce the bounded chart and table datasets from the consolidated benchmark_data.json measurements. Transformation formulas and raw source-file identities are recorded in source_notes.md."
+    }
+  ]
+}

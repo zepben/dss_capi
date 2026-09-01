@@ -362,7 +362,8 @@ begin
                     begin
                         CalcDailyMult(DynaVars.dblHour);
                     end;
-                    TSolveMode.YEARLYMODE:
+                    TSolveMode.YEARLYMODE,
+                    TSolveMode.LINEARYEARLYMODE:
                     begin
                         CalcYearlyMult(DynaVars.dblHour);
                     end;
@@ -388,6 +389,7 @@ begin
                 NAmps := Amps;
                 if (Mode = TSolveMode.DAILYMODE) or     // If a loadshape mode simulation
                     (Mode = TSolveMode.YEARLYMODE) or
+                    (Mode = TSolveMode.LINEARYEARLYMODE) or
                     (Mode = TSolveMode.DUTYCYCLE) or 
                     (Mode = TSolveMode.DYNAMICMODE) then
                     NAmps := Amps * ShapeFactor.re;
