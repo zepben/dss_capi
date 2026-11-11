@@ -9,6 +9,14 @@
 extern void connect_to_stream(char const *hostname, int const port, char const *username, char const *password, char const *stream, int const heartbeat);
 extern void disconnect_from_stream();
 extern void stream_out_message(void const *msg_ptr, size_t msg_size, bool confirm);
+// Connect to the result processor gRPC server at "host:port". Performs a grpc.health.v1 Check, retrying 3 times with
+// 5s/10s/20s backoff and up to 50% jitter. Panics if it cannot connect, as connect_to_stream does.
+// Once connected, stream_out_message sends over gRPC (`confirm` is ignored), blocking when the result processor is behind.
+extern void connect_to_grpc_stream(char const *address);
+// Half-close the gRPC stream, and wait for the StreamSummary. Returns the StreamStatus enum value (0/1/2), or -1 on a
+// transport error, if not connected over gRPC, or if the stream was already finished. After this call no further
+// messages may be sent.
+extern int finish_grpc_stream();
 
 // Repeated values for the DemandIntervalReport.
 struct TVoltBaseRegisters {
