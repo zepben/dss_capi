@@ -21,7 +21,20 @@ opentelemetry = "0.31.0"
 opentelemetry_sdk = "0.31.0"
 opentelemetry-otlp = {version = "0.31.0", features = ["grpc-tonic"]}
 async-trait = "0.1.91"
+bytes = "1.11.1"
+prost = "0.14.3"
+tokio-stream = "0.1.18"
+tonic = "0.14.5"
+tonic-health = "0.14.5"
+tonic-prost = "0.14.5"
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.5"
 
 [dev-dependencies]
+http = "1.4.0"
+http-body = "1.0.1"
 ntest = "0.9.5"
 tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "time", "test-util"] }
+tower = { version = "0.5.2", features = ["util"] }

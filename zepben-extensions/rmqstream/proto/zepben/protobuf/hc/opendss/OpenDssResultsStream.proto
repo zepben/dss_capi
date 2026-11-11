@@ -1,0 +1,40 @@
+/*
+ * Copyright 2026 Zeppelin Bend Pty Ltd
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.zepben.protobuf.hc.opendss";
+package zepben.protobuf.hc.opendss;
+
+import "zepben/protobuf/hc/opendss/OpenDssReport.proto";
+
+/**
+ * A service for streaming OpenDSS results from an executor to a result processor.
+ */
+service OpenDssResultsStream {
+    // Client streaming. The client half-closes when done, and the server replies once every batch on this stream has been
+    // processed (and, for the stream carrying the final report, once finalisation is complete).
+    rpc StreamResults(stream OpenDssReportBatch) returns (StreamSummary);
+}
+
+/**
+ * The outcome of processing a results stream.
+ */
+enum StreamStatus {
+    STREAM_STATUS_UNSPECIFIED = 0;
+    STREAM_STATUS_SUCCEEDED = 1;
+    STREAM_STATUS_FAILED = 2;
+}
+
+/**
+ * The response sent by the result processor once a results stream has been processed.
+ */
+message StreamSummary {
+    StreamStatus status = 1;
+}
