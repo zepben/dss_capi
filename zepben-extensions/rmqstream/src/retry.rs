@@ -18,12 +18,24 @@ pub async fn with_retries<T, E: Debug, F: Future<Output = Result<T, E>>>(
     on_retry: impl Fn(),
     f: impl Fn() -> F,
 ) -> Result<T, E> {
+    with_retries_from(BACKOFF_DELAY, action, retry_on, on_retry, f).await
+}
+
+/// As [with_retries], but with the given `initial_delay` before the first retry, instead of
+/// `BACKOFF_DELAY`.
+pub async fn with_retries_from<T, E: Debug, F: Future<Output = Result<T, E>>>(
+    initial_delay: Duration,
+    action: &'static str,
+    retry_on: impl Fn(&E) -> bool,
+    on_retry: impl Fn(),
+    f: impl Fn() -> F,
+) -> Result<T, E> {
     let mut retires = 0;
 
     loop {
         match f().await {
             Err(e) if retry_on(&e) && retires < MAX_RETRIES => {
-                let delay = jittered_delay(backoff(BACKOFF_DELAY, retires));
+                let delay = jittered_delay(backoff(initial_delay, retires));
                 warn!(
                     "{action} failed with error `{e:?}`, retrying in {}ms",
                     delay.as_millis()
