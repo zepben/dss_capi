@@ -24,6 +24,8 @@
 #include "proto/hc/opendss/OpenDssReport.pb-c.h"
 
 #define REPORT_BATCH_SIZE 10
+// The maximum number of entries in each EventLog report. At about 227 bytes per entry, this is about 1.1 MiB.
+#define EVENTLOG_CHUNK_SIZE 5000
 
 // message batching
 static OpenDssReport* reports[REPORT_BATCH_SIZE];
@@ -384,7 +386,8 @@ void batch_push_taps_report(struct TTapsReport data) {
     batch_push_opendss_report(&report);
 }
 
-void batch_push_eventlog(struct TEventLog* data, int num_events) {
+// Push an EventLog report holding `num_events` entries, starting at `data`, in a batch on its own.
+static void batch_push_eventlog_chunk(struct TEventLog* data, int num_events) {
     EventLog* el = malloc(sizeof(EventLog));
     *el = (EventLog)EVENT_LOG__INIT;
 
@@ -410,7 +413,25 @@ void batch_push_eventlog(struct TEventLog* data, int num_events) {
     report.report_case = OPEN_DSS_REPORT__REPORT_EL;
     report.el = el;
 
-    batch_push_opendss_report(&report);
+    // batches are only flushed by report count, so send the reports already batched, then send this chunk in a batch
+    // on its own. this bounds the size of a batch holding an EventLog to a single chunk.
+    send_opendss_report_batch(false);
+    batch_push_opendss_report_nosend(&report);
+    send_opendss_report_batch(false);
+}
+
+// Push the event log as EventLog reports of at most EVENTLOG_CHUNK_SIZE entries each, in order. A large event log in a
+// single report can exceed the result processor's maximum message size.
+void batch_push_eventlog(struct TEventLog* data, int num_events) {
+    int start = 0;
+
+    // an empty event log is still sent as a single, empty EventLog report.
+    do {
+        int remaining = num_events - start;
+        int chunk_size = remaining < EVENTLOG_CHUNK_SIZE ? remaining : EVENTLOG_CHUNK_SIZE;
+        batch_push_eventlog_chunk(data + start, chunk_size);
+        start += chunk_size;
+    } while (start < num_events);
 }
 
 void batch_push_loop_report(struct TLoopReport data) {
